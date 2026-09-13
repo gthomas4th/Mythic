@@ -438,7 +438,6 @@ extension GameCard {
                 }
             }
 
-
         }
     }
 }

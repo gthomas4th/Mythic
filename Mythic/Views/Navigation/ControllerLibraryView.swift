@@ -64,6 +64,7 @@ struct ControllerLibraryView: View {
                 Label(input.connected ? "Controller connected" : "Keyboard ready", systemImage: "gamecontroller")
             }
             TextField("Search games", text: $search).textFieldStyle(.roundedBorder).focused($searchFocused)
+                .onSubmit { searchFocused = false; browsingFocused = true }
             Text("↑ ↓ Browse · A / Return Details & Play · B / Escape Back · X Favorite · Y Favorites filter")
                 .font(.callout).foregroundStyle(.secondary)
             if details, let game = selected {
