@@ -173,7 +173,7 @@ struct SteamDeckLibraryView: View {
         }
         .padding(24)
         .frame(minWidth: 650, idealWidth: 720, minHeight: 480, idealHeight: 560)
-        .fileImporter(isPresented: $isImporterPresented, allowedContentTypes: [.data], allowsMultipleSelection: false) {
+        .fileImporter(isPresented: $isImporterPresented, allowedContentTypes: [.item], allowsMultipleSelection: false) {
             store.importFile($0)
         }
     }
