@@ -116,7 +116,12 @@ one successful disconnect/reconnect, then a failure on a second cycle after clic
 the game with the mouse. Pressing controller buttons again did not recover input.
 This is a correlation, not proof that mouse input causes the failure. Steam logged
 both reconnects and selected Rebirth bindings; these loaded controller_base/empty.vdf
-and reported no XInput mapping. Enabling Steam Input for Rebirth alone is the next
-candidate test, not a verified fix. The desktop tool cannot access the Windows Steam
-Wine window, so its per-game setting requires a manual UI change. No input overrides
-or driver changes have been applied. Physical controller navigation through the hub is also still pending.
+and reported no XInput mapping. The owner authorized closing the game without waiting for another save confirmation.
+After Windows Steam and its Wine processes stopped, its local configuration was
+backed up privately outside Git and a Rebirth-only root apps/2909400 override
+UseSteamControllerConfig=1 was added. Existing configuration text was preserved.
+Steam restarted, signed in, and retained the override. Rebirth relaunch was requested,
+but no new game process or active gamepad-emulation binding has yet been observed.
+The desktop tool cannot access the Windows Steam Wine window; the visible client
+state is awaiting owner observation. Steam Input remains an unverified candidate fix.
+No driver or graphics-profile changes have been applied. Physical controller navigation through the hub is also still pending.
