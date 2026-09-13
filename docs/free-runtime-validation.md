@@ -120,8 +120,12 @@ and reported no XInput mapping. The owner authorized closing the game without wa
 After Windows Steam and its Wine processes stopped, its local configuration was
 backed up privately outside Git and a Rebirth-only root apps/2909400 override
 UseSteamControllerConfig=1 was added. Existing configuration text was preserved.
-Steam restarted, signed in, and retained the override. Rebirth relaunch was requested,
-but no new game process or active gamepad-emulation binding has yet been observed.
-The desktop tool cannot access the Windows Steam Wine window; the visible client
-state is awaiting owner observation. Steam Input remains an unverified candidate fix.
-No driver or graphics-profile changes have been applied. Physical controller navigation through the hub is also still pending.
+Steam restarted, signed in, and retained the override. After the owner dismissed
+Steam's sync warning, Steam recorded the Rebirth launcher and game process at
+1920×1080. The owner then confirmed that the mouse-click and controller reconnect
+sequence worked. Retain the current configuration as the successful tested state.
+The logs still reported no XInput mapping, so this test does not establish that
+Steam Input emulation caused the recovery. First connection after a launch with no
+controller, and repeated reconnect cycles, remain separate unverified cases.
+No driver or graphics-profile changes have been applied. Physical controller
+navigation through the hub is also still pending.
