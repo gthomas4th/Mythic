@@ -22,3 +22,18 @@ then applied off successfully in the new Steam container.
 Validation: full Debug build, 41 passing core tests, and live engine/container setup.
 No Windows game compatibility is claimed. Per-game runtime pins and side-by-side
 upgrade/rollback remain unimplemented; the inherited explicit removal flow remains.
+
+## Current Steam compatibility failure
+
+Windows Steam client build 1788652215 installed and completed its own executable
+checksum verification, but steamui_html.txt recorded repeated webhelper restarts
+without a usable window. A clean restart reproduced this on engine 2.6.1+0. The
+failed container session was stopped; files and native Mac Steam were preserved.
+This matches the symptoms reported in [upstream issue 282](https://github.com/MythicApp/Mythic/issues/282),
+but does not establish the exact low-level cause.
+
+Next runtime decision: test a maintained newer Wine distribution in an isolated
+container, or use an available Windows PC for remote play. The current preview
+catalog lacks a published checksum, and the locally cached Wineskin engines are
+23.7.1-era builds; neither is an established fix. Do not mark Rebirth playable or
+download its payload until storefront access is verified.

@@ -40,8 +40,10 @@ is present. The new Steam container uses Windows 11, MSync and AVX2, with DXVK o
 Retina mode was explicitly disabled through the corrected settings UI and reported
 success. This is an initial shared-container baseline, not a benchmarked per-game profile.
 
-The official Steam installer was launched through the app. Storefront setup/login
-and the game download remain pending. No Rebirth gameplay, compatibility result,
+The official Steam installer completed its update to client build 1788652215.
+The Steam UI helper repeatedly restarted before showing a login window, including
+a clean container restart and executable checksum verification. This runtime/client
+combination failed storefront acceptance; login and the game download remain blocked. No Rebirth gameplay, compatibility result,
 or measured FPS is claimed. Storage cleanup left over 300 GB available before setup.
 
 The installer now verifies the publisher's SHA-256 over HTTPS before extraction,
