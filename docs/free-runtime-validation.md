@@ -101,3 +101,17 @@ The owner accepts approximately 40 FPS at the game's displayed 1080p. The ineffe
 the selected JSON profile and local bookmarked/hash-pinned runtime binding. The test
 host remains an ignored development artifact, not the primary launcher. See
 [project status](project-status.md) for precise implementation and live-test limits.
+
+## Local controller validation — 2026-09-13
+
+The owner connected an Xbox One S controller after Rebirth was already running.
+Game Hub reported it connected, Windows Steam logged the device arrival, and Wine
+registered an XInput-compatible device. The owner reported no game input. After
+exiting normally and relaunching through Game Hub with the controller connected,
+the owner confirmed that input worked. The accepted 1080p runtime profile was unchanged.
+
+Connecting before launch is the verified workaround, not the desired final behavior.
+First connection during gameplay remains unresolved. Disconnect/reconnect within a
+session that started with a controller is a separate pending test. Steam Input is a
+candidate for investigation, not a verified fix; no input overrides or driver changes
+have been applied. Physical controller navigation through the hub is also still pending.

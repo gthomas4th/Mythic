@@ -44,7 +44,7 @@ are not the user entry point. Do not remove recovery copies before final live ac
 | ROMs | Folder/application/core bookmarks, incremental content hashes, cue/m3u grouping, missing-part/traversal/cycle checks; no user ROMs available yet |
 | Remote | Home PC form, automatic startup and prelaunch checks, five-second timeout, direct Rebirth tile; Moonlight 1080p60/20 Mb/s/HDR off; TCP reachability is not labelled stream quality |
 | Xbox | Official Xbox Cloud library link; no purchase or Wine-based Microsoft Store promise |
-| Controller | Keyboard search, Return/details, Escape/back, favorite/filter, and immediate target switching verified; controller hardware check still open |
+| Controller | Keyboard search, Return/details, Escape/back, favorite/filter, and immediate target switching verified; local Rebirth controller input owner-confirmed when connected before launch; late connection and physical hub navigation still open |
 | Diagnostics | Correlation IDs and bounded in-session events; export excludes raw runtime logs, bookmarks, credentials, filesystem paths and network addresses |
 | Build | Full Debug build; 62 synthetic tests pass; SwiftLint zero errors, nine inherited warnings |
 
