@@ -49,7 +49,9 @@ struct ROMSource: Codable, Identifiable {
         let rootPanel = NSOpenPanel(); rootPanel.canChooseDirectories = true; rootPanel.canChooseFiles = false
         rootPanel.message = "Choose the folder containing your own games for this system."
         guard rootPanel.runModal() == .OK, let root = rootPanel.url else { return }
-        let appPanel = NSOpenPanel(); appPanel.allowedContentTypes = [.application]
+        let appPanel = NSOpenPanel()
+        appPanel.canChooseFiles = true; appPanel.canChooseDirectories = false
+        appPanel.allowedContentTypes = [.application]
         appPanel.message = "Choose the installed emulator application."
         guard appPanel.runModal() == .OK, let app = appPanel.url else { return }
         do {

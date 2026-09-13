@@ -113,3 +113,25 @@ Absence does not prove a broken link: empty directories and link-to-link targets
 need separate checking. No links were recreated or modified. The five home-backup
 links require their own reconciliation. Portable USB setup is deferred until the
 end at the owner's request; no local ROM staging is authorized.
+
+## NAS SMB trial
+
+The owner selected a separate SMB account. A dedicated no-login account and
+read-only ROM share are configured; its generated credential is stored in macOS
+Keychain, not source control. Access ACLs were backed up before granting narrowly
+scoped read/traverse access to the verified Melee trial path. Transfer internals,
+BIOS and saves are outside the share. Existing owner permissions were retained.
+A 67.11 MB SMB read discarded in memory measured 12.21 MB/s. A write probe was
+denied as required. Game Hub is configured with the mounted NAS GameCube folder.
+No local ROM copy is made. The existing Xbox mapping and local save remain.
+
+Access to future transferred ROMs is not yet automated: the worker creates private
+temporary files before promotion, so directory inheritance alone is insufficient.
+Current ACL coverage is the Melee trial, not the entire incoming library. The
+private NAS-share folder contains account/share receipts, Keychain-backed mount
+helper and access notes. No new router or firewall rule was added.
+
+The emulator application picker now explicitly selects files rather than folders.
+The full Debug build and installed code-signature verification passed. A stale
+Computer Use picker state also required refreshing the automation session; the
+code change is defensive and does not prove that stale state was caused by the app.
