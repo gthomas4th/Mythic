@@ -2,6 +2,7 @@ import SwiftUI
 import UniformTypeIdentifiers
 
 struct LaunchSettingsView: View {
+    var initialProfileID: String?
     @Environment(\.dismiss) private var dismiss
     @State private var status = ""
     @State private var profiles: [CompatibilityProfile] = []
@@ -56,7 +57,7 @@ struct LaunchSettingsView: View {
             if !status.isEmpty { Text(status).font(.callout).foregroundStyle(.secondary) }
         }
         .padding(24).frame(width: 620)
-        .task { refresh() }
+        .task { selected = initialProfileID ?? ""; refresh() }
     }
     private func refresh() {
         let files = (try? FileManager.default.contentsOfDirectory(at: GameHubRuntime.profiles.directory, includingPropertiesForKeys: nil)) ?? []

@@ -19,7 +19,7 @@ import SwiftUI
         observers = []
         for controller in GCController.controllers() {
             guard let pad = controller.extendedGamepad else { continue }
-            for button in [pad.dpad.up, pad.dpad.down, pad.dpad.left, pad.dpad.right, pad.buttonA, pad.buttonB, pad.buttonX, pad.buttonY] {
+            for button in [pad.dpad.up, pad.dpad.down, pad.dpad.left, pad.dpad.right, pad.buttonA, pad.buttonB, pad.buttonX, pad.buttonY, pad.buttonMenu] {
                 button.pressedChangedHandler = nil
             }
         }
@@ -29,7 +29,7 @@ import SwiftUI
         for controller in GCController.controllers() {
             guard let pad = controller.extendedGamepad else { continue }
             for (button, action) in [(pad.dpad.up, "up"), (pad.dpad.down, "down"), (pad.dpad.left, "left"),
-                (pad.dpad.right, "right"), (pad.buttonA, "select"), (pad.buttonB, "back"), (pad.buttonX, "favorite"), (pad.buttonY, "filter")] {
+                (pad.dpad.right, "right"), (pad.buttonA, "select"), (pad.buttonB, "back"), (pad.buttonX, "favorite"), (pad.buttonY, "filter"), (pad.buttonMenu, "settings")] {
                 button.pressedChangedHandler = { [weak self] _, _, pressed in
                     guard pressed else { return }
                     Task { @MainActor in
@@ -48,6 +48,8 @@ struct ControllerLibraryView: View {
     @State private var favoritesOnly = false
     @State private var message = ""
     @State private var search = ""
+    @State private var showLaunchSettings = false
+    @State private var detailProfile: CompatibilityProfile?
     private enum Focus: Hashable { case search, browsing }
     @FocusState private var focus: Focus?
     private var games: [Game] {
@@ -70,8 +72,28 @@ struct ControllerLibraryView: View {
             if details, let game = selected {
                 Text(game.title).font(.title.bold())
                 if let steam = game as? SteamGame, let record = steam.record {
-                    let kind = LaunchResolver.resolve(record.launchTargets, preferredID: steam.preferredTargetID)?.kind
-                    Text(kind == .wineSteam ? "Windows Steam · pinned profile" : (kind == .moonlight ? "Home PC" : (kind == .nativeMac ? "Native Mac" : "Unavailable")))
+                    let target = displayedTarget(for: steam, record: record)
+                    VStack(alignment: .leading, spacing: 10) {
+                        LabeledContent("Play on", value: targetName(target?.kind))
+                        LabeledContent("Availability", value: target?.available == true ? "Ready to launch" : "Checked again when you launch")
+                        LabeledContent("Controller", value: input.connected ? "Connected to this Mac" : "Not connected")
+                        if target?.kind == .wineSteam {
+                            LabeledContent("Compatibility", value: detailProfile?.validation == "owner-accepted" ? "Accepted by you" : "Not yet accepted")
+                            if let profile = detailProfile {
+                                let width = profile.arguments.first { $0.hasPrefix("-ResX=") }?.dropFirst(6)
+                                let height = profile.arguments.first { $0.hasPrefix("-ResY=") }?.dropFirst(6)
+                                if let width, let height { LabeledContent("Launch resolution", value: "\(width) × \(height)") }
+                            }
+                            Button("Advanced Launch Settings") { showLaunchSettings = true }
+                            Text("Menu / S · Launch settings").font(.caption).foregroundStyle(.secondary)
+                        } else if target?.kind == .moonlight {
+                            Text("Streams from your Home PC. Its game settings and saves are used.")
+                                .font(.callout).foregroundStyle(.secondary)
+                        }
+                    }
+                    .task(id: target?.profileID) {
+                        detailProfile = target?.profileID.flatMap { try? GameHubRuntime.profiles.load($0) }
+                    }
                     if record.launchTargets.count > 1 { Text("← → Change launch target").font(.caption) }
                 }
                 HStack {
@@ -114,17 +136,40 @@ struct ControllerLibraryView: View {
             return .handled
         }
         .onKeyPress("x") { guard focus != .search else { return .ignored }; action("favorite"); return .handled }
+        .onKeyPress("s") { guard focus != .search, details else { return .ignored }; action("settings"); return .handled }
         .onKeyPress("y") { guard focus != .search else { return .ignored }; action("filter"); return .handled }
         .onExitCommand { action("back") }
         .onChange(of: search) { _, _ in selection = 0; details = false }
+        .sheet(isPresented: $showLaunchSettings) {
+            LaunchSettingsView(initialProfileID: detailProfile?.profileID)
+        }
         .onAppear { input.onAction = action; input.start(); focus = .browsing }
         .onDisappear { input.stop(); input.onAction = nil }
     }
+    private func displayedTarget(for game: SteamGame, record: GameRecord) -> LaunchTarget? {
+        record.launchTargets.first { $0.id == game.preferredTargetID && $0.kind == .moonlight }
+            ?? LaunchResolver.resolve(record.launchTargets, preferredID: game.preferredTargetID)
+    }
+    private func targetName(_ kind: LaunchTarget.Kind?) -> String {
+        switch kind {
+        case .wineSteam: "This Mac · Windows Steam"
+        case .nativeMac: "This Mac · Native"
+        case .moonlight: "Home PC"
+        case .emulator: "This Mac · Emulator"
+        case .webCloud: "Cloud"
+        case nil: "Unavailable"
+        }
+    }
     private func action(_ action: String) {
+        if showLaunchSettings {
+            if action == "back" || action == "settings" { showLaunchSettings = false }
+            return
+        }
         switch action {
         case "up": if !details { selection = max(0, selection - 1) }
         case "down": if !details { selection = min(max(0, games.count - 1), selection + 1) }
         case "select": if details, let game = selected { play(game) } else { details = true }
+        case "settings": if details, detailProfile != nil { showLaunchSettings = true }
         case "back": details = false
         case "favorite": if let game = selected { game.isFavourited.toggle(); GameDataStore.shared.savePreferences(for: game) }
         case "filter": favoritesOnly.toggle(); selection = 0; details = false

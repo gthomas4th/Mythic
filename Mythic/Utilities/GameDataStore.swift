@@ -116,11 +116,13 @@ import OSLog
                 try data.write(to: backup, options: .atomic)
             }
             let existing = Set(try catalog?.records().map { $0.id.description } ?? [])
-            for game in library where !existing.contains(identity(for: game)) {
+            for game in library {
                 let record = GameRecord(id: .init(provider: game.storefront == .epicGames ? .epic : .local, externalID: game.id),
                     title: game.title, launchTargets: [], artwork: game.verticalImageURL)
                 try catalog?.upsert([record])
-                try catalog?.setPreference(.init(favorite: game.isFavourited, lastPlayed: game.lastLaunched), for: identity(for: game))
+                if !existing.contains(identity(for: game)) {
+                    try catalog?.setPreference(.init(favorite: game.isFavourited, lastPlayed: game.lastLaunched), for: identity(for: game))
+                }
             }
         } catch { persistenceError = "The existing library could not be imported. Its original data is preserved." }
     }
