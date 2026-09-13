@@ -1,4 +1,7 @@
-# Game Hub discovery and acceptance status
+# Game Hub initial discovery report
+
+Historical baseline. See [current delivery status](project-status.md) for later
+Windows Steam, profiles, ROM, remote and controller implementation.
 
 Status: Debug builds and runs; native Steam integration is implemented. Real game
 launch validation is pending because the configured Steam libraries are empty.

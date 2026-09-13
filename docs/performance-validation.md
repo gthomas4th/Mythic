@@ -62,3 +62,11 @@ D3DMetal loading and owner-driven gameplay are now verified. The owner reports p
 but steady frame rate; an unlabelled 60-second HUD window averaged 34.56 FPS.
 Performance acceptance remains open. A 720p comparison is prepared, not yet measured;
 see the free-runtime notes for the current evidence.
+
+## Owner acceptance supersedes earlier tuning interpretation
+
+The owner clarified that the game's displayed resolution remains 1080p and roughly
+40 FPS is acceptable. Preserve this configuration; further local performance tuning
+was not requested. See [current project status](project-status.md) for the persisted
+profile and remaining live acceptance gates. The roughly 78 FPS follow-up sample
+cannot establish improvement because scene and resolution were not controlled.

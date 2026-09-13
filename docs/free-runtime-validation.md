@@ -93,3 +93,11 @@ resolution can be compared while retaining the same renderer and default sync mo
 generated GameUserSettings.ini contains only a newline; do not pretend it exposes
 the game's current quality settings or modify binary save data to tune graphics.
 Save and exit the game normally before testing the other launch request.
+
+## Integrated delivery
+
+The owner accepts approximately 40 FPS at the game's displayed 1080p. The ineffective
+720p comparison is not the accepted profile. The production library bridge now uses
+the selected JSON profile and local bookmarked/hash-pinned runtime binding. The test
+host remains an ignored development artifact, not the primary launcher. See
+[project status](project-status.md) for precise implementation and live-test limits.

@@ -1,18 +1,18 @@
 # Game Hub engineering checkout
 
-A native macOS game hub built on Mythic, retaining GPL-3.0 and upstream notices.
-Work continues on `feat/steam-native`; no rebrand or large UI rewrite is underway.
+Native macOS game hub based on Mythic, retaining GPL-3.0 and upstream notices.
+Authoritative source: this checkout, branch `feat/steam-native` on the owner's fork.
+See [current delivery and acceptance status](docs/project-status.md).
 
-The Debug app builds and opens successfully. Installed native Steam discovery and
-launch integration are implemented. The local Steam libraries currently contain no
-installed manifests, so a real game launch remains pending an installed Mac title.
-Native-only onboarding avoids requiring Windows components for Steam discovery.
-Verified engine installation and Wine registry readback are implemented; the current
-core suite has 41 passing tests. Windows Steam setup is in progress; an [isolated free Wine candidate](docs/free-runtime-validation.md)
-has initialized Steam's UI after the bundled runtime failed.
-Library → Steam Deck imports a copied shortcut list and keeps unavailable references
-visible offline. See the [transfer guide](docs/steam-deck-transfer-guide.md) and
-[hardware tuning requirements](docs/performance-validation.md).
+Implemented: native and Windows Steam discovery in the existing library, pinned
+Windows launch profiles, SQLite catalog/preferences, profile import/export/clone/
+rollback/selection, safe Deck references, ROM indexing and emulator adapters,
+Moonlight launch/connection controls, official Xbox Cloud entry, controller library,
+and sanitized diagnostic export. Epic and local launchers retain their existing APIs.
+
+Rebirth is installed and the owner accepts its 1080p gameplay at approximately
+40 FPS on this M3 Pro. The accepted free runtime is preserved; a 720p test override
+was ineffective and is not the accepted profile. No paid runtime is required.
 
 ```sh
 export DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
@@ -21,11 +21,12 @@ xcrun swift test --package-path Packages/GameHubCore
 python3 scripts/verify-debug-build.py --package-cache <existing-SourcePackages-directory>
 ```
 
-Build logs stay in ignored `.build-local`. Debug Firebase initialization and symbol
-upload are disabled; Release behavior still needs review before distribution.
+54 core tests pass. The full Debug build passes; lint has no errors and nine
+inherited warnings. Generated apps, private runtime bindings, logs, account data and
+save backups are excluded from Git. Runtime bindings and profiles are stored under
+Application Support/GameHub on this Mac. Debug telemetry remains disabled.
 
-See [discovery and acceptance status](docs/discovery-report.md),
-[upstream baseline](docs/upstream-baseline.md), and
-[Steam Deck ROM plan](docs/steam-deck-rom-shortcuts.md).
-The [original handoff](docs/game-hub-vscode-engineering-handoff.md) is retained as
-project reference; owner decisions and current acceptance evidence take precedence.
+This is a local Debug delivery, not a notarized public release. Live Yoda streaming,
+ROM/emulator/BIOS validation, native Steam tile launch and full controller acceptance
+still require the corresponding host/content/hardware and UI access. These checks
+are explicitly open, not replaced by synthetic tests.
