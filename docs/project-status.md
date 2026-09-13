@@ -8,7 +8,7 @@ into passes.
 ## Installed candidate
 
 Authoritative local app: `~/Applications/Game Hub.app`.
-Built from source revision `4fb7b4d211274ea46a4abe2b402e22d36451a867` on
+Built from source revision `d29fc8d3b5512099000d1abe8b56882315b9f45d` on
 `feat/steam-native`. Xcode performed the local ad-hoc signing; the installed copy
 passes `codesign --verify --deep --strict`. This is not a notarized public release.
 The original app and runtime are preserved. Development builds and the test host
@@ -46,16 +46,16 @@ are not the user entry point. Do not remove recovery copies before final live ac
 | Xbox | Official Xbox Cloud library link; no purchase or Wine-based Microsoft Store promise |
 | Controller | Optional library with directional navigation, details/Play, favorite/filter and target switching; controller hardware check still open |
 | Diagnostics | Correlation IDs and bounded in-session events; export excludes raw runtime logs, bookmarks, credentials, filesystem paths and network addresses |
-| Build | Full Debug build; 58 synthetic tests pass; SwiftLint zero errors, nine inherited warnings |
+| Build | Full Debug build; 59 synthetic tests pass; SwiftLint zero errors, nine inherited warnings |
 
 ## External/live gates still open
 
-1. **Yoda:** discovered and paired in Moonlight; Desktop and Steam entries are visible.
-   A 1080p60-target H.264 SDR stream used Mac hardware decoding, but disconnected
-   after about 88 seconds with error -1. The retry failed on UDP control port 47999
-   with error 35. This is not a ten-minute LAN pass. Host-side diagnosis is pending;
-   no router forwarding or firewall change was made. See `remote-lan-validation.md`.
-   External direct-tunnel measurement and per-game remote mapping remain open.
+1. **Yoda:** paired, with Desktop and Steam applications visible. After an initial
+   disconnect and control-channel retry failure, a Desktop stream recovered and
+   displayed Rebirth gameplay at approximately 60 FPS. The owner accepted gameplay
+   and controller support. See `remote-lan-validation.md` for measured samples.
+   Formal ten-minute stability, a direct Rebirth tile, and external direct-tunnel
+   measurement remain open. No router/firewall policy was changed for this test.
 2. **UI — access restored:** on 2026-09-13 the installed app opened successfully.
    Rebirth's library tile and accepted-profile badge were observed, and Settings →
    Updates displayed the approved manual app/security-update policy. The prior

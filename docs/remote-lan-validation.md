@@ -31,3 +31,23 @@ and an external direct Tailscale path remain unverified. No firewall, router,
 credentials or pairing records were modified during this test.
 
 Raw client logs remain local; private addresses and account details are excluded here.
+
+## Recovery and owner acceptance
+
+A subsequent Desktop connection succeeded without changing firewall/router policy.
+Rebirth was launched from Yoda's installed Steam copy after its cloud status showed
+up to date. Gameplay was visibly rendered at approximately 60 FPS, and the owner
+reported that it worked well and the controller was supported.
+
+The resumed Desktop session ended with a normal quit event. Its aggregate included
+idle desktop, Steam startup and gameplay, so its 39.27 incoming / 39.21 rendered FPS
+is not a gameplay benchmark. Summary: 4 ms network latency (variance 0 ms),
+0.00% network drops, 0.10% jitter drops, 3.04 ms decode, 1.34 ms render, and
+2.50 ms average host processing. The session did not establish a ten-minute test.
+
+Game Hub's own TCP reachability retest succeeded at 18 ms. Mac Local Network
+permission for Game Hub was already on. No permission change was needed for that
+check. The earlier transient disconnect remains recorded; its root cause is unknown.
+
+The owner prefers direct game launch over entering Desktop. A dedicated Sunshine
+Rebirth entry and matching Game Hub target remain to be configured and verified.
