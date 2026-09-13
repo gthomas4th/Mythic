@@ -111,7 +111,12 @@ exiting normally and relaunching through Game Hub with the controller connected,
 the owner confirmed that input worked. The accepted 1080p runtime profile was unchanged.
 
 Connecting before launch is the verified workaround, not the desired final behavior.
-First connection during gameplay remains unresolved. Disconnect/reconnect within a
-session that started with a controller is a separate pending test. Steam Input is a
-candidate for investigation, not a verified fix; no input overrides or driver changes
-have been applied. Physical controller navigation through the hub is also still pending.
+First connection during gameplay remains unresolved. The owner subsequently confirmed
+one successful disconnect/reconnect, then a failure on a second cycle after clicking
+the game with the mouse. Pressing controller buttons again did not recover input.
+This is a correlation, not proof that mouse input causes the failure. Steam logged
+both reconnects and selected Rebirth bindings; these loaded controller_base/empty.vdf
+and reported no XInput mapping. Enabling Steam Input for Rebirth alone is the next
+candidate test, not a verified fix. The desktop tool cannot access the Windows Steam
+Wine window, so its per-game setting requires a manual UI change. No input overrides
+or driver changes have been applied. Physical controller navigation through the hub is also still pending.
