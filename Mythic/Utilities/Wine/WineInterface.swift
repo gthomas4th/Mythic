@@ -305,17 +305,11 @@ final class Wine { // TODO: https://forum.winehq.org/viewtopic.php?t=15416
 
         try process.checkTerminationStatus()
 
-        // Gather non-empty, trimmed lines; return the last occurrence
-        let lines = commandResult.standardOutput?
-            .split(separator: "\n", omittingEmptySubsequences: true)
-            .map { String($0).trimmingCharacters(in: .whitespacesAndNewlines) }
-            .filter { !$0.isEmpty }
-
-        if let last = lines?.last {
-            return last
-        } else {
+        guard let output = commandResult.standardOutput,
+              let value = WineRegistryValue.parse(output, name: name, type: type.rawValue) else {
             throw UnableToQueryRegistryError()
         }
+        return value
     }
 
     static func toggleRetinaMode(containerURL: URL, toggle: Bool) async throws {

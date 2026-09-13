@@ -10,9 +10,9 @@ launch validation is pending because the configured Steam libraries are empty.
 | Installed clients | Steam, Steam Link, Tailscale |
 | Steam discovery | 0 installed manifests, 0 native records, 0 diagnostics |
 | Other clients | Moonlight, RetroArch, PCSX2 and RPCS3 not found in standard locations |
-| Tests | 34 synthetic XCTest tests pass |
+| Tests | 41 synthetic XCTest tests pass |
 | Debug | Full build passes; Firebase upload skipped; native-only onboarding, library and Deck import screen verified |
-| Data | No game installs, moves, deletions, logins or legacy catalog migration |
+| Runtime | Verified engine 2.6.1+0 installed; new Steam container initialized; storefront setup pending |
 
 ## Implemented boundaries
 
@@ -39,7 +39,7 @@ git diff --check
 
 Tests use temporary synthetic fixtures, no network or live library writes. The same
 core source files compile into the app. Tests cover VDF, manifest/native evidence,
-identity and actor-bound work/metadata. They do not replace live storefront validation.
+identity, Deck shortcuts, actor-bound work/metadata, engine hashes and registry values. They do not replace live storefront validation.
 
 ## Remaining acceptance
 

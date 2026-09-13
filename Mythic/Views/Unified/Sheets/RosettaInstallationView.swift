@@ -48,6 +48,12 @@ struct RosettaInstallationView: View { // similar to EngineInstallationView
                     .disabled(!agreedToSLA)
             }
         }
+        .task {
+            if Rosetta.exists {
+                installationComplete = true
+                isPresented = false
+            }
+        }
     }
 }
 

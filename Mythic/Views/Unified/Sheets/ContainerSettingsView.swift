@@ -31,19 +31,36 @@ struct ContainerSettingsView: View {
 
     private func fetchRetinaModeStatus() async {
         guard let selectedContainerURL else { return }
-        
+        modifyingRetinaMode = true
+        defer { modifyingRetinaMode = false }
         do {
-            let fetchedRetinaMode = try await Wine.getRetinaMode(containerURL: selectedContainerURL)
-            
-            await MainActor.run(body: { retinaMode = fetchedRetinaMode })
-            // intentionally separated, to prevent both variable updates from occuring during the same render cycle
-            await MainActor.run {
-                withAnimation {
-                    modifyingRetinaMode = false
-                }
-            }
+            let value = try await Wine.getRetinaMode(containerURL: selectedContainerURL)
+            try Task.checkCancellation()
+            guard self.selectedContainerURL == selectedContainerURL else { return }
+            retinaMode = value
+        } catch is CancellationError {
+            return
         } catch {
             retinaModeSuccess = false
+        }
+    }
+
+    private func setRetinaMode(_ value: Bool, container: Wine.Container) {
+        let previous = retinaMode
+        retinaMode = value
+        modifyingRetinaMode = true
+        retinaModeSuccess = nil
+        Task {
+            defer { modifyingRetinaMode = false }
+            do {
+                try await Wine.toggleRetinaMode(containerURL: container.url, toggle: value)
+                container.settings.retinaMode = value
+                container.settings.scaling = value ? 192 : 96
+                retinaModeSuccess = true
+            } catch {
+                retinaMode = previous
+                retinaModeSuccess = false
+            }
         }
     }
 
@@ -93,22 +110,15 @@ struct ContainerSettingsView: View {
                 ))
                 .disabled(variables.getVariable("booting") == true)
 
-                Toggle("Retina Mode", isOn: $retinaMode)
-                    .disabled(variables.getVariable("booting") == true)
-                    .task(priority: .high) {
-                        // asynchronously fetch retina mode status upon view presentation
-                        await fetchRetinaModeStatus()
-                    }
-                    .withOperationStatus(
-                        operating: $modifyingRetinaMode,
-                        successful: $retinaModeSuccess,
-                        observing: $retinaMode,
-                        placement: .leading
-                    ) {
-                        try? await Wine.toggleRetinaMode(containerURL: container.url, toggle: retinaMode)
-                        container.settings.retinaMode = retinaMode
-                        retinaModeSuccess = true
-                    }
+                Toggle("Retina Mode", isOn: Binding(
+                    get: { retinaMode },
+                    set: { setRetinaMode($0, container: container) }
+                ))
+                .disabled(modifyingRetinaMode || variables.getVariable("booting") == true)
+                .task(id: selectedContainerURL) { await fetchRetinaModeStatus() }
+                .modifier(OperationStatusViewModifier(operating: $modifyingRetinaMode,
+                                                      successful: $retinaModeSuccess,
+                                                      autoReset: true, placement: .leading))
 
                 Toggle("Enhanced Sync (MSync)", isOn: Binding(
                     get: { container.settings.msync },

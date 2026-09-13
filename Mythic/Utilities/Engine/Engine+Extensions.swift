@@ -11,12 +11,12 @@ import Foundation
 import SemanticVersion
 
 extension Engine {
-    enum InstallStage {
+    enum InstallStage: Sendable {
         case downloading
         case installing
     }
 
-    struct InstallProgress {
+    struct InstallProgress: Sendable {
         var stage: InstallStage
         var progress: Progress
     }
@@ -40,6 +40,7 @@ import SwiftUI
 
 extension Engine {
     struct NotInstalledView: View {
+        var onInstallationComplete: () -> Void = {}
         @State private var isInstallationViewPresented: Bool = false
 
         @State private var installationError: Error?
@@ -67,6 +68,9 @@ extension Engine {
                     installationComplete: $installationComplete
                 )
                 .padding()
+            }
+            .onChange(of: installationComplete) { _, complete in
+                if complete { onInstallationComplete() }
             }
         }
     }

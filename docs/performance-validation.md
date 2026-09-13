@@ -20,7 +20,7 @@ settings. Current machine: MacBook Pro Mac15,6, Apple M3 Pro, 11 CPU / 14 GPU co
 - Native and emulator profiles are per game/system. Demanding local Wine candidates
   also get a Remote PC target when configured; remote availability is measured.
 
-## Pin and rollback contract
+## Required pin and rollback contract (not yet implemented)
 
 A verified profile records the exact engine version and artifact SHA-256, renderer,
 settings and hardware/OS. Testing an upgrade creates a separate candidate and retains
@@ -28,18 +28,24 @@ the previous working engine/profile. App updates cannot silently replace a pinne
 runtime. Saves remain outside profile rollback.
 
 An untested or menu-only result stays unverified. A useful gameplay window and repeat
-launch are required before marking a profile playable. FFVII Remake precedes Rebirth;
-FFXV remains excluded. Store identities remain tied to the owner's actual purchases.
+launch are required before marking a profile playable. The owner selected FFVII Rebirth
+on Steam as the first Windows target, overriding the handoff sequence. FFXV remains
+excluded. Store identities remain tied to the owner's actual purchases.
 
 ## Current evidence and remaining work
 
-Native Steam and the Deck reference importer compile and run. No game payload is
-installed locally yet, and the Windows engine has not been installed. Therefore no
-local gameplay benchmark, tuned runtime profile, or Final Fantasy compatibility result
-is claimed. The upstream Wine settings expose msync, Retina mode, DXVK and AVX flags;
-these are options to test, not blanket performance guarantees.
+Native Steam and the Deck reference importer compile and run. The verified installer
+installed stable engine 2.6.1+0 (catalog 2.6.1); wine64 reports wine-7.7 and D3DMetal
+is present. The new Steam container uses Windows 11, MSync and AVX2, with DXVK off.
+Retina mode was explicitly disabled through the corrected settings UI and reported
+success. This is an initial shared-container baseline, not a benchmarked per-game profile.
 
-The official engine catalog offers stable 2.6.1 with a checksum; preview 3.0.0 lacks a
-checksum entry. The upstream installer currently ignores checksums. Verified artifact
-installation and per-game profile persistence must precede Windows tuning. Interactive
-license acceptance, storefront login and game selection remain user-facing steps.
+The official Steam installer was launched through the app. Storefront setup/login
+and the game download remain pending. No Rebirth gameplay, compatibility result,
+or measured FPS is claimed. Storage cleanup left over 300 GB available before setup.
+
+The installer now verifies the publisher's SHA-256 over HTTPS before extraction,
+validates the staged engine, and records its exact version and digest. Preview 3.0.0
+has no checksum entry and is rejected. Existing engine folders are preserved by
+installation. The inherited explicit remove/update flow is not yet the required
+side-by-side upgrade and rollback implementation; do not use it for a pinned profile.

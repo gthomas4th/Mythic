@@ -37,14 +37,6 @@ final class Engine {
     static let directory = Bundle.appHome!.appending(path: "Engine")
     static let wineExecutableURL = directory.appending(path: "wine/bin/wine64")
     
-    // TODO: use checksum to verify?
-    // sum generated using `shasum` of the actual tarfile
-    // shasum -a Engine-2.6.0.tar.xz | awk '{print $1}' > Engine-2.6.0.tar.xz.sha256
-    // from now on, you must create 'directory' manually
-    // tar -cJf Engine.tar.xz -C Engine . (archive w/o folder)
-    
-    // TODO: + add sum URL to test updatestream
-    
     static var isInstalled: Bool {
         return FileManager.default.fileExists(atPath: directory.appending(path: "Properties.plist").path)
     }
@@ -109,82 +101,103 @@ final class Engine {
     
     static func install() -> AsyncThrowingStream<InstallProgress, Error> {
         AsyncThrowingStream { continuation in
-            Task(priority: .high) {
+            let task = Task(priority: .utility) {
                 do {
-                    guard !isInstalled else { continuation.finish(); return } // silent exit
+                    guard !isInstalled else { continuation.finish(); return }
+                    guard !FileManager.default.fileExists(atPath: directory.path) else {
+                        throw EngineArtifactVerifier.VerificationError.existingDirectory
+                    }
                     let release = try await getLatestCompatibleRelease()
-                    
-                    let task = URLSession.shared.downloadTask(with: URL(string: release.downloadURL)!) { file, response, error in
-                        guard error == nil else { continuation.finish(throwing: error!); return }
-                        if let httpResponse = response as? HTTPURLResponse,
-                           !(200...299).contains(httpResponse.statusCode) {
-                            continuation.finish(throwing: URLError(.badServerResponse)); return
-                        }
-                        guard let file else {
-                            continuation.finish(throwing: CocoaError(.fileNoSuchFile)); return
-                        }
-                        
-                        Task(priority: .userInitiated) {
-                            let installationProgress: Progress = .init(totalUnitCount: 100)
-                            
-                            do {
-                                // check for remnant/empty engine folder
-                                if (try? FileManager.default.contentsOfDirectory(atPath: directory.path))?.isEmpty == false {
-                                    try FileManager.default.removeItem(at: directory)
-                                }
-                                // create engine directory if necessary
-                                if !FileManager.default.fileExists(atPath: directory.path) {
-                                    try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-                                }
-                                
-                                continuation.yield(.init(stage: .installing, progress: installationProgress))
-                                
-                                let process: Process = .init()
-                                process.executableURL = .init(filePath: "/usr/bin/tar")
-                                process.arguments = ["-xJf", file.path, "-C", directory.path]
-                                
-                                let tarResult = try await process.runWrapped()
-                                
-                                // `man tar` (bsdtar) — The tar utility exits 0 on success, and >0 if an error occurs.
-                                
-                                guard process.terminationStatus == 0 else {
-                                    log.error("""
-                                        Engine installation unsuccessful, Tar exited with a nonzero termination status.
-                                        Output (stderr): \(tarResult.standardError ?? "N/A")
-                                        """)
-                                    
-                                    // filewriteunknown is more suitable than Process.NonZeroTerminationStatus.
-                                    continuation.finish(throwing: CocoaError(.fileWriteUnknown)); return
-                                }
-                                
-                                installationProgress.completedUnitCount = 100
-                                continuation.yield(.init(stage: .installing, progress: installationProgress))
-                                
-                                continuation.finish()
-                            } catch {
-                                try? FileManager.default.removeItem(atPath: file.path)
-                                continuation.finish(throwing: error)
-                            }
+                    let artifactURL = try EngineArtifactVerifier.secureURL(release.downloadURL)
+                    guard let checksumLocation = release.checksumURL else {
+                        throw EngineArtifactVerifier.VerificationError.missingChecksum
+                    }
+                    let checksumURL = try EngineArtifactVerifier.secureURL(checksumLocation)
+                    let delegate = EngineDownloadDelegate { completed, total in
+                        let progress = Progress(totalUnitCount: max(total, 1))
+                        progress.completedUnitCount = total > 0 ? completed : 0
+                        continuation.yield(.init(stage: .downloading, progress: progress))
+                    }
+                    let session = URLSession(configuration: .ephemeral, delegate: delegate, delegateQueue: nil)
+                    defer { session.invalidateAndCancel() }
+                    let (bytes, checksumResponse) = try await session.bytes(from: checksumURL)
+                    try validateArtifactResponse(checksumResponse)
+                    var checksumData = Data()
+                    for try await byte in bytes {
+                        checksumData.append(byte)
+                        guard checksumData.count <= 4096 else {
+                            throw EngineArtifactVerifier.VerificationError.invalidChecksum
                         }
                     }
-                    
-                    Task(priority: .utility) {
-                        while case .running = task.state {
-                            continuation.yield(InstallProgress(stage: .downloading, progress: task.progress))
-                            try? await Task.sleep(for: .milliseconds(100))
-                        }
-                        // finally yield upon completion
-                        continuation.yield(InstallProgress(stage: .downloading, progress: task.progress))
+                    let expectedHash = try EngineArtifactVerifier.checksum(checksumData)
+                    continuation.yield(.init(stage: .downloading, progress: Progress(totalUnitCount: 1)))
+                    let (file, response) = try await session.download(from: artifactURL)
+                    defer { try? FileManager.default.removeItem(at: file) }
+                    try validateArtifactResponse(response)
+                    try Task.checkCancellation()
+                    try EngineArtifactVerifier.verify(file: file, expectedSHA256: expectedHash)
+                    try Task.checkCancellation()
+
+                    // Extract into our own staging folder. An existing runtime is never removed.
+                    let staging = directory.deletingLastPathComponent()
+                        .appendingPathComponent("Engine.installing-\(UUID().uuidString)", isDirectory: true)
+                    try FileManager.default.createDirectory(at: staging, withIntermediateDirectories: false)
+                    defer { try? FileManager.default.removeItem(at: staging) }
+                    continuation.yield(.init(stage: .installing, progress: Progress(totalUnitCount: 100)))
+                    let process = Process()
+                    process.executableURL = URL(filePath: "/usr/bin/tar")
+                    process.arguments = ["-xJf", file.path, "-C", staging.path]
+                    _ = try await process.runWrapped()
+                    try Task.checkCancellation()
+                    guard process.terminationStatus == 0,
+                          FileManager.default.isExecutableFile(atPath: staging.appendingPathComponent("wine/bin/wine64").path) else {
+                        throw EngineArtifactVerifier.VerificationError.incompleteEngine
                     }
-                    
-                    task.resume()
+                    let decoder = PropertyListDecoder()
+                    decoder.semanticVersionDecodingStrategy = .defaultCodable
+                    let properties = try decoder.decode(EngineProperties.self,
+                        from: Data(contentsOf: staging.appendingPathComponent("Properties.plist")))
+                    // Catalog versions omit build metadata (2.6.1); the archive may include it (2.6.1+0).
+                    guard properties.version.major == release.version.major,
+                          properties.version.minor == release.version.minor,
+                          properties.version.patch == release.version.patch,
+                          properties.version.preRelease == release.version.preRelease,
+                          release.version.build.isEmpty || properties.version.build == release.version.build else {
+                        throw EngineArtifactVerifier.VerificationError.incompleteEngine
+                    }
+                    let receipt = ["schemaVersion": "1", "engineVersion": receiptVersion(properties.version),
+                                   "catalogVersion": receiptVersion(release.version),
+                                   "sha256": expectedHash, "upstreamCommit": release.commitSHA]
+                    let receiptData = try JSONEncoder().encode(receipt)
+                    try receiptData.write(to: staging.appendingPathComponent("GameHubInstallReceipt.json"), options: .atomic)
+                    try Task.checkCancellation()
+                    // moveItem refuses an existing destination, including one created during download.
+                    try FileManager.default.moveItem(at: staging, to: directory)
+                    let completed = Progress(totalUnitCount: 100)
+                    completed.completedUnitCount = 100
+                    continuation.yield(.init(stage: .installing, progress: completed))
+                    continuation.finish()
                 } catch {
                     continuation.finish(throwing: error)
                 }
             }
+            continuation.onTermination = { _ in task.cancel() }
         }
     }
-    
+
+    private static func receiptVersion(_ version: SemanticVersion) -> String {
+        EngineArtifactVerifier.versionString(major: version.major, minor: version.minor, patch: version.patch,
+                                             preRelease: version.preRelease, build: version.build)
+    }
+
+    private static func validateArtifactResponse(_ response: URLResponse) throws {
+        guard let response = response as? HTTPURLResponse,
+              (200...299).contains(response.statusCode), let url = response.url,
+              url.scheme == "https", (try? EngineArtifactVerifier.secureURL(url.absoluteString)) == url else {
+            throw EngineArtifactVerifier.VerificationError.invalidSource
+        }
+    }
+
     static func remove() async throws {
         if FileManager.default.fileExists(atPath: directory.path) {
             try FileManager.default.removeItem(at: directory)
@@ -271,4 +284,29 @@ extension Engine {
             await errorAlert.beginSheetModal(for: window)
         }
     }
+}
+
+/// Restrict redirects as well as initial requests to the official HTTPS engine source.
+private final class EngineDownloadDelegate: NSObject, URLSessionDownloadDelegate {
+    let progress: @Sendable (Int64, Int64) -> Void
+    init(progress: @escaping @Sendable (Int64, Int64) -> Void) { self.progress = progress }
+
+    func urlSession(_ session: URLSession, task: URLSessionTask,
+                    willPerformHTTPRedirection response: HTTPURLResponse, newRequest request: URLRequest,
+                    completionHandler: @escaping (URLRequest?) -> Void) {
+        guard let url = request.url, url.scheme == "https",
+              (try? EngineArtifactVerifier.secureURL(url.absoluteString)) == url else {
+            completionHandler(nil)
+            return
+        }
+        completionHandler(request)
+    }
+
+    func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask,
+                    didWriteData bytesWritten: Int64, totalBytesWritten: Int64, totalBytesExpectedToWrite: Int64) {
+        progress(totalBytesWritten, totalBytesExpectedToWrite)
+    }
+
+    func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask,
+                    didFinishDownloadingTo location: URL) {}
 }

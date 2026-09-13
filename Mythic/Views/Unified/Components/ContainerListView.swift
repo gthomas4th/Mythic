@@ -12,14 +12,16 @@ import OSLog
 import SwordRPC
 
 struct ContainerListView: View {
+    @State private var engineReady = Engine.isInstalled
+    @StateObject private var containers = CodableUserDefaultsObserver<[URL]>(key: "containerURLs", defaultValue: [])
     @State private var isContainerConfigurationViewPresented = false
     @State private var isDeletionAlertPresented = false
     
     @State private var isContainerCreationViewPresented = false
     
     var body: some View {
-        if Engine.isInstalled {
-            ForEach(Wine.containerObjects) { container in
+        if engineReady && !containers.value.isEmpty {
+            ForEach(containers.value.compactMap { try? Wine.getContainerObject(at: $0) }) { container in
                 HStack {
                     Text(container.name)
 
@@ -74,7 +76,7 @@ struct ContainerListView: View {
                     }
                 }
             }
-        } else if Wine.containerURLs.isEmpty {
+        } else if engineReady {
             ContentUnavailableView(
                 "No containers are initialised. 😢",
                 systemImage: "cube.transparent",
@@ -95,7 +97,7 @@ struct ContainerListView: View {
                 ContainerCreationView(isPresented: $isContainerCreationViewPresented)
             }
         } else {
-            Engine.NotInstalledView()
+            Engine.NotInstalledView(onInstallationComplete: { engineReady = true })
                 .frame(maxWidth: .infinity, alignment: .center)
         }
     }
@@ -539,9 +541,8 @@ struct ContainerConfigurationView: View {
                                     process.arguments = [url.path]
                                     Wine.transformProcess(process, containerURL: container.url)
                                     
+                                    // Opening an installer must not block the main actor until it closes.
                                     try process.run()
-                                    
-                                    process.waitUntilExit()
                                 } catch {
                                     openError = error
                                     isOpenAlertPresented = true

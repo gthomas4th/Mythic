@@ -41,6 +41,7 @@ struct EngineInstallationView: View { // similar to RosettaInstallationView
                     )
                 case .finished:
                     CompletionView(isPresented: $isPresented, viewModel: viewModel)
+                        .onAppear { installationComplete = true }
                 }
             }
             
