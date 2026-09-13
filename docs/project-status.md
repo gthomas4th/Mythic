@@ -8,7 +8,7 @@ into passes.
 ## Installed candidate
 
 Authoritative local app: `~/Applications/Game Hub.app`.
-Built from source revision `d29fc8d3b5512099000d1abe8b56882315b9f45d` on
+Built from source revision `11e3cfa8133a0e65e499d3355cdccb3d65a3c953` on
 `feat/steam-native`. Xcode performed the local ad-hoc signing; the installed copy
 passes `codesign --verify --deep --strict`. This is not a notarized public release.
 The original app and runtime are preserved. Development builds and the test host
@@ -36,17 +36,22 @@ are not the user entry point. Do not remove recovery copies before final live ac
 | Area | Evidence |
 |---|---|
 | Windows Steam library | Live read-only discovery finds `steam:2909400`; app-created SQLite catalog contains it |
-| Launch integration | Main library Play resolves native/Windows targets and uses official Steam `-applaunch`; final on-screen tile test still open |
+| Launch integration | Main library Play resolves native/Windows targets and uses official Steam `-applaunch`; Home PC tile-to-game verified; local Wine tile verification still open |
 | Catalog | SQLite schema version 2, deterministic provider identities, target merge/resolver, favorite/recent/preference persistence; reopening covered by tests |
 | Legacy data | Epic/local records now persist in SQLite after a one-way import; original defaults and schema-1 backup are retained; existing launch/install APIs remain intact |
 | Profiles | Validation, export/import, clone, selection and revision rollback; original profile remains available |
 | Deck | Device-scoped shortcut references remain offline-readable; imported commands are never executed |
 | ROMs | Folder/application/core bookmarks, incremental content hashes, cue/m3u grouping, missing-part/traversal/cycle checks; no user ROMs available yet |
-| Remote | Home PC form, five-second streaming-port check, documented Moonlight 1080p60/20 Mb/s invocation; successful TCP connection is not labelled good streaming |
+| Remote | Home PC form, automatic startup and prelaunch checks, five-second timeout, direct Rebirth tile; Moonlight 1080p60/20 Mb/s/HDR off; TCP reachability is not labelled stream quality |
 | Xbox | Official Xbox Cloud library link; no purchase or Wine-based Microsoft Store promise |
 | Controller | Optional library with directional navigation, details/Play, favorite/filter and target switching; controller hardware check still open |
 | Diagnostics | Correlation IDs and bounded in-session events; export excludes raw runtime logs, bookmarks, credentials, filesystem paths and network addresses |
 | Build | Full Debug build; 59 synthetic tests pass; SwiftLint zero errors, nine inherited warnings |
+
+The latest small Home-screen changes use available portrait artwork when a banner is
+missing and persist release-note dismissal. Build/signing/lint passed; their final
+visual check is pending because Computer Use began returning `cgWindowNotFound`
+for both Game Hub and Finder. The installed app process remains running.
 
 ## External/live gates still open
 
@@ -54,13 +59,14 @@ are not the user entry point. Do not remove recovery copies before final live ac
    disconnect and control-channel retry failure, a Desktop stream recovered and
    displayed Rebirth gameplay at approximately 60 FPS. The owner accepted gameplay
    and controller support. See `remote-lan-validation.md` for measured samples.
-   Formal ten-minute stability, a direct Rebirth tile, and external direct-tunnel
-   measurement remain open. No router/firewall policy was changed for this test.
+   Direct Rebirth launch and automatic selection of the game display are verified.
+   Formal ten-minute active-gameplay stability and external direct-tunnel
+   measurement remain open. Restricted SSH administration was separately approved.
 2. **UI — access restored:** on 2026-09-13 the installed app opened successfully.
    Rebirth's library tile and accepted-profile badge were observed, and Settings →
    Updates displayed the approved manual app/security-update policy. The prior
-   `cgWindowNotFound` capture failure is no longer blocking this check. A full
-   tile-to-game launch and controller hardware acceptance remain open.
+   `cgWindowNotFound` capture failure is no longer blocking this check. Remote tile-to-game launch passed. Local tile-to-game launch and hub controller
+   browsing acceptance remain open.
 3. **Content:** no installed native Mac Steam title, copied Deck inventory, central
    ROMs or configured BIOS/firmware were supplied. Emulator launch/graphics tuning
    can only be validated after content and an installed emulator are selected.
