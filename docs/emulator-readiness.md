@@ -32,8 +32,13 @@ The live test exposed and corrected the CLI graphics system name: `Graphics`,
 not the `GFX.ini` filename. The corrected launch showed Metal, 1920×1584
 internal resolution (3×), about 59.96 FPS and 100% speed at the initial memory-card
 prompt. This is a boot/rendering check, not a gameplay benchmark. Automated
-keyboard events did not advance the prompt; physical input and gameplay remain
-open acceptance checks. The full build and all 72 tests passed after the correction. Linux Deck emulator backups are preserved
+keyboard events did not advance the prompt. The Xbox One S controller was then
+configured with SDL button/axis bindings, preserving the prior configuration and
+Apex profile. The owner confirmed gameplay and disconnect/reconnect checks,
+including reconnect after mouse interaction, worked well. The owner clarified
+that the reported mild lag was network lag, not input lag; its connection has
+not yet been identified. Relaunch retained the controller mapping, but the game
+still requested save creation; save persistence remains unverified. The full build and all 72 tests passed after the correction. Linux Deck emulator backups are preserved
 as backups and are not presented as installed macOS applications.
 
 Sources: [official release download](https://dl.dolphin-emu.org/releases/2606a/dolphin-2606a-universal.dmg),
@@ -59,8 +64,8 @@ game performance or controller behavior.
 Both GameCube/Dolphin and PS2/PCSX2 source bookmarks are saved in Game Hub. Their
 real versions were displayed and the settings layout checked visually. Local
 working-copy folders are separate from the NAS master. No game is labelled
-playable until a real local copy has been indexed. No gamepad was connected during
-Dolphin's device check; physical controller mapping remains an acceptance task.
+playable until a real local copy has been indexed. Dolphin now has a saved Xbox
+One S mapping; the owner confirmed gameplay and both reconnect sequences.
 Dolphin's optional telemetry was declined and its FPS, speed and internal-resolution
 overlays enabled for live verification.
 
