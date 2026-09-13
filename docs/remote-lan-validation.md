@@ -90,4 +90,3 @@ receipts remain outside tracked source.
 References: [Sunshine application examples](https://github.com/LizardByte/Sunshine/blob/master/docs/app_examples.md),
 [Sunshine display configuration](https://docs.lizardbyte.dev/projects/sunshine/master/md_docs_2configuration.html),
 [Apple application launch configuration](https://developer.apple.com/documentation/appkit/nsworkspace/openconfiguration).
-
