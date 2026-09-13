@@ -48,7 +48,11 @@ With the free Wine 10 candidate, the copied prefix upgraded, Steam reported
 BrowserReady, established its UI websocket, and created a popup window. The previous
 webhelper restart loop did not recur during the initial observation.
 
-This is log evidence of successful Steam UI initialization. Owner-visible login,
-Steam Guard, game download and sustained Rebirth gameplay remain acceptance gates.
+The owner completed Windows Steam login; its connection log confirmed a successful
+logon. Rebirth (2909400) is downloading in the isolated container: Steam reports
+156.75 GB to download and 171.06 GB to stage. The native test host now also exposes
+Install Rebirth through Steam's installation URI; download state is independently
+verified from its manifest and content log. Sustained Rebirth gameplay remains an
+acceptance gate.
 No Rebirth compatibility or FPS claim is made. Production runtime selection,
 renderer integration and per-game pinning still require implementation after validation.

@@ -56,4 +56,5 @@ side-by-side upgrade and rollback implementation; do not use it for a pinned pro
 
 An isolated free Wine 10 candidate has passed the initial Steam UI startup failure
 seen above. See [free runtime validation](free-runtime-validation.md) for provenance,
-companion-library requirements and evidence. Login and gameplay remain unverified.
+companion-library requirements and evidence. Windows Steam login is verified and Rebirth is downloading in that test container.
+Renderer integration and gameplay remain unverified.

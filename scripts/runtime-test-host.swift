@@ -17,8 +17,9 @@ final class RuntimeTestHost: NSObject, NSApplicationDelegate {
         title.font = .boldSystemFont(ofSize: 19)
         let detail = NSTextField(wrappingLabelWithString: "This test uses a copied Steam container. The original Game Hub engine is preserved.")
         let start = NSButton(title: "Launch Windows Steam", target: self, action: #selector(startSteam))
+        let install = NSButton(title: "Install Rebirth", target: self, action: #selector(installRebirth))
         let stop = NSButton(title: "Stop Test Container", target: self, action: #selector(stopSteam))
-        let buttons = NSStackView(views: [start, stop])
+        let buttons = NSStackView(views: [start, install, stop])
         let stack = NSStackView(views: [title, detail, buttons, status])
         stack.orientation = .vertical
         stack.alignment = .leading
@@ -77,6 +78,17 @@ final class RuntimeTestHost: NSObject, NSApplicationDelegate {
             try process.run()
             launched = process
             status.stringValue = "Steam started. First launch may update the copied container."
+        } catch { status.stringValue = error.localizedDescription }
+    }
+
+    @objc private func installRebirth() {
+        do {
+            let prefix = try path("TestPrefix")
+            let executable = prefix.appendingPathComponent("drive_c/Program Files (x86)/Steam/steam.exe")
+            let request = try process(tool: "wine", arguments: [executable.path, "steam://install/2909400"])
+            request.currentDirectoryURL = executable.deletingLastPathComponent()
+            try request.run()
+            status.stringValue = "Rebirth installation requested in Windows Steam."
         } catch { status.stringValue = error.localizedDescription }
     }
 
