@@ -115,7 +115,7 @@ extension GameCard {
                         }
                     }
                     .disabled(networkMonitor.epicAccessibilityState != .accessible)
-                    .disabled(game.storefront == .local)
+                    .disabled(game.storefront == .local || !game.supportsFileManagement)
                     .disabled(operationManager.queue.contains(where: { $0.game == game && $0.type == .install }))
                     .help("Install \(game.description)")
 
@@ -165,7 +165,7 @@ extension GameCard {
                     }
                 }
                 .disabled(networkMonitor.epicAccessibilityState != .accessible)
-                .disabled(game.storefront == .local)
+                .disabled(game.storefront == .local || !game.supportsFileManagement)
                 .disabled(operationManager.queue.contains(where: { $0.game == game && $0.type == .repair }))
                 .alert("Unable to verify installation.",
                        isPresented: $isVerificationErrorAlertPresented,
@@ -296,6 +296,7 @@ extension GameCard {
                             .padding(2)
                     }
                 }
+                .disabled(!game.supportsFileManagement)
                 .disabled(operationManager.queue.contains(where: { $0.game == game && $0.type == .uninstall }))
                 // FIXME: .disabled(game.checkIfGameIsRunning())
                 .help("Delete \"\(game.title)\"")

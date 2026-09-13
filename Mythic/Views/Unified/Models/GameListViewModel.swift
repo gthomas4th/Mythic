@@ -35,7 +35,7 @@ import OSLog
     }
     
     var sortedLibrary: [Game] {
-        GameDataStore.shared.library
+        GameDataStore.shared.displayLibrary
             .sorted(by: { $0.title < $1.title })                            // primary sort — title
             .sorted(by: { $0.installationState > $1.installationState })    // secondary sort — installation state
             .sorted(by: { $0.isOperating && !$1.isOperating })              // tertiary sort — operating games

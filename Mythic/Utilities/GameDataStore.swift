@@ -53,10 +53,14 @@ import OSLog
     @ObservationIgnored
     private var cancellables: Set<AnyCancellable> = .init()
 
-    var recent: Game? {
-        guard !library.allSatisfy({ $0.lastLaunched == nil }) else { return nil }
+    private(set) var discoveredGames: Set<Game> = []
+    private(set) var discoveryDiagnostics: [String] = []
+    var displayLibrary: Set<Game> { library.union(discoveredGames) }
 
-        return library.max {
+    var recent: Game? {
+        guard !displayLibrary.allSatisfy({ $0.lastLaunched == nil }) else { return nil }
+
+        return displayLibrary.max {
             $0.lastLaunched ?? .distantPast < $1.lastLaunched ?? .distantPast
         }
     }
@@ -70,6 +74,27 @@ import OSLog
         // if variadics are empty, default to all cases
         let storefronts = storefronts.isEmpty ? Game.Storefront.allCases : storefronts as [Game.Storefront]
         
+        // Read-only discovery is separate from legacy persistence, and runs before Epic so
+        // an Epic login/network failure cannot hide installed Steam titles.
+        if storefronts.contains(.steam) {
+            let result = await Task.detached(priority: .utility) {
+                await SteamNativeProvider().discoverInstalled()
+            }.value
+            discoveryDiagnostics = result.diagnostics
+            var refreshed: Set<Game> = []
+            for record in result.records {
+                guard let target = record.launchTargets.first else { continue }
+                let game = SteamGame(record: record, target: target)
+                if let old = discoveredGames.first(where: { $0.id == game.id }) {
+                    game.isFavourited = old.isFavourited
+                    game.lastLaunched = old.lastLaunched
+                }
+                refreshed.insert(game)
+            }
+            discoveredGames = refreshed
+            for diagnostic in discoveryDiagnostics { log.notice("Steam discovery: \(diagnostic, privacy: .public)") }
+        }
+
         // legendary (epic games)
         if storefronts.contains(.epicGames) {
             do {

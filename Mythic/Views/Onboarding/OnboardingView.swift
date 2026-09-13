@@ -125,6 +125,16 @@ struct OnboardingView: View {
                     .frame(width: geometry.size.width * 0.75)
                     .padding(.horizontal)
 
+                    if viewModel.currentStage == .welcome {
+                        Button("Start with native Mac games") {
+                            viewModel.currentStage = .finished
+                        }
+                        .buttonStyle(.borderedProminent)
+                        Text("Windows game support can be set up later from Settings.")
+                            .font(.callout)
+                            .foregroundStyle(.secondary)
+                    }
+
                     if !(viewModel.currentStage == .rosetta || viewModel.currentStage == .engine || viewModel.currentStage == .defaultContainerSetup) {
                         // the if statement is a bit primitive, but functional.. the code at those stages are self-sufficient
                         HStack {

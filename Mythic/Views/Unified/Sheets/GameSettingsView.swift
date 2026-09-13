@@ -135,6 +135,8 @@ struct GameSettingsView: View {
                                 }
                             }
 
+                            .disabled(!game.supportsLaunchArguments)
+
                             // MARK: File Integrity verification button
                             HStack {
                                 VStack(alignment: .leading) {
@@ -173,7 +175,7 @@ struct GameSettingsView: View {
                                     Button("Move...") {
                                         isMovingFileImporterPresented = true
                                     }
-                                    .disabled(operationManager.queue.first?.game == game)
+                                    .disabled(!game.supportsFileManagement || operationManager.queue.first?.game == game)
                                     // FIXME: xcode's code formatter does NOT like using stacked parameters,
                                     // FIXME: it messes up the indent for the .alert below this
                                     .fileImporter(

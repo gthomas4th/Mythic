@@ -28,7 +28,7 @@ struct HomeView: View {
     @State private var isContainersSectionExpanded: Bool = true
 
     private var favouriteGamesExcludingRecent: [Game] {
-        gameDataStore.library
+        gameDataStore.displayLibrary
             .filter(\.self.isFavourited)
             .filter({ $0 != gameDataStore.recent })
     }

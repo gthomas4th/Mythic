@@ -37,6 +37,9 @@ import AppKit
         set { _containerURL = newValue }
     }
 
+    var supportsFileManagement: Bool { true }
+    var supportsLaunchArguments: Bool { true }
+
     var isUpdateAvailable: Bool? { nil } // override in subclass
 
     // swiftlint:disable:next identifier_name
@@ -274,6 +277,7 @@ struct AnyGame: Codable, Equatable {
             switch storefront {
             case .epicGames:    try EpicGamesGame(from: decoder)
             case .local:        try LocalGame(from: decoder)
+            case .steam:        try SteamGame(from: decoder)
             case nil:           try Game(from: decoder)
             }
         }()

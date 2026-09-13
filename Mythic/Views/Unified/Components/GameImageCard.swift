@@ -29,7 +29,13 @@ struct GameImageCard: View {
     
     var body: some View {
         GeometryReader { geometry in
-            if let url = url {
+            if let url, url.isFileURL, let image = NSImage(contentsOf: url) {
+                Image(nsImage: image)
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+                    .frame(width: geometry.size.width, height: geometry.size.height)
+                    .onAppear { isImageEmpty = false }
+            } else if let url = url {
                 AsyncImage(url: url) { phase in
                     switch phase {
                     case .empty:

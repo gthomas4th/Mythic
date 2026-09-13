@@ -40,12 +40,14 @@ extension Game {
     /// Enumeration containing all available game storefronts.
     enum Storefront: CustomStringConvertible, CaseIterable, Codable, Hashable {
         case epicGames
+        case steam
         case local
 
         var description: String {
             switch self {
             case .epicGames:    String(localized: "Epic Games")
             case .local:        String(localized: "Local")
+            case .steam:        String(localized: "Steam")
             }
         }
     }
