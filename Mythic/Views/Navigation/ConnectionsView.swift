@@ -92,6 +92,9 @@ import Network
         var selectedHost = host
         if let application { selectedHost.application = application }
         try selectedHost.validate()
+        // Launch Services ignores arguments when reusing an existing application.
+        // A stream request needs a fresh Moonlight invocation to select its game.
+        config.createsNewApplicationInstance = stream
         config.arguments = stream ? selectedHost.arguments : []
         try await NSWorkspace.shared.openApplication(at: app, configuration: config)
     }
