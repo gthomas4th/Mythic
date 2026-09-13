@@ -64,8 +64,10 @@ The BIOS session was shut down normally. This validates initialization, not PS2
 game performance or controller behavior.
 
 Both GameCube/Dolphin and PS2/PCSX2 source bookmarks are saved in Game Hub. Their
-real versions were displayed and the settings layout checked visually. Local
-working-copy folders are separate from the NAS master. No game is labelled
+real versions were displayed and the settings layout checked visually. The owner now requires NAS-only ROMs. The earlier local Melee test copy was
+removed after its checksum matched a fresh NAS read; emulator saves were preserved.
+No further local ROM staging is authorized. NAS source mounting and launch
+acceptance remain pending; previous local gameplay checks do not validate NAS play. No game is labelled
 playable until a real local copy has been indexed. Dolphin now has a saved Xbox
 One S mapping; the owner confirmed gameplay and both reconnect sequences.
 Dolphin's optional telemetry was declined and its FPS, speed and internal-resolution
@@ -75,3 +77,16 @@ Source: [official PCSX2 setup](https://pcsx2.net/docs/setup/running/) and
 [release package](https://github.com/PCSX2/pcsx2/releases/download/v2.8.2/pcsx2-v2.8.2-macos-Qt.tar.xz).
 
 CLI system-name reference: [Dolphin 2606a configuration mapping](https://github.com/dolphin-emu/dolphin/blob/2606a/Source/Core/Common/Config/Config.cpp).
+
+## NAS-only performance investigation
+
+The Mac-to-NAS SSH stream test (268.44 MB discarded in memory) measured
+11.20 MB/s; this is not an SMB benchmark. A full NAS-side Melee SHA-256 read
+measured 434.27 MB/s, potentially served from ARC cache. Ten ICMP samples
+showed 4.54 ms average, 5.25 ms maximum and no packet loss. The Mac used Wi-Fi;
+its listed Ethernet adapters were inactive. NAS Ethernet negotiated 1 Gb/s.
+These samples suggest investigating the network path before storage tuning;
+they do not prove a 100 Mb/s link or exclude intermittent latency.
+No SMB share currently exposes the ROM directory, and no SMB volume is mounted
+on the Mac. NAS-only game launch has not yet been tested. Network/storage
+settings were not changed.

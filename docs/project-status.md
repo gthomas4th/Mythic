@@ -118,3 +118,11 @@ remain labelled honestly. Do not describe this delivery as every handoff phase c
 - [RetroArch command line](https://docs.libretro.com/guides/cli-intro/)
 - [Runtime provenance and historical tests](free-runtime-validation.md)
 - [Original supplied handoff](game-hub-vscode-engineering-handoff.md)
+
+## Current ROM storage requirement
+
+Owner requires NAS-only ROMs, with no local ROM copies. The 1.13 GB local
+Melee test image was removed after matching its hash against a fresh NAS read;
+its save remains intact. Future testing must use a mounted NAS source. The
+ROM directory is not currently exposed by an SMB share; NAS launch acceptance
+remains open. See `emulator-readiness.md` for measured network observations.
