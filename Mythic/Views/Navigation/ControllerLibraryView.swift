@@ -48,6 +48,7 @@ struct ControllerLibraryView: View {
     @State private var favoritesOnly = false
     @State private var message = ""
     @State private var search = ""
+    @FocusState private var searchFocused: Bool
     private var games: [Game] {
         GameDataStore.shared.displayLibrary.filter {
             (!favoritesOnly || $0.isFavourited) && (search.isEmpty || $0.title.localizedStandardContains(search))
@@ -61,7 +62,7 @@ struct ControllerLibraryView: View {
                 Spacer()
                 Label(input.connected ? "Controller connected" : "Keyboard ready", systemImage: "gamecontroller")
             }
-            TextField("Search games", text: $search).textFieldStyle(.roundedBorder)
+            TextField("Search games", text: $search).textFieldStyle(.roundedBorder).focused($searchFocused)
             Text("↑ ↓ Browse · A / Return Details & Play · B / Escape Back · X Favorite · Y Favorites filter")
                 .font(.callout).foregroundStyle(.secondary)
             if details, let game = selected {
@@ -104,8 +105,13 @@ struct ControllerLibraryView: View {
         }
         .padding(24).navigationTitle("Controller Library")
         .focusable()
-        .onMoveCommand { direction in action(String(describing: direction)) }
-        .onKeyPress(.return) { action("select"); return .handled }
+        .onMoveCommand { direction in if !searchFocused { action(String(describing: direction)) } }
+        .onKeyPress(.return) {
+            if searchFocused { searchFocused = false } else { action("select") }
+            return .handled
+        }
+        .onKeyPress("x") { guard !searchFocused else { return .ignored }; action("favorite"); return .handled }
+        .onKeyPress("y") { guard !searchFocused else { return .ignored }; action("filter"); return .handled }
         .onExitCommand { action("back") }
         .onChange(of: search) { _, _ in selection = 0; details = false }
         .onAppear { input.onAction = action; input.start() }

@@ -24,13 +24,11 @@ struct HomeView: View {
     
     @State private var isImageEmpty = true
     
-    @State private var isFavouritesSectionExpanded: Bool = true
-    @State private var isContainersSectionExpanded: Bool = true
 
-    private var favouriteGamesExcludingRecent: [Game] {
+    private var favouriteGames: [Game] {
         gameDataStore.displayLibrary
             .filter(\.self.isFavourited)
-            .filter({ $0 != gameDataStore.recent })
+            .sorted { $0.title.localizedStandardCompare($1.title) == .orderedAscending }
     }
 
     var body: some View {
@@ -40,7 +38,7 @@ struct HomeView: View {
                     ZStack(alignment: .bottomLeading) {
                         GameImageCard(url: recentGame.horizontalImageURL ?? recentGame.verticalImageURL, isImageEmpty: $isImageEmpty)
                             .aspectRatio(16/9, contentMode: .fill)
-                            .frame(width: geometry.size.width, height: geometry.size.height * 0.75)
+                            .frame(width: geometry.size.width, height: min(480, max(320, geometry.size.height * 0.6)))
                             .glur(radius: 18,
                                   offset: 0.6,
                                   interpolation: 0.6)
@@ -52,6 +50,8 @@ struct HomeView: View {
                                 }
                             }
 
+                        LinearGradient(colors: [.clear, .black.opacity(0.85)], startPoint: .center, endPoint: .bottom)
+                            .allowsHitTesting(false)
                         HStack {
                             if isImageEmpty, recentGame.isFallbackImageAvailable {
                                 GameImageCard.FallbackGameImageCard(game: .constant(recentGame))
@@ -80,7 +80,7 @@ struct HomeView: View {
                         }
                         .padding([.leading, .bottom])
                     }
-                    .frame(height: geometry.size.height * 0.75)
+                    .frame(height: min(480, max(320, geometry.size.height * 0.6)))
                 } else {
                     ContentUnavailableView(
                         "Welcome to Mythic!",
@@ -91,41 +91,32 @@ struct HomeView: View {
                     )
                     .frame(
                         width: geometry.size.width,
-                        height: geometry.size.height * 0.75
+                        height: min(480, max(320, geometry.size.height * 0.6))
                     )
                     .background(.quinary)
                 }
                 
-                Form {
-                    Section("Your Favourites", isExpanded: $isFavouritesSectionExpanded) {
-                        if favouriteGamesExcludingRecent.isEmpty {
-                            HStack(alignment: .center) {
-                                Spacer()
-                                ContentUnavailableView(
-                                    "No Favourites",
-                                    systemImage: "star.slash.fill",
-                                    description: .init("""
-                                    Games you favourite will appear here.
-                                    You can favourite a game by pressing [􀍠] → [􀋂].
-                                    """)
-                                )
-                                Spacer()
-                            }
-                        } else {
-                            LazyVGrid(columns: [.init(.adaptive(minimum: gameCardSize))]) {
-                                ForEach(favouriteGamesExcludingRecent) { game in
-                                    GameCard(game: .constant(game))
-                                }
-                            }
+                VStack(alignment: .leading, spacing: 28) {
+                    if favouriteGames.isEmpty {
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("Favourites").font(.title2.bold())
+                            Text("Favourite a game from its options menu to keep it here.")
+                                .foregroundStyle(.secondary)
                         }
+                    } else {
+                        gameRow("Favourites", games: favouriteGames)
                     }
-                    
-                    Section("Your Containers", isExpanded: $isContainersSectionExpanded) {
-                        ContainerListView()
-                    }
-                    
+                    gameRow("Recently Played", games: gameDataStore.displayLibrary
+                        .filter { $0.lastLaunched != nil && $0 != gameDataStore.recent }
+                        .sorted { ($0.lastLaunched ?? .distantPast) > ($1.lastLaunched ?? .distantPast) })
+                    gameRow("Final Fantasy", games: sortedGames.filter { $0.title.localizedStandardContains("Final Fantasy") })
+                    gameRow("Retro", games: sortedGames.filter { $0 is ROMGame })
+                    gameRow("Ready on Home PC", games: sortedGames.filter {
+                        ($0 as? SteamGame)?.record?.launchTargets.contains { $0.kind == .moonlight && $0.available } == true
+                    })
                 }
-                .formStyle(.grouped)
+                .padding(24)
+
             }
         }
         .ignoresSafeArea(edges: .top)
@@ -153,6 +144,24 @@ struct HomeView: View {
             }())
         }
     }
+    private var sortedGames: [Game] {
+        gameDataStore.displayLibrary.sorted { $0.title.localizedStandardCompare($1.title) == .orderedAscending }
+    }
+    @ViewBuilder private func gameRow(_ title: String, games: [Game]) -> some View {
+        if !games.isEmpty {
+            VStack(alignment: .leading, spacing: 12) {
+                Text(title).font(.title2.bold())
+                ScrollView(.horizontal) {
+                    LazyHStack(spacing: 16) {
+                        ForEach(Array(games.prefix(20))) { game in
+                            GameCard(game: .constant(game)).frame(width: max(240, gameCardSize), height: 340)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
 }
 
 #Preview {
