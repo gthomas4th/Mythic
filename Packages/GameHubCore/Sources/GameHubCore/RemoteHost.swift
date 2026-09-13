@@ -10,7 +10,7 @@ public struct RemoteHost: Codable, Sendable {
               !application.isEmpty, application.count <= 200, !application.hasPrefix("-"),
               !application.contains("\n"), !application.contains("\0") else { throw RemoteError.invalid }
     }
-    public var arguments: [String] { ["stream", address, application, "--resolution", "1920x1080", "--fps", "60", "--bitrate", "20000"] }
+    public var arguments: [String] { ["stream", address, application, "--resolution", "1920x1080", "--fps", "60", "--bitrate", "20000", "--no-hdr"] }
     public enum RemoteError: LocalizedError {
         case invalid
         public var errorDescription: String? { "Enter a valid host name or address and Sunshine application name." }

@@ -34,9 +34,8 @@ public struct SteamWindowsProvider: GameProvider {
                 let profile = profileIDs[manifest.appID]
                 let target = LaunchTarget(id: "steam:\(manifest.appID):windows", kind: .wineSteam,
                     locator: locator, application: payload, available: profile != nil, verified: profile != nil, profileID: profile)
-                let image = steamRoot.appendingPathComponent("appcache/librarycache/\(manifest.appID)_library_600x900.jpg")
                 records.append(.init(id: .init(provider: .steam, externalID: manifest.appID), title: manifest.title,
-                    launchTargets: [target], artwork: files.fileExists(atPath: image.path) ? image : nil))
+                    launchTargets: [target], artwork: SteamNativeProvider.cachedArtwork(appID: manifest.appID, steamRoot: steamRoot)))
             } catch { diagnostics.append("windows-steam.manifest-invalid") }
         }
         return .init(records: LaunchResolver.merge(records), diagnostics: diagnostics)

@@ -50,6 +50,7 @@ final class EmulationRemoteTests: XCTestCase {
     func testRemoteInputAndHealthDoNotClaimQuality() throws {
         let valid = RemoteHost(name: "PC", address: "yoda.local", application: "Desktop")
         XCTAssertNoThrow(try valid.validate())
+        XCTAssertTrue(valid.arguments.contains("--no-hdr"))
         XCTAssertEqual(valid.arguments.prefix(3), ["stream", "yoda.local", "Desktop"])
         XCTAssertThrowsError(try RemoteHost(name: "PC", address: "--evil", application: "Desktop").validate())
         XCTAssertThrowsError(try RemoteHost(name: "PC", address: "pc;bad", application: "Desktop").validate())

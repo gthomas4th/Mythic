@@ -129,6 +129,23 @@ final class CatalogProfileTests: XCTestCase {
         XCTAssertThrowsError(try store.decode(Data(repeating: 0, count: 65537)))
         XCTAssertEqual(try store.decode(JSONEncoder().encode(profile())), profile())
     }
+    func testArtworkSupportsModernAndLegacyCacheWithoutEscapingRoot() throws {
+        let root = try folder()
+        let cache = root.appendingPathComponent("appcache/librarycache")
+        let modern = cache.appendingPathComponent("42/library_600x900.jpg")
+        try FileManager.default.createDirectory(at: modern.deletingLastPathComponent(), withIntermediateDirectories: true)
+        let legacy = cache.appendingPathComponent("42_library_600x900.jpg")
+        try Data([1]).write(to: legacy)
+        XCTAssertEqual(SteamNativeProvider.cachedArtwork(appID: "42", steamRoot: root), legacy.resolvingSymlinksInPath())
+        try Data([2]).write(to: modern)
+        XCTAssertEqual(SteamNativeProvider.cachedArtwork(appID: "42", steamRoot: root), modern.resolvingSymlinksInPath())
+        try FileManager.default.removeItem(at: modern)
+        let outside = root.appendingPathComponent("outside.jpg")
+        try Data([3]).write(to: outside)
+        try FileManager.default.createSymbolicLink(at: modern, withDestinationURL: outside)
+        XCTAssertEqual(SteamNativeProvider.cachedArtwork(appID: "42", steamRoot: root), legacy.resolvingSymlinksInPath())
+        XCTAssertNil(SteamNativeProvider.cachedArtwork(appID: "../42", steamRoot: root))
+    }
     func testWindowsManifestDiscoveryAndMissingProfile() throws {
         let root = try folder()
         let apps = root.appendingPathComponent("steamapps")

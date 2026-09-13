@@ -89,7 +89,7 @@ public struct SteamNativeProvider: GameProvider {
                         id: .init(provider: .steam, externalID: manifest.appID), title: manifest.title,
                         launchTargets: [.init(id: "steam:\(manifest.appID):native", kind: .nativeMac,
                                               locator: locator, application: application)],
-                        artwork: cachedArtwork(appID: manifest.appID))
+                        artwork: Self.cachedArtwork(appID: manifest.appID, steamRoot: steamRoot))
                 } catch { diagnostics.append("manifest.unreadable-or-malformed") }
             }
         }
@@ -104,11 +104,17 @@ public struct SteamNativeProvider: GameProvider {
         else { throw ValveKeyValues.ParseError.limitExceeded }
         return text
     }
-    private func cachedArtwork(appID: String) -> URL? {
-        let cache = steamRoot.appendingPathComponent("appcache/librarycache")
-        for name in ["\(appID)_library_600x900.jpg", "\(appID)_library_600x900_2x.jpg"] {
-            let file = cache.appendingPathComponent(name)
-            if FileManager.default.fileExists(atPath: file.path) { return file }
+    public static func cachedArtwork(appID: String, steamRoot: URL) -> URL? {
+        guard SteamLaunch.url(appID: appID) != nil else { return nil }
+        let cache = steamRoot.appendingPathComponent("appcache/librarycache").resolvingSymlinksInPath()
+        let names = ["\(appID)/library_600x900.jpg", "\(appID)/library_600x900_2x.jpg",
+                     "\(appID)_library_600x900.jpg", "\(appID)_library_600x900_2x.jpg"]
+        for name in names {
+            let file = cache.appendingPathComponent(name).resolvingSymlinksInPath()
+            guard file.path.hasPrefix(cache.path + "/"),
+                  let values = try? file.resourceValues(forKeys: [.isRegularFileKey, .fileSizeKey]),
+                  values.isRegularFile == true, let size = values.fileSize, size > 0, size <= 20 * 1024 * 1024 else { continue }
+            return file
         }
         return nil
     }

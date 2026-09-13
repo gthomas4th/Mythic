@@ -3,7 +3,16 @@ import Network
 
 @MainActor @Observable final class HubConnections {
     static let shared = HubConnections()
-    var host = RemoteHost(name: "Home PC", address: "", application: "Desktop")
+    var host = RemoteHost(name: "Home PC", address: "", application: "Desktop") {
+        didSet {
+            guard host.address != oldValue.address else { return }
+            reachable = false; checking = false
+            connection?.stateUpdateHandler = nil; connection?.cancel(); connection = nil
+            timeout?.cancel(); timeout = nil
+            status = "Address changed. Test this PC before selecting its game targets."
+            Task { try? await GameDataStore.shared.refreshFromStorefronts(.steam) }
+        }
+    }
     var status = "Add your Home PC address to test its streaming service."
     var checking = false
     var reachable = false
@@ -26,11 +35,12 @@ import Network
         do { try save() } catch { status = error.localizedDescription; return }
         reachable = false; checking = true; status = "Checking streaming port…"
         let start = Date()
+        let checkedAddress = host.address
         let attempt = NWConnection(host: NWEndpoint.Host(host.address), port: 47989, using: .tcp)
         connection = attempt
         attempt.stateUpdateHandler = { [weak self] state in
             Task { @MainActor in
-                guard let self, self.checking else { return }
+                guard let self, self.checking, self.host.address == checkedAddress else { return }
                 switch state {
                 case .ready: self.reachable = true; self.finish(RemoteHealthClassifier.description(reachable: true, relayed: nil, milliseconds: Date().timeIntervalSince(start) * 1000))
                 case .failed: self.finish(RemoteHealthClassifier.description(reachable: false, relayed: nil, milliseconds: nil))
@@ -54,8 +64,10 @@ import Network
     func saveMapping(appID: String, application: String) throws {
         guard SteamLaunch.url(appID: appID) != nil else { throw RemoteHost.RemoteError.invalid }
         var mappedHost = host; mappedHost.application = application; try mappedHost.validate()
-        steamApplications[appID] = application
-        try JSONEncoder().encode(steamApplications).write(to: mappingFile, options: .atomic)
+        var updated = steamApplications; updated[appID] = application
+        try FileManager.default.createDirectory(at: mappingFile.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try JSONEncoder().encode(updated).write(to: mappingFile, options: .atomic)
+        steamApplications = updated
         Task { try? await GameDataStore.shared.refreshFromStorefronts(.steam) }
     }
     func targets(for records: [GameRecord]) -> [GameRecord] {
