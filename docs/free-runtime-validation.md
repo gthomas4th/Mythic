@@ -23,7 +23,8 @@ The executable reports `wine-10.0 (Sikarugir)`.
 The standalone engine requires companion libraries normally supplied by its wrapper.
 Only top-level dylibs and their relative symlinks from the verified template's
 Contents/Frameworks were copied into the candidate's lib directory. No wrapper
-launcher or proprietary renderer was installed from that archive. Runtime and
+launcher was installed. The renderer was staged separately during the later
+first-launch preparation described below. Runtime and
 container files are under Application Support/GameHub/RuntimeCandidates, outside Git.
 A local candidate receipt records artifact URLs, hashes and executable hashes.
 
@@ -53,10 +54,9 @@ logon. Rebirth (2909400) completed installation in the isolated container. Steam
 reported Fully Installed (manifest StateFlags 4), scheduler result No Error, and
 171.06 GB installed. Both ff7rebirth.exe and End/Binaries/Win64/ff7rebirth_.exe exist. The native test host now also exposes
 Install Rebirth through Steam's installation URI; download state is independently
-verified from its manifest and content log. Sustained Rebirth gameplay remains an
-acceptance gate.
-No Rebirth compatibility or FPS claim is made. Production runtime selection,
-renderer integration and per-game pinning still require implementation after validation.
+verified from its manifest and content log. The owner subsequently launched the game and moved through gameplay, but reported
+a steady, poor frame rate. Performance acceptance remains open. Production runtime
+selection and per-game pinning still require implementation after validation.
 
 ## Rebirth first-launch preparation
 
@@ -76,6 +76,20 @@ Steam completed its Visual C++/DirectX first-run installers, then held the launc
 SynchronizingCloud with pendingcloudsessions. Its cloud log reports one pending
 remote operation while the locally downloaded saves match cloud change number 23.
 Five downloaded saves were copied and hash-verified outside Git before resolving
-the remote-session prompt. No game process, gameplay benchmark or FPS result has
-yet been verified. Do not dismiss the prompt without resolving the owner's other
-device session or an explicit owner decision about the available save state.
+the remote-session prompt. The owner confirmed the game was not running elsewhere, accepted the warning,
+and launched the game manually. Save backups remain separate from runtime changes.
+
+## First performance observation
+
+The live Rebirth process loaded the staged D3DMetal framework and libd3dshared,
+verified through its mapped files. A 59.983-second Metal HUD frame-counter window
+advanced 2,073 frames: 34.56 frames/second. This is an unlabelled scene observation,
+not a controlled gameplay benchmark or a claim of acceptable performance. The owner
+reported poor but steady frame rate.
+
+The development launcher now offers separate 1080p and 720p launch requests so the
+resolution can be compared while retaining the same renderer and default sync mode.
+720p has not yet been measured or confirmed as the actual output resolution. The
+generated GameUserSettings.ini contains only a newline; do not pretend it exposes
+the game's current quality settings or modify binary save data to tune graphics.
+Save and exit the game normally before testing the other launch request.

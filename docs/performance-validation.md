@@ -58,4 +58,7 @@ An isolated free Wine 10 candidate has passed the initial Steam UI startup failu
 seen above. See [free runtime validation](free-runtime-validation.md) for provenance,
 companion-library requirements and evidence. Windows Steam login is verified and Rebirth is fully installed in that test container
 (171.06 GB; Steam scheduler result No Error).
-Renderer integration and gameplay remain unverified.
+D3DMetal loading and owner-driven gameplay are now verified. The owner reports poor
+but steady frame rate; an unlabelled 60-second HUD window averaged 34.56 FPS.
+Performance acceptance remains open. A 720p comparison is prepared, not yet measured;
+see the free-runtime notes for the current evidence.

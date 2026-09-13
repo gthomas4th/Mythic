@@ -10,7 +10,7 @@ final class RuntimeTestHost: NSObject, NSApplicationDelegate {
     private var logHandle: FileHandle?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 700, height: 220),
+        window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 860, height: 220),
                           styleMask: [.titled, .closable, .miniaturizable], backing: .buffered, defer: false)
         window.title = "Game Hub — Free Runtime Test"
         let title = NSTextField(labelWithString: "Windows Steam · Sikarugir Wine 10")
@@ -19,8 +19,9 @@ final class RuntimeTestHost: NSObject, NSApplicationDelegate {
         let start = NSButton(title: "Launch Windows Steam", target: self, action: #selector(startSteam))
         let install = NSButton(title: "Install Rebirth", target: self, action: #selector(installRebirth))
         let play = NSButton(title: "Test Rebirth · 1080p", target: self, action: #selector(playRebirth))
+        let performance = NSButton(title: "Test Rebirth · 720p", target: self, action: #selector(playRebirth720))
         let stop = NSButton(title: "Stop Test Container", target: self, action: #selector(stopSteam))
-        let buttons = NSStackView(views: [start, install, play, stop])
+        let buttons = NSStackView(views: [start, install, play, performance, stop])
         let stack = NSStackView(views: [title, detail, buttons, status])
         stack.orientation = .vertical
         stack.alignment = .leading
@@ -105,14 +106,18 @@ final class RuntimeTestHost: NSObject, NSApplicationDelegate {
         } catch { status.stringValue = error.localizedDescription }
     }
 
-    @objc private func playRebirth() {
+    @objc private func playRebirth() { launchRebirth(width: 1920, height: 1080) }
+
+    @objc private func playRebirth720() { launchRebirth(width: 1280, height: 720) }
+
+    private func launchRebirth(width: Int, height: Int) {
         do {
             let prefix = try path("TestPrefix")
             let executable = prefix.appendingPathComponent("drive_c/Program Files (x86)/Steam/steam.exe")
-            let request = try process(tool: "wine", arguments: [executable.path, "-applaunch", "2909400", "-windowed", "-ResX=1920", "-ResY=1080"])
+            let request = try process(tool: "wine", arguments: [executable.path, "-applaunch", "2909400", "-windowed", "-ResX=\(width)", "-ResY=\(height)"])
             request.currentDirectoryURL = executable.deletingLastPathComponent()
             try request.run()
-            status.stringValue = "Rebirth launch requested through Steam at 1080p."
+            status.stringValue = "Rebirth launch requested through Steam at \(width)×\(height)."
         } catch { status.stringValue = error.localizedDescription }
     }
 
