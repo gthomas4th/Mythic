@@ -15,6 +15,10 @@ import OSLog
 final class SparkleUpdateController: NSObject, SPUUserDriver, ObservableObject {
     @MainActor static let shared: SparkleUpdateController = .init()
 
+    static var upstreamUpdatesEnabled: Bool {
+        Bundle.main.object(forInfoDictionaryKey: "GameHubUpstreamUpdatesEnabled") as? Bool == true
+    }
+
     private let log: Logger = .custom(category: "SparkleUpdaterController")
 
     private var sparkleUpdater: SPUUpdater?
@@ -27,6 +31,9 @@ final class SparkleUpdateController: NSObject, SPUUserDriver, ObservableObject {
 
     override init() {
         super.init()
+
+        // This fork receives app and security updates through reviewed source updates.
+        guard Self.upstreamUpdatesEnabled else { return }
 
         let updaterController: SPUUpdater = .init(
             hostBundle: Bundle.main,
@@ -91,6 +98,7 @@ final class SparkleUpdateController: NSObject, SPUUserDriver, ObservableObject {
     }
 
     func checkForUpdates(userInitiated: Bool = false) {
+        guard Self.upstreamUpdatesEnabled else { return }
         guard let updater = sparkleUpdater, !updater.sessionInProgress else {
             log.info("\(userInitiated ? "User-initiated" : "Automatic") update check ignored due to in-progress update session.")
             if userInitiated {

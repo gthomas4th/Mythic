@@ -70,7 +70,11 @@ struct MythicApp: App {
             }
 
             CommandGroup(after: .appInfo) {
-                Button("Check for Mythic Updates...", action: { SparkleUpdateController.shared.checkForUpdates(userInitiated: true) })
+                if SparkleUpdateController.upstreamUpdatesEnabled {
+                    Button("Check for Mythic Updates...", action: { SparkleUpdateController.shared.checkForUpdates(userInitiated: true) })
+                } else {
+                    Link("Game Hub Updates (Manual)", destination: URL(string: "https://github.com/gthomas4th/Mythic/tree/feat/steam-native")!)
+                }
                 
                 Button("Check for Mythic Engine Updates...") {
                     Task(priority: .userInitiated) {

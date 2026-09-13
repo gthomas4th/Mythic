@@ -245,24 +245,11 @@ extension SettingsView {
         @AppStorage("engineAutomaticallyChecksForUpdates") private var engineAutomaticallyChecksForUpdates: Bool = true
 
         var body: some View {
-            Section("Mythic", isExpanded: $isMythicUpdatesSectionExpanded) {
-//                Toggle(
-//                    "Automatically check for Mythic updates",
-//                    systemImage: "arrow.down.app.dashed",
-//                    isOn: Binding(
-//                        get: { sparkleController.updater.automaticallyChecksForUpdates },
-//                        set: { sparkleController.updater.automaticallyChecksForUpdates = $0 }
-//                    )
-//                )
-//
-//                Toggle(
-//                    "Automatically download Mythic updates",
-//                    systemImage: "arrow.down.app",
-//                    isOn: Binding(
-//                        get: { sparkleController.updater.automaticallyDownloadsUpdates },
-//                        set: { sparkleController.updater.automaticallyDownloadsUpdates = $0 }
-//                    )
-//                )
+            Section("Game Hub", isExpanded: $isMythicUpdatesSectionExpanded) {
+                if !SparkleUpdateController.upstreamUpdatesEnabled {
+                    Text("App and security updates are applied manually through the Game Hub project. Upstream Mythic updates cannot replace this build.")
+                    Link("Open Game Hub project", destination: URL(string: "https://github.com/gthomas4th/Mythic/tree/feat/steam-native")!)
+                }
             }
 
             Section("Mythic Engine", isExpanded: $isEngineUpdatesSectionExpanded) {

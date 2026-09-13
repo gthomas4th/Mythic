@@ -64,10 +64,10 @@ are not the user entry point. Do not remove recovery copies before final live ac
 3. **Content:** no installed native Mac Steam title, copied Deck inventory, central
    ROMs or configured BIOS/firmware were supplied. Emulator launch/graphics tuning
    can only be validated after content and an installed emulator are selected.
-4. **App updater:** automatic approval review rejected disabling upstream Sparkle
-   app updates because of security-update risk. No updater change was applied.
-   A review-only patch is prepared and explicit owner approval is pending. Runtime
-   pinning is independent of the app updater.
+4. **App updater — resolved:** owner explicitly approved manual fork updates on
+   2026-09-13. Sparkle initialization and update requests are disabled by default for
+   this fork, and the menu/settings explain manual app and security updates.
+   Existing runtime pins and engine controls are unchanged.
 
 ## Remaining product refinements from the complete handoff
 

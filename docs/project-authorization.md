@@ -22,3 +22,10 @@ CrossOver dependency or time-limited trial is an acceptable runtime solution.
 Continue investigating and testing free Wine engines within the existing project;
 this constraint is not a request to abandon the project or ask again for approval.
 Keep alternative-engine tests isolated and retain the verified original runtime.
+
+## Manual application updates approved
+
+On 2026-09-13 the owner replied “allowed” to the explicit request to prevent upstream
+Mythic application updates from replacing this fork. App and security updates will
+be applied manually through the project fork. This resolves the automatic approval
+review gate for that change. Per-game runtime pins and existing engine controls remain separate.
