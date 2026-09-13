@@ -90,3 +90,26 @@ they do not prove a 100 Mb/s link or exclude intermittent latency.
 No SMB share currently exposes the ROM directory, and no SMB volume is mounted
 on the Mac. NAS-only game launch has not yet been tested. Network/storage
 settings were not changed.
+
+## PS2 controller configuration
+
+Port 1 now maps the Xbox controller through SDL-0: face buttons, both sticks,
+D-pad, Start/Select, shoulders, triggers, stick clicks and both rumble motors.
+The previous INI was backed up before editing; BIOS, graphics and other sections
+were retained. Bindings use the installed v2.8.2 SDL names and survived restart.
+The final device list contained only keyboard and mouse, so physical PS2 input,
+rumble and gameplay remain unverified until the controller is connected and a
+verified PS2 game is available through the approved external storage path.
+
+Source: [PCSX2 v2.8.2 SDL bindings](https://github.com/PCSX2/pcsx2/blob/v2.8.2/pcsx2/Input/SDLInputSource.cpp).
+
+## Transfer link review
+
+A private read-only inventory review classified all 731 Emulation symlinks:
+710 resolve within the Emulation tree and 21 resolve into Deck home. Of the
+internal targets, one is a regular file and 32 are directories containing
+manifested regular files; 677 are absent from that regular-file inventory.
+Absence does not prove a broken link: empty directories and link-to-link targets
+need separate checking. No links were recreated or modified. The five home-backup
+links require their own reconciliation. Portable USB setup is deferred until the
+end at the owner's request; no local ROM staging is authorized.
