@@ -8,8 +8,8 @@ into passes.
 ## Installed candidate
 
 Authoritative local app: `~/Applications/Game Hub.app`.
-Built from source revision `9ccf30847c424545e81463f4162e9eaec45b3356` on
-`feat/steam-native`. Xcode performed the local ad-hoc signing; the installed copy
+The exact installed source revision is recorded in the private
+`.build-local/installed-revision.json` receipt on `feat/steam-native`. Xcode performed the local ad-hoc signing; the installed copy
 passes `codesign --verify --deep --strict`. This is not a notarized public release.
 The original app and runtime are preserved. Development builds and the test host
 are not the user entry point. Do not remove recovery copies before final live acceptance.
@@ -41,12 +41,12 @@ are not the user entry point. Do not remove recovery copies before final live ac
 | Legacy data | Epic/local records now persist in SQLite after a one-way import; original defaults and schema-1 backup are retained; existing launch/install APIs remain intact |
 | Profiles | Validation, export/import, clone, selection and revision rollback; original profile remains available |
 | Deck | Device-scoped shortcut references remain offline-readable; imported commands are never executed |
-| ROMs | Folder/application/core bookmarks, incremental content hashes, cue/m3u grouping, missing-part/traversal/cycle checks; no user ROMs available yet |
+| ROMs | Folder/application/core bookmarks, incremental content hashes, cue/m3u grouping, missing-part/traversal/cycle checks; real Deck inventory imported; central copy in progress; local emulator gameplay pending |
 | Remote | Home PC form, automatic startup and prelaunch checks, five-second timeout, direct Rebirth tile; Moonlight 1080p60/20 Mb/s/HDR off; TCP reachability is not labelled stream quality |
 | Xbox | Official Xbox Cloud library link; no purchase or Wine-based Microsoft Store promise |
 | Controller | Keyboard search, Return/details, Escape/back, favorite/filter, and immediate target switching verified; local Rebirth input and mouse-click/reconnect sequence owner-confirmed with current configuration; first connection after launch and physical hub navigation still open |
 | Diagnostics | Correlation IDs and private durable journal capped at 200 events; bounded reads, atomic writes, and unreadable-snapshot preservation; non-Steam identifiers are hashed; export excludes raw runtime logs, bookmarks, credentials, filesystem paths and network addresses |
-| Build | Full Debug build; 68 synthetic tests pass; SwiftLint zero errors, nine inherited warnings |
+| Build | Full Debug build; 72 synthetic tests pass; SwiftLint zero errors, nine inherited warnings |
 
 Home now includes Continue Playing, Favourites, Recently Played, Recently Added, Final Fantasy,
 Retro, and Ready on Home PC collections (empty collections are omitted). Containers
@@ -83,9 +83,14 @@ refreshes now update title/artwork without resetting preferences or first-seen d
    profile; Steam recorded 1920×1080 launch arguments and the owner located the game
    on the Mac's other monitor. The original favorite state and Home PC preference
    were restored after testing. Physical hub controller browsing remains open.
-3. **Content:** no installed native Mac Steam title, copied Deck inventory, central
-   ROMs or configured BIOS/firmware were supplied. Emulator launch/graphics tuning
-   can only be validated after content and an installed emulator are selected.
+3. **Content:** the real Deck shortcut inventory is imported and the direct central
+   ROM/BIOS copy is running with checksums and hourly notifications. Dolphin 2606a
+   is installed as a native Apple Silicon application; its signature and actual CLI
+   were checked. The hub supports ISO/GCM/RVZ/WIA/WBFS/CISO discovery and Dolphin
+   fullscreen launch with optional Metal/native or Metal/3× presets. Emulator app
+   version detection and executable validation are tested. Actual GameCube gameplay,
+   required BIOS/firmware setup for other emulators, and a native Mac Steam title
+   launch remain open. See `emulator-readiness.md`.
 4. **App updater — resolved:** owner explicitly approved manual fork updates on
    2026-09-13. Sparkle initialization and update requests are disabled by default for
    this fork, and the menu/settings explain manual app and security updates.

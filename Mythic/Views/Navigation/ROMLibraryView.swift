@@ -8,6 +8,8 @@ struct ROMSource: Codable, Identifiable {
     var root: Data
     var application: Data
     var core: Data?
+    var applicationVersion: String?
+    var dolphinPreset: DolphinGraphicsPreset?
     var index = ROMIndex()
     func resolve(_ data: Data) throws -> URL {
         var stale = false
@@ -42,7 +44,7 @@ struct ROMSource: Codable, Identifiable {
         try FileManager.default.createDirectory(at: file.deletingLastPathComponent(), withIntermediateDirectories: true)
         try JSONEncoder().encode(sources).write(to: file, options: .atomic)
     }
-    func add(system: String, emulator: EmulatorKind) {
+    func add(system: String, emulator: EmulatorKind, dolphinPreset: DolphinGraphicsPreset = .emulatorSettings) {
         guard CompatibilityProfile.safeID(system) else { status = "Enter a short system ID such as ps1, ps2 or snes."; return }
         let rootPanel = NSOpenPanel(); rootPanel.canChooseDirectories = true; rootPanel.canChooseFiles = false
         rootPanel.message = "Choose the folder containing your own games for this system."
@@ -51,16 +53,21 @@ struct ROMSource: Codable, Identifiable {
         appPanel.message = "Choose the installed emulator application."
         guard appPanel.runModal() == .OK, let app = appPanel.url else { return }
         do {
+            let installation = try EmulatorApplicationInfo.inspect(application: app)
             var core: Data?
             if emulator == .retroArch {
                 let corePanel = NSOpenPanel(); corePanel.message = "Choose the installed RetroArch core (.dylib) for this system."
                 guard corePanel.runModal() == .OK, let url = corePanel.url, url.pathExtension == "dylib" else { return }
                 core = try url.bookmarkData(options: .withSecurityScope)
             }
+            let previous = sources
             sources.append(ROMSource(system: system, emulator: emulator, root: try root.bookmarkData(options: .withSecurityScope),
-                application: try app.bookmarkData(options: .withSecurityScope), core: core))
-            try save(); scan()
-        } catch { status = "Could not save folder access. Your existing sources are unchanged." }
+                application: try app.bookmarkData(options: .withSecurityScope), core: core,
+                applicationVersion: installation.version, dolphinPreset: emulator == .dolphin ? dolphinPreset : nil))
+            do { try save() } catch { sources = previous; throw error }
+            scan()
+        } catch let error as ROMError { status = error.localizedDescription }
+        catch { status = "Could not save folder access. Your existing sources are unchanged." }
     }
     func scan() {
         guard !scanning else { return }
@@ -106,9 +113,10 @@ final class ROMGame: Game {
         defer { for (index, url) in urls.enumerated() where access[index] { url.stopAccessingSecurityScopedResource() } }
         let content = root.appendingPathComponent(entry.relativePath).resolvingSymlinksInPath()
         _ = try ROMIndex.parts(of: content, root: root)
-        guard FileManager.default.fileExists(atPath: app.path), core.map({ FileManager.default.fileExists(atPath: $0.path) }) ?? true else { throw ROMError.coreMissing }
+        _ = try EmulatorApplicationInfo.inspect(application: app)
+        guard core.map({ FileManager.default.fileExists(atPath: $0.path) }) ?? true else { throw ROMError.coreMissing }
         let config = NSWorkspace.OpenConfiguration()
-        config.arguments = try EmulatorCommand.arguments(kind: source.emulator, content: content, core: core)
+        config.arguments = try EmulatorCommand.arguments(kind: source.emulator, content: content, core: core, dolphinPreset: source.dolphinPreset ?? .emulatorSettings)
         try await NSWorkspace.shared.openApplication(at: app, configuration: config)
     }
 }
@@ -117,19 +125,34 @@ struct ROMLibraryView: View {
     @State private var system = "ps1"
     @State private var emulator = EmulatorKind.duckStation
     @State private var deckPresented = false
+    @State private var dolphinPreset = DolphinGraphicsPreset.metal1080
     var body: some View {
         Form {
             Section("Add a system") {
                 TextField("System ID", text: $system)
                 Picker("Emulator", selection: $emulator) {
-                    ForEach(EmulatorKind.allCases, id: \.self) { Text($0.rawValue).tag($0) }
+                    ForEach(EmulatorKind.allCases, id: \.self) { Text($0.displayName).tag($0) }
                 }
-                Button("Choose ROM folder and emulator…") { store.add(system: system, emulator: emulator) }.disabled(store.scanning)
+                if emulator == .dolphin {
+                    Picker("Graphics", selection: $dolphinPreset) {
+                        ForEach(DolphinGraphicsPreset.allCases, id: \.self) { Text($0.displayName).tag($0) }
+                    }
+                    Text("Metal 3× is a starting point for this Mac. Lower to native resolution if a game struggles. The preset applies only when launching from Game Hub.")
+                        .font(.callout).foregroundStyle(.secondary)
+                }
+                Button("Choose ROM folder and emulator…") { store.add(system: system, emulator: emulator, dolphinPreset: dolphinPreset) }.disabled(store.scanning)
                 Text("Use your existing emulator configuration. BIOS, firmware and game files are never downloaded by the hub.").font(.callout).foregroundStyle(.secondary)
             }
             Section("Sources") {
                 ForEach(store.sources) { source in
-                    LabeledContent(source.system, value: "\(source.index.entries.count) games · \(source.emulator.rawValue)")
+                    VStack(alignment: .leading, spacing: 4) {
+                        LabeledContent(source.system, value: "\(source.index.entries.count) games · \(source.emulator.displayName)")
+                        Text("Version when added: \(source.applicationVersion ?? "Not checked")")
+                            .font(.caption).foregroundStyle(.secondary)
+                        if source.emulator == .dolphin {
+                            Text((source.dolphinPreset ?? .emulatorSettings).displayName).font(.caption).foregroundStyle(.secondary)
+                        }
+                    }
                 }
                 Button("Rescan folders") { store.scan() }.disabled(store.scanning || store.sources.isEmpty)
                 Text(store.status).font(.callout)

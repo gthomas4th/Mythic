@@ -58,4 +58,55 @@ final class EmulationRemoteTests: XCTestCase {
         XCTAssertTrue(RemoteHealthClassifier.description(reachable: true, relayed: nil, milliseconds: 10).contains("untested"))
         XCTAssertTrue(RemoteHealthClassifier.description(reachable: false, relayed: false, milliseconds: 10).contains("unavailable"))
     }
+    func testDolphinPresetsKeepContentAsOneArgument() throws {
+        let content = URL(fileURLWithPath: "/games/A game; $(ignored).rvz")
+        let args = try EmulatorCommand.arguments(kind: .dolphin, content: content, dolphinPreset: .metal1080)
+        XCTAssertEqual(Array(args.suffix(2)), ["-e", content.path])
+        XCTAssertTrue(args.contains("GFX.Settings.InternalResolution=3"))
+        XCTAssertTrue(args.contains("Metal"))
+        let defaults = try EmulatorCommand.arguments(kind: .dolphin, content: content)
+        XCTAssertFalse(defaults.contains("Metal"))
+        XCTAssertFalse(defaults.contains(where: { $0.contains("InternalResolution") }))
+        XCTAssertThrowsError(try EmulatorCommand.arguments(kind: .dolphin, content: XCTUnwrap(URL(string: "https://example.com/game.iso"))))
+    }
+    func testGameCubeFormatsAreIndexedAndStableWhenRenamed() throws {
+        let root = try folder()
+        try Data([7, 8, 9]).write(to: root.appendingPathComponent("Game.rvz"))
+        try Data([4, 5, 6]).write(to: root.appendingPathComponent("Disc.gcm"))
+        try Data([1]).write(to: root.appendingPathComponent("Not extracted.zip"))
+        var index = ROMIndex(); try index.scan(root: root, system: "gc")
+        XCTAssertEqual(index.entries.count, 2)
+        let ids = Set(index.entries.map(\.id))
+        try FileManager.default.moveItem(at: root.appendingPathComponent("Game.rvz"), to: root.appendingPathComponent("Renamed.rvz"))
+        try index.scan(root: root, system: "gc")
+        XCTAssertEqual(Set(index.entries.map(\.id)), ids)
+    }
+    func testEmulatorVersionReadDoesNotExecuteApplication() throws {
+        let app = try fixtureEmulator()
+        let info = try EmulatorApplicationInfo.inspect(application: app)
+        XCTAssertEqual(info.version, "1.2.3")
+        XCTAssertEqual(info.bundleIdentifier, "test.emulator")
+        try FileManager.default.removeItem(at: app.appendingPathComponent("Contents/MacOS/emulator"))
+        XCTAssertThrowsError(try EmulatorApplicationInfo.inspect(application: app))
+    }
+    func testEmulatorExecutableTraversalAndSymlinkEscapeFail() throws {
+        let app = try fixtureEmulator()
+        let executable = app.appendingPathComponent("Contents/MacOS/emulator")
+        try FileManager.default.removeItem(at: executable)
+        try FileManager.default.createSymbolicLink(at: executable, withDestinationURL: URL(fileURLWithPath: "/bin/sh"))
+        XCTAssertThrowsError(try EmulatorApplicationInfo.inspect(application: app))
+        let info: [String: Any] = ["CFBundleExecutable": "../../../bin/sh"]
+        try PropertyListSerialization.data(fromPropertyList: info, format: .xml, options: 0).write(to: app.appendingPathComponent("Contents/Info.plist"))
+        XCTAssertThrowsError(try EmulatorApplicationInfo.inspect(application: app))
+    }
+    private func fixtureEmulator() throws -> URL {
+        let app = try folder().appendingPathComponent("Test.app")
+        try FileManager.default.createDirectory(at: app.appendingPathComponent("Contents/MacOS"), withIntermediateDirectories: true)
+        let info: [String: Any] = ["CFBundleExecutable": "emulator", "CFBundleShortVersionString": "1.2.3", "CFBundleIdentifier": "test.emulator"]
+        try PropertyListSerialization.data(fromPropertyList: info, format: .xml, options: 0).write(to: app.appendingPathComponent("Contents/Info.plist"))
+        let executable = app.appendingPathComponent("Contents/MacOS/emulator")
+        try Data("This fixture must never execute".utf8).write(to: executable)
+        try FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: executable.path)
+        return app
+    }
 }

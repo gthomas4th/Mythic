@@ -21,12 +21,13 @@ xcrun swift test --package-path Packages/GameHubCore
 python3 scripts/verify-debug-build.py --package-cache <existing-SourcePackages-directory>
 ```
 
-54 core tests pass. The full Debug build passes; lint has no errors and nine
+72 core tests pass. The full Debug build passes; lint has no errors and nine
 inherited warnings. Generated apps, private runtime bindings, logs, account data and
 save backups are excluded from Git. Runtime bindings and profiles are stored under
 Application Support/GameHub on this Mac. Debug telemetry remains disabled.
 
-This is a local Debug delivery, not a notarized public release. Live Yoda streaming,
-ROM/emulator/BIOS validation, native Steam tile launch and full controller acceptance
-still require the corresponding host/content/hardware and UI access. These checks
+This is a local Debug delivery, not a notarized public release. Yoda streaming and local Rebirth gameplay have owner acceptance.
+ROM gameplay/BIOS validation, native Steam tile launch and full controller acceptance
+remain open. Dolphin is installed locally, with GameCube image discovery and
+selectable Metal launch presets implemented. These checks
 are explicitly open, not replaced by synthetic tests.

@@ -35,10 +35,10 @@ export. Invalid files and future/corrupt inventory schemas do not overwrite the 
 inventory. No remote reachability is inferred from a file path. Local Play is not
 exposed until emulator/content preflight exists. Ten synthetic tests cover parser,
 identity and merge behavior; the app screen and file chooser were verified. The
-owner's real Deck export and a populated live import remain pending.
+owner's real Deck export has now been imported and its populated inventory verified.
 
 Steam-native scanning remains separate. The Mac's local shortcut file was empty;
-no Deck inventory or ROM files have been transferred yet. See the
+Deck inventory is now imported and the central ROM copy is in progress. See the
 [copy-only transfer guide](steam-deck-transfer-guide.md).
 
 ## Central storage recommendation
