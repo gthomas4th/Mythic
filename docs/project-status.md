@@ -8,7 +8,7 @@ into passes.
 ## Installed candidate
 
 Authoritative local app: `~/Applications/Game Hub.app`.
-Built from source revision `0f2515c15301acab28259ed44087b66f3314075b` on
+Built from source revision `4fb7b4d211274ea46a4abe2b402e22d36451a867` on
 `feat/steam-native`. Xcode performed the local ad-hoc signing; the installed copy
 passes `codesign --verify --deep --strict`. This is not a notarized public release.
 The original app and runtime are preserved. Development builds and the test host
@@ -57,10 +57,11 @@ are not the user entry point. Do not remove recovery copies before final live ac
    6.1.0 is installed from its official GitHub release and passes notarization/signature
    checks. Pairing, a ten-minute LAN test, external direct-tunnel measurement and
    per-game remote mapping remain unverified live. No network policy was changed.
-2. **UI:** Computer Use began returning `cgWindowNotFound` for both the hub and
-   Finder. Runtime tests and app build pass, but this blocks honest on-screen final
-   Play/controller/profile acceptance. Do not work around UI controls with another
-   automation technology or claim a visual pass from a process check.
+2. **UI — access restored:** on 2026-09-13 the installed app opened successfully.
+   Rebirth's library tile and accepted-profile badge were observed, and Settings →
+   Updates displayed the approved manual app/security-update policy. The prior
+   `cgWindowNotFound` capture failure is no longer blocking this check. A full
+   tile-to-game launch and controller hardware acceptance remain open.
 3. **Content:** no installed native Mac Steam title, copied Deck inventory, central
    ROMs or configured BIOS/firmware were supplied. Emulator launch/graphics tuning
    can only be validated after content and an installed emulator are selected.
