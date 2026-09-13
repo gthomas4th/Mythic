@@ -3,7 +3,7 @@ import Foundation
 import AppKit
 
 /// Temporary bridge into the existing UI. Steam records never enter the legacy defaults blob.
-final class SteamGame: Game {
+@Observable final class SteamGame: Game {
     var record: GameRecord?
     var preferredTargetID: String?
     override var storefront: Storefront? { .steam }
