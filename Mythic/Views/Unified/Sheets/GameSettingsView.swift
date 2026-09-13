@@ -249,6 +249,7 @@ struct GameSettingsView: View {
             }
         }
         .ignoresSafeArea(edges: .top)
+        .onDisappear { GameDataStore.shared.savePreferences(for: game) }
 
         bottomBar
     }

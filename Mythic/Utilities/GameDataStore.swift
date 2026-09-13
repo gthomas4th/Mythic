@@ -8,39 +8,44 @@
 // Copyright © 2023-2025 vapidinfinity
 
 import Foundation
-import Combine
 import OSLog
 
-// TODO: eventually, migrate to SwiftData.
+// SQLite is authoritative; the original defaults blob remains a recovery source.
 @Observable @MainActor final class GameDataStore {
     static let shared: GameDataStore = .init()
     let log: Logger = .custom(category: "GameDataStore")
     
     private var catalog: CatalogStore?
     private(set) var persistenceError: String?
-    private let gamesObserver: CodableUserDefaultsObserver<[AnyGame]>
-    private var isUpdatingFromObserver = false
+    private var persistenceReady = false
     
-    var library: Set<Game> = .init() {
-        didSet {
-            guard !isUpdatingFromObserver else { return }
-            try? UserDefaults.standard.encodeAndSet(library.map({ AnyGame($0) }), forKey: "games")
-        }
+    var library: Set<Game> = [] {
+        didSet { if persistenceReady { persistLibrary() } }
     }
 
     @MainActor private init() {
-        // initialise observer
-        gamesObserver = .init(key: "games",
-                              defaultValue: [])
-        
         do {
-            catalog = try CatalogStore(url: GameHubRuntime.support.appendingPathComponent("Catalog/catalog.sqlite"))
-        } catch { persistenceError = "The saved catalog could not be opened. Existing data has been preserved." }
-        // load library on initialisation
-        library = Set(gamesObserver.value.map({ $0.base }))
-        
-        importLegacyCatalog()
-        for game in library { restorePreferences(for: game) }
+            let folder = GameHubRuntime.support.appendingPathComponent("Catalog")
+            catalog = try CatalogStore(url: folder.appendingPathComponent("catalog.sqlite"))
+            if let saved = try catalog?.importedGameDetails() {
+                library = Set(try saved.values.map { try PropertyListDecoder().decode(AnyGame.self, from: $0).base })
+            } else {
+                let old = UserDefaults.standard.data(forKey: "games")
+                let legacy = try old.map { try PropertyListDecoder().decode([AnyGame].self, from: $0) } ?? []
+                let backup = folder.appendingPathComponent("legacy-games-before-import.plist")
+                if let old, !FileManager.default.fileExists(atPath: backup.path) { try old.write(to: backup, options: .atomic) }
+                library = Set(legacy.map(\.base))
+                try catalog?.importGameDetailsOnce(encodedLibrary())
+            }
+            persistenceReady = true
+            importLegacyCatalog()
+            for game in library { restorePreferences(for: game) }
+        } catch {
+            persistenceError = "The catalog could not be opened. Original data and backups have been preserved; changes will not be saved."
+            if library.isEmpty, let data = UserDefaults.standard.data(forKey: "games"), let legacy = try? PropertyListDecoder().decode([AnyGame].self, from: data) {
+                library = Set(legacy.map(\.base))
+            }
+        }
         if let cached = try? catalog?.records() {
             discoveredGames = Set(cached.filter { $0.id.provider == .steam }.compactMap { record in
                 guard let target = record.launchTargets.first else { return nil }
@@ -52,24 +57,22 @@ import OSLog
                 return game
             })
         }
-        // observe external changes
-        gamesObserver.$value
-            .sink { [weak self] newGames in
-                guard let self else { return }
-                let newLibrary = Set(newGames.map({ $0.base }))
-                
-                guard newLibrary != self.library else { return }
-                self.log.debug("Games key changed in UserDefaults, updating library")
-                
-                self.isUpdatingFromObserver = true
-                defer { self.isUpdatingFromObserver = false }
-                self.library = newLibrary
-            }
-            .store(in: &cancellables)
     }
-    
-    @ObservationIgnored
-    private var cancellables: Set<AnyCancellable> = .init()
+
+    private func encodedLibrary() throws -> [String: Data] {
+        var result: [String: Data] = [:]
+        for game in library {
+            result[identity(for: game)] = try PropertyListEncoder().encode(AnyGame(game))
+        }
+        return result
+    }
+    private func persistLibrary() {
+        guard persistenceReady else { return }
+        do {
+            try catalog?.replaceGameDetails(encodedLibrary())
+            importLegacyCatalog()
+        } catch { persistenceError = "Library changes could not be saved. The previous catalog snapshot is preserved." }
+    }
 
     private(set) var discoveredGames: Set<Game> = []
     private(set) var discoveryDiagnostics: [String] = []
@@ -109,9 +112,11 @@ import OSLog
         }
     }
     func savePreferences(for game: Game) {
+        guard persistenceReady else { return }
         do {
             try catalog?.setPreference(.init(favorite: game.isFavourited, lastPlayed: game.lastLaunched,
                 preferredTargetID: (game as? SteamGame)?.preferredTargetID), for: identity(for: game))
+            if library.contains(game) { persistLibrary() }
         } catch { persistenceError = "Game preferences could not be saved." }
     }
 
@@ -138,7 +143,9 @@ import OSLog
             }
             let records = HubConnections.shared.targets(for: LaunchResolver.merge(cached + result.records + windows.records))
             discoveryDiagnostics = result.diagnostics + windows.diagnostics
-            do { try catalog?.upsert(records) } catch { persistenceError = "Library changes could not be saved." }
+            if persistenceReady {
+                do { try catalog?.upsert(records) } catch { persistenceError = "Library changes could not be saved." }
+            }
             var refreshed: Set<Game> = []
             for record in records {
                 guard let target = LaunchResolver.resolve(record.launchTargets) ?? record.launchTargets.first else { continue }

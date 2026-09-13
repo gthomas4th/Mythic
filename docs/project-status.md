@@ -1,6 +1,6 @@
 # Game Hub delivery and acceptance
 
-The Mac implementation is ready for final live verification. The complete original
+The Mac implementation and live verification are still in progress. The complete original
 project acceptance is **not yet closed**. Owner authorization permits continuing all
 routine implementation, builds and clean commits; it does not turn missing tests
 into passes.
@@ -37,8 +37,8 @@ are not the user entry point. Do not remove recovery copies before final live ac
 |---|---|
 | Windows Steam library | Live read-only discovery finds `steam:2909400`; app-created SQLite catalog contains it |
 | Launch integration | Main library Play resolves native/Windows targets and uses official Steam `-applaunch`; final on-screen tile test still open |
-| Catalog | SQLite schema version 1, deterministic provider identities, target merge/resolver, favorite/recent/preference persistence; reopening covered by tests |
-| Legacy data | Epic/local metadata importer backs up the defaults blob and leaves existing launch/install APIs intact; no destructive migration |
+| Catalog | SQLite schema version 2, deterministic provider identities, target merge/resolver, favorite/recent/preference persistence; reopening covered by tests |
+| Legacy data | Epic/local records now persist in SQLite after a one-way import; original defaults and schema-1 backup are retained; existing launch/install APIs remain intact |
 | Profiles | Validation, export/import, clone, selection and revision rollback; original profile remains available |
 | Deck | Device-scoped shortcut references remain offline-readable; imported commands are never executed |
 | ROMs | Folder/application/core bookmarks, incremental content hashes, cue/m3u grouping, missing-part/traversal/cycle checks; no user ROMs available yet |
@@ -46,17 +46,16 @@ are not the user entry point. Do not remove recovery copies before final live ac
 | Xbox | Official Xbox Cloud library link; no purchase or Wine-based Microsoft Store promise |
 | Controller | Optional library with directional navigation, details/Play, favorite/filter and target switching; controller hardware check still open |
 | Diagnostics | Correlation IDs and bounded in-session events; export excludes raw runtime logs, bookmarks, credentials, filesystem paths and network addresses |
-| Build | Full Debug build; 54 synthetic tests pass; SwiftLint zero errors, nine inherited warnings |
+| Build | Full Debug build; 58 synthetic tests pass; SwiftLint zero errors, nine inherited warnings |
 
 ## External/live gates still open
 
-1. **Yoda:** owner supplied its name and powered it on. Neither `yoda` nor
-   `yoda.local` resolved from this Mac, and local streaming service discovery found
-   no host. Tailscale is stopped. Await its IPv4 address and Sunshine installation
-   status; do not infer absence of Sunshine from failed name resolution. Moonlight
-   6.1.0 is installed from its official GitHub release and passes notarization/signature
-   checks. Pairing, a ten-minute LAN test, external direct-tunnel measurement and
-   per-game remote mapping remain unverified live. No network policy was changed.
+1. **Yoda:** discovered and paired in Moonlight; Desktop and Steam entries are visible.
+   A 1080p60-target H.264 SDR stream used Mac hardware decoding, but disconnected
+   after about 88 seconds with error -1. The retry failed on UDP control port 47999
+   with error 35. This is not a ten-minute LAN pass. Host-side diagnosis is pending;
+   no router forwarding or firewall change was made. See `remote-lan-validation.md`.
+   External direct-tunnel measurement and per-game remote mapping remain open.
 2. **UI — access restored:** on 2026-09-13 the installed app opened successfully.
    Rebirth's library tile and accepted-profile badge were observed, and Settings →
    Updates displayed the approved manual app/security-update policy. The prior
@@ -72,8 +71,8 @@ are not the user entry point. Do not remove recovery copies before final live ac
 
 ## Remaining product refinements from the complete handoff
 
-The current delivery keeps legacy Epic/local operations as adapters; it is not a
-full replacement of their persistence. Direct/relay
+The current delivery keeps legacy Epic/local operations as adapters and stores their
+records in SQLite. Direct/relay
 telemetry, complete remote/controller acceptance, emulator BIOS/version detection,
 and ROM artwork editing require follow-up. Unknown or unavailable targets must
 remain labelled honestly. Do not describe this delivery as every handoff phase complete.

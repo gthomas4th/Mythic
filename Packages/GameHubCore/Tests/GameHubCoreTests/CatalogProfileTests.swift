@@ -1,4 +1,5 @@
 import XCTest
+import SQLite3
 @testable import GameHubCore
 
 final class CatalogProfileTests: XCTestCase {
@@ -47,6 +48,58 @@ final class CatalogProfileTests: XCTestCase {
         XCTAssertEqual(try reopened.records().first?.id, record.id)
         XCTAssertTrue(try reopened.preference(for: record.id.description).favorite)
         XCTAssertEqual(try reopened.preference(for: record.id.description).preferredTargetID, "remote")
+    }
+    func sql(_ file: URL, _ command: String) throws {
+        var database: OpaquePointer?
+        XCTAssertEqual(sqlite3_open(file.path, &database), SQLITE_OK)
+        defer { sqlite3_close(database) }
+        XCTAssertEqual(sqlite3_exec(database, command, nil, nil, nil), SQLITE_OK)
+    }
+    func testLegacyImportIsOneWayAndEmptySnapshotStaysEmpty() throws {
+        let file = try folder().appendingPathComponent("catalog.sqlite")
+        do {
+            let store = try CatalogStore(url: file)
+            XCTAssertNil(try store.importedGameDetails())
+            XCTAssertTrue(try store.importGameDetailsOnce(["epic:42": Data("original".utf8)]))
+            XCTAssertFalse(try store.importGameDetailsOnce(["epic:42": Data("stale".utf8)]))
+            XCTAssertEqual(try store.importedGameDetails()?["epic:42"], Data("original".utf8))
+            try store.replaceGameDetails([:])
+        }
+        let reopened = try CatalogStore(url: file)
+        XCTAssertEqual(try reopened.importedGameDetails(), [:])
+        XCTAssertFalse(try reopened.importGameDetailsOnce(["epic:42": Data("stale".utf8)]))
+    }
+    func testSchemaOneBackupPreservesCatalogAndPreferences() throws {
+        let file = try folder().appendingPathComponent("catalog.sqlite")
+        do {
+            let store = try CatalogStore(url: file)
+            try store.setPreference(.init(favorite: true), for: "epic:42")
+        }
+        try sql(file, "DROP TABLE game_details; DROP TABLE migrations; PRAGMA user_version=1")
+        let store = try CatalogStore(url: file)
+        XCTAssertTrue(try store.preference(for: "epic:42").favorite)
+        XCTAssertNil(try store.importedGameDetails())
+        let backup = file.appendingPathExtension("schema1-backup")
+        let original = try Data(contentsOf: backup)
+        try store.setPreference(.init(favorite: false), for: "epic:42")
+        _ = try CatalogStore(url: file)
+        XCTAssertEqual(try Data(contentsOf: backup), original)
+    }
+    func testSnapshotFailureRollsBackPreviousData() throws {
+        let file = try folder().appendingPathComponent("catalog.sqlite")
+        let store = try CatalogStore(url: file)
+        let original = ["local:42": Data("retained".utf8)]
+        try store.replaceGameDetails(original)
+        try sql(file, "CREATE TRIGGER fail_insert BEFORE INSERT ON game_details BEGIN SELECT RAISE(ABORT, 'fixture'); END")
+        XCTAssertThrowsError(try store.replaceGameDetails(["local:43": Data("new".utf8)]))
+        XCTAssertEqual(try store.importedGameDetails(), original)
+    }
+    func testFutureSchemaRemainsUntouched() throws {
+        let file = try folder().appendingPathComponent("catalog.sqlite")
+        try sql(file, "PRAGMA user_version=99")
+        let original = try Data(contentsOf: file)
+        XCTAssertThrowsError(try CatalogStore(url: file))
+        XCTAssertEqual(try Data(contentsOf: file), original)
     }
     func testProfileRollbackAndClonePreserveOriginal() throws {
         let store = CompatibilityProfileStore(directory: try folder())
