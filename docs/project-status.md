@@ -5,6 +5,15 @@ project acceptance is **not yet closed**. Owner authorization permits continuing
 routine implementation, builds and clean commits; it does not turn missing tests
 into passes.
 
+## Installed candidate
+
+Authoritative local app: `~/Applications/Game Hub.app`.
+Built from source revision `0f2515c15301acab28259ed44087b66f3314075b` on
+`feat/steam-native`. Xcode performed the local ad-hoc signing; the installed copy
+passes `codesign --verify --deep --strict`. This is not a notarized public release.
+The original app and runtime are preserved. Development builds and the test host
+are not the user entry point. Do not remove recovery copies before final live acceptance.
+
 ## Working configuration
 
 - FFVII Rebirth, Steam app 2909400; 171.06 GB installed in the shared Windows Steam
