@@ -76,7 +76,7 @@ import AppKit
             let root = paths.steam.deletingLastPathComponent()
             guard roots.insert(root).inserted else { continue }
             let access = paths.prefix.startAccessingSecurityScopedResource()
-            let result = await Task.detached(priority: .utility) { SteamWindowsProvider(steamRoot: root, profileIDs: ids).scan() }.value
+            let result = await Task.detached(priority: .utility) { SteamWindowsProvider(steamRoot: root, profileIDs: ids, driveRoots: ["c": paths.prefix.appendingPathComponent("drive_c")]).scan() }.value
             if access { paths.prefix.stopAccessingSecurityScopedResource() }
             records += result.records.map { record in
                 GameRecord(id: record.id, title: record.title, launchTargets: record.launchTargets.map { target in
@@ -110,7 +110,7 @@ import AppKit
             }
         }.value
         guard FileManager.default.fileExists(atPath: paths.steam.path),
-              SteamWindowsProvider(steamRoot: paths.steam.deletingLastPathComponent(), profileIDs: [appID: profileID]).scan().records.contains(where: { $0.id.externalID == appID }) else { throw RuntimeError.missing }
+              SteamWindowsProvider(steamRoot: paths.steam.deletingLastPathComponent(), profileIDs: [appID: profileID], driveRoots: ["c": paths.prefix.appendingPathComponent("drive_c")]).scan().records.contains(where: { $0.id.externalID == appID }) else { throw RuntimeError.missing }
         var environment = ProcessInfo.processInfo.environment
         environment["WINEPREFIX"] = paths.prefix.path
         environment["WINEDEBUG"] = "-all,err+all"
