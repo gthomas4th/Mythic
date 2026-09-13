@@ -7,9 +7,11 @@ public final class CatalogStore {
     public struct Preference: Codable, Sendable {
         public var favorite: Bool = false
         public var lastPlayed: Date?
+        public var firstSeen: Date?
         public var preferredTargetID: String?
-        public init(favorite: Bool = false, lastPlayed: Date? = nil, preferredTargetID: String? = nil) {
+        public init(favorite: Bool = false, lastPlayed: Date? = nil, preferredTargetID: String? = nil, firstSeen: Date? = nil) {
             self.favorite = favorite; self.lastPlayed = lastPlayed; self.preferredTargetID = preferredTargetID
+            self.firstSeen = firstSeen
         }
     }
     public enum StoreError: Error { case database, newerSchema, invalidData }
@@ -66,12 +68,13 @@ public final class CatalogStore {
             result.append(String(cString: value))
         }
     }
-    public func upsert(_ records: [GameRecord]) throws {
+    public func upsert(_ records: [GameRecord], observedAt: Date = .now) throws {
         try execute("BEGIN IMMEDIATE")
         do {
             for record in LaunchResolver.merge(records) {
                 guard let json = String(data: try JSONEncoder().encode(record), encoding: .utf8) else { throw StoreError.invalidData }
                 try execute("INSERT OR REPLACE INTO records VALUES (?, ?)", [record.id.description, json])
+                _ = try recordFirstSeen(for: record.id.description, at: observedAt)
             }
             try execute("COMMIT")
         } catch { try? execute("ROLLBACK"); throw error }
@@ -114,7 +117,17 @@ public final class CatalogStore {
         guard let json = try query("SELECT payload FROM preferences WHERE id=?", [id]).first else { return .init() }
         return try JSONDecoder().decode(Preference.self, from: Data(json.utf8))
     }
+    /// First discovery is immutable across rescans, preference edits and restarts.
+    @discardableResult public func recordFirstSeen(for id: String, at date: Date = .now) throws -> Date {
+        var saved = try preference(for: id)
+        if let firstSeen = saved.firstSeen { return firstSeen }
+        saved.firstSeen = date
+        try setPreference(saved, for: id)
+        return date
+    }
     public func setPreference(_ preference: Preference, for id: String) throws {
+        var preference = preference
+        preference.firstSeen = try self.preference(for: id).firstSeen ?? preference.firstSeen
         guard let json = String(data: try JSONEncoder().encode(preference), encoding: .utf8) else { throw StoreError.invalidData }
         try execute("INSERT OR REPLACE INTO preferences VALUES (?, ?)", [id, json])
     }

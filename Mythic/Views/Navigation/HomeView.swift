@@ -108,6 +108,7 @@ struct HomeView: View {
                     gameRow("Recently Played", games: gameDataStore.displayLibrary
                         .filter { $0.lastLaunched != nil && $0 != gameDataStore.recent }
                         .sorted { ($0.lastLaunched ?? .distantPast) > ($1.lastLaunched ?? .distantPast) })
+                    gameRow("Recently Added", games: gameDataStore.recentlyAdded)
                     gameRow("Final Fantasy", games: sortedGames.filter { $0.title.localizedStandardContains("Final Fantasy") })
                     gameRow("Retro", games: sortedGames.filter { $0 is ROMGame })
                     gameRow("Ready on Home PC", games: sortedGames.filter {

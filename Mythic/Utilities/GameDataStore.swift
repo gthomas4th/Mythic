@@ -18,6 +18,7 @@ import OSLog
     private var catalog: CatalogStore?
     private(set) var persistenceError: String?
     private var persistenceReady = false
+    private var firstSeenDates: [String: Date] = [:]
     
     var library: Set<Game> = [] {
         didSet { if persistenceReady { persistLibrary() } }
@@ -54,6 +55,7 @@ import OSLog
                     game.isFavourited = saved.favorite; game.lastLaunched = saved.lastPlayed
                     game.preferredTargetID = saved.preferredTargetID
                 }
+                rememberFirstSeen(for: game)
                 return game
             })
         }
@@ -71,6 +73,7 @@ import OSLog
         do {
             try catalog?.replaceGameDetails(encodedLibrary())
             importLegacyCatalog()
+            for game in library { rememberFirstSeen(for: game) }
         } catch { persistenceError = "Library changes could not be saved. The previous catalog snapshot is preserved." }
     }
 
@@ -86,6 +89,21 @@ import OSLog
         }
     }
 
+    var recentlyAdded: [Game] {
+        displayLibrary.filter { firstSeenDates[identity(for: $0)] != nil }.sorted {
+            let left = firstSeenDates[identity(for: $0)] ?? .distantPast
+            let right = firstSeenDates[identity(for: $1)] ?? .distantPast
+            if left != right { return left > right }
+            let order = $0.title.localizedStandardCompare($1.title)
+            return order == .orderedSame ? identity(for: $0) < identity(for: $1) : order == .orderedAscending
+        }
+    }
+    private func rememberFirstSeen(for game: Game) {
+        guard persistenceReady, let catalog else { return }
+        do {
+            firstSeenDates[identity(for: game)] = try catalog.recordFirstSeen(for: identity(for: game))
+        } catch { persistenceError = "The date this game was added could not be saved." }
+    }
     private func identity(for game: Game) -> String {
         if game is SteamGame || game is ROMGame { return game.id }
         return (game.storefront == .epicGames ? "epic:" : "local:") + game.id
@@ -107,6 +125,7 @@ import OSLog
         } catch { persistenceError = "The existing library could not be imported. Its original data is preserved." }
     }
     func restorePreferences(for game: Game) {
+        rememberFirstSeen(for: game)
         if let saved = try? catalog?.preference(for: identity(for: game)) {
             game.isFavourited = saved.favorite; game.lastLaunched = saved.lastPlayed
         }
@@ -159,6 +178,7 @@ import OSLog
                     game.isFavourited = old.isFavourited
                     game.lastLaunched = old.lastLaunched
                 }
+                rememberFirstSeen(for: game)
                 refreshed.insert(game)
             }
             discoveredGames = refreshed

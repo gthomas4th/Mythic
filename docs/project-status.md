@@ -46,13 +46,13 @@ are not the user entry point. Do not remove recovery copies before final live ac
 | Xbox | Official Xbox Cloud library link; no purchase or Wine-based Microsoft Store promise |
 | Controller | Keyboard search, Return/details, Escape/back, favorite/filter, and immediate target switching verified; local Rebirth input and mouse-click/reconnect sequence owner-confirmed with current configuration; first connection after launch and physical hub navigation still open |
 | Diagnostics | Correlation IDs and bounded in-session events; export excludes raw runtime logs, bookmarks, credentials, filesystem paths and network addresses |
-| Build | Full Debug build; 62 synthetic tests pass; SwiftLint zero errors, nine inherited warnings |
+| Build | Full Debug build; 64 synthetic tests pass; SwiftLint zero errors, nine inherited warnings |
 
 Home now includes Continue Playing, Favourites, Recently Played, Final Fantasy,
 Retro, and Ready on Home PC collections (empty collections are omitted). Containers
 remain available under Management. Artwork contrast and fallback images were
 visually checked; release notes remain dismissed after restarting. Debug game IDs
-no longer crowd game cards. Recently Added still needs first-seen catalog metadata.
+no longer crowd game cards. Recently Added uses persistent first-seen catalog dates; rescans and preference edits preserve ordering. Existing entries are dated when first observed by this version, not by an invented historical install date.
 
 Windows discovery reads secondary libraries within explicitly supplied drive roots.
 The runtime currently supplies its authorized C drive. Other drives are reported
@@ -88,7 +88,7 @@ paths, traversal, and symlink escape. The real Rebirth installation remains visi
 The current delivery keeps legacy Epic/local operations as adapters and stores their
 records in SQLite. Direct/relay
 telemetry, complete remote/controller acceptance, emulator BIOS/version detection,
-ROM artwork editing, Recently Added metadata, and fuller game details require follow-up. Unknown or unavailable targets must
+ROM artwork editing and fuller game details require follow-up. Unknown or unavailable targets must
 remain labelled honestly. Do not describe this delivery as every handoff phase complete.
 
 ## Source references

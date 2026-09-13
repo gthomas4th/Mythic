@@ -49,6 +49,37 @@ final class CatalogProfileTests: XCTestCase {
         XCTAssertTrue(try reopened.preference(for: record.id.description).favorite)
         XCTAssertEqual(try reopened.preference(for: record.id.description).preferredTargetID, "remote")
     }
+    func testFirstSeenSurvivesRescanPreferenceChangesAndReopen() throws {
+        let file = try folder().appendingPathComponent("catalog.sqlite")
+        let first = Date(timeIntervalSince1970: 100)
+        let later = Date(timeIntervalSince1970: 200)
+        let record = GameRecord(id: .init(provider: .steam, externalID: "42"), title: "Original", launchTargets: [], artwork: nil)
+        do {
+            let store = try CatalogStore(url: file)
+            try store.upsert([record], observedAt: first)
+            try store.setPreference(.init(favorite: true, preferredTargetID: "remote"), for: record.id.description)
+            try store.upsert([record], observedAt: later)
+            XCTAssertEqual(try store.recordFirstSeen(for: record.id.description, at: later), first)
+        }
+        let store = try CatalogStore(url: file)
+        let saved = try store.preference(for: record.id.description)
+        XCTAssertEqual(saved.firstSeen, first)
+        XCTAssertTrue(saved.favorite)
+        XCTAssertEqual(saved.preferredTargetID, "remote")
+        XCTAssertEqual(try store.recordFirstSeen(for: "rom:42", at: later), later)
+    }
+    func testOldPreferencesGainFirstSeenWithoutLosingUserChoices() throws {
+        let store = try CatalogStore(url: folder().appendingPathComponent("catalog.sqlite"))
+        let old = try JSONDecoder().decode(CatalogStore.Preference.self,
+            from: Data(#"{"favorite":true,"preferredTargetID":"local"}"#.utf8))
+        XCTAssertNil(old.firstSeen)
+        try store.setPreference(old, for: "local:legacy")
+        let observed = Date(timeIntervalSince1970: 300)
+        try store.recordFirstSeen(for: "local:legacy", at: observed)
+        XCTAssertTrue(try store.preference(for: "local:legacy").favorite)
+        XCTAssertEqual(try store.preference(for: "local:legacy").preferredTargetID, "local")
+        XCTAssertEqual(try store.preference(for: "local:legacy").firstSeen, observed)
+    }
     func sql(_ file: URL, _ command: String) throws {
         var database: OpaquePointer?
         XCTAssertEqual(sqlite3_open(file.path, &database), SQLITE_OK)
