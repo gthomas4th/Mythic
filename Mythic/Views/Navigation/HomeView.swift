@@ -23,7 +23,6 @@ struct HomeView: View {
     @AppStorage("gameCardSize") private var gameCardSize: Double = 200.0
     
     @State private var isImageEmpty = true
-    
 
     private var favouriteGames: [Game] {
         gameDataStore.displayLibrary

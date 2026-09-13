@@ -48,8 +48,8 @@ struct ControllerLibraryView: View {
     @State private var favoritesOnly = false
     @State private var message = ""
     @State private var search = ""
-    @FocusState private var searchFocused: Bool
-    @FocusState private var browsingFocused: Bool
+    private enum Focus: Hashable { case search, browsing }
+    @FocusState private var focus: Focus?
     private var games: [Game] {
         GameDataStore.shared.displayLibrary.filter {
             (!favoritesOnly || $0.isFavourited) && (search.isEmpty || $0.title.localizedStandardContains(search))
@@ -63,8 +63,8 @@ struct ControllerLibraryView: View {
                 Spacer()
                 Label(input.connected ? "Controller connected" : "Keyboard ready", systemImage: "gamecontroller")
             }
-            TextField("Search games", text: $search).textFieldStyle(.roundedBorder).focused($searchFocused)
-                .onSubmit { searchFocused = false; browsingFocused = true }
+            TextField("Search games", text: $search).textFieldStyle(.roundedBorder).focused($focus, equals: .search)
+                .onSubmit { details = selected != nil; focus = .browsing }
             Text("↑ ↓ Browse · A / Return Details & Play · B / Escape Back · X Favorite · Y Favorites filter")
                 .font(.callout).foregroundStyle(.secondary)
             if details, let game = selected {
@@ -107,17 +107,17 @@ struct ControllerLibraryView: View {
         }
         .padding(24).navigationTitle("Controller Library")
         .focusable()
-        .focused($browsingFocused)
-        .onMoveCommand { direction in if !searchFocused { action(String(describing: direction)) } }
+        .focused($focus, equals: .browsing)
+        .onMoveCommand { direction in if focus != .search { action(String(describing: direction)) } }
         .onKeyPress(.return) {
-            if searchFocused { searchFocused = false; browsingFocused = true } else { action("select") }
+            if focus == .search { details = selected != nil; focus = .browsing } else { action("select") }
             return .handled
         }
-        .onKeyPress("x") { guard !searchFocused else { return .ignored }; action("favorite"); return .handled }
-        .onKeyPress("y") { guard !searchFocused else { return .ignored }; action("filter"); return .handled }
+        .onKeyPress("x") { guard focus != .search else { return .ignored }; action("favorite"); return .handled }
+        .onKeyPress("y") { guard focus != .search else { return .ignored }; action("filter"); return .handled }
         .onExitCommand { action("back") }
         .onChange(of: search) { _, _ in selection = 0; details = false }
-        .onAppear { input.onAction = action; input.start(); browsingFocused = true }
+        .onAppear { input.onAction = action; input.start(); focus = .browsing }
         .onDisappear { input.stop(); input.onAction = nil }
     }
     private func action(_ action: String) {
