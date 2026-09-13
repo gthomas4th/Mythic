@@ -22,10 +22,15 @@ final class SteamGame: Game {
     required init(from decoder: any Decoder) throws { try super.init(from: decoder) }
 
     @MainActor override func _launch() async throws {
-        guard let record, let target = LaunchResolver.resolve(record.launchTargets, preferredID: preferredTargetID) else {
+        guard let record else { throw GameHubRuntime.RuntimeError.unconfigured }
+        // An explicit Home PC choice must be checked before availability-based fallback.
+        let preferredRemote = record.launchTargets.first { $0.id == preferredTargetID && $0.kind == .moonlight }
+        guard let target = preferredRemote ?? LaunchResolver.resolve(record.launchTargets, preferredID: preferredTargetID) else {
             throw GameHubRuntime.RuntimeError.unconfigured
         }
         if target.kind == .moonlight {
+            guard await HubConnections.shared.checkReachability() else { throw LaunchError.remoteUnavailable }
+            try Task.checkCancellation()
             guard let application = HubConnections.shared.steamApplications[record.id.externalID] else { throw GameHubRuntime.RuntimeError.unconfigured }
             try await HubConnections.shared.openMoonlight(stream: true, application: application)
             return
@@ -51,9 +56,10 @@ final class SteamGame: Game {
     @MainActor override func _update() async throws { throw LaunchError.managedBySteam }
 
     enum LaunchError: LocalizedError {
-        case clientMissing, payloadUnavailable, openFailed, managedBySteam
+        case clientMissing, payloadUnavailable, openFailed, managedBySteam, remoteUnavailable
         var errorDescription: String? {
             switch self {
+            case .remoteUnavailable: "Your Home PC is unavailable. Turn it on and check Sunshine, or choose another target with Play using."
             case .clientMissing: "Install or open the native Steam client, then try Play again."
             case .payloadUnavailable: "The Mac game files are unavailable. Refresh the library or check the installation in Steam."
             case .openFailed: "macOS could not hand this game to Steam. Open Steam and try again."

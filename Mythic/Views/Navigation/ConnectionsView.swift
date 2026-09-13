@@ -9,6 +9,8 @@ import Network
             reachable = false; checking = false
             connection?.stateUpdateHandler = nil; connection?.cancel(); connection = nil
             timeout?.cancel(); timeout = nil
+            attemptID = UUID()
+            resolveWaiters(false)
             status = "Address changed. Test this PC before selecting its game targets."
             Task { try? await GameDataStore.shared.refreshFromStorefronts(.steam) }
         }
@@ -20,10 +22,13 @@ import Network
     private let mappingFile = GameHubRuntime.support.appendingPathComponent("remote-steam-mappings.json")
     private var connection: NWConnection?
     private var timeout: Task<Void, Never>?
+    private var attemptID = UUID()
+    private var waiters: [CheckedContinuation<Bool, Never>] = []
     private let file = GameHubRuntime.support.appendingPathComponent("remote-host.json")
     init() {
         if let data = try? Data(contentsOf: mappingFile), let saved = try? JSONDecoder().decode([String: String].self, from: data) { steamApplications = saved }
         if let data = try? Data(contentsOf: file), let saved = try? JSONDecoder().decode(RemoteHost.self, from: data), (try? saved.validate()) != nil { host = saved }
+        Task { if !host.address.isEmpty { test() } }
     }
     func save() throws {
         try host.validate()
@@ -32,15 +37,16 @@ import Network
     }
     func test() {
         guard !checking else { return }
-        do { try save() } catch { status = error.localizedDescription; return }
+        do { try save() } catch { reachable = false; finish(error.localizedDescription); return }
         reachable = false; checking = true; status = "Checking streaming port…"
         let start = Date()
         let checkedAddress = host.address
+        let identifier = UUID(); attemptID = identifier
         let attempt = NWConnection(host: NWEndpoint.Host(host.address), port: 47989, using: .tcp)
         connection = attempt
         attempt.stateUpdateHandler = { [weak self] state in
             Task { @MainActor in
-                guard let self, self.checking, self.host.address == checkedAddress else { return }
+                guard let self, self.checking, self.attemptID == identifier, self.host.address == checkedAddress else { return }
                 switch state {
                 case .ready: self.reachable = true; self.finish(RemoteHealthClassifier.description(reachable: true, relayed: nil, milliseconds: Date().timeIntervalSince(start) * 1000))
                 case .failed: self.finish(RemoteHealthClassifier.description(reachable: false, relayed: nil, milliseconds: nil))
@@ -51,12 +57,23 @@ import Network
         attempt.start(queue: .global(qos: .utility))
         timeout = Task { [weak self] in
             try? await Task.sleep(for: .seconds(5))
-            guard !Task.isCancelled else { return }
+            guard !Task.isCancelled, self?.attemptID == identifier else { return }
             self?.finish("Streaming port unavailable. Check the PC address and Sunshine on the PC.")
         }
     }
+    func checkReachability() async -> Bool {
+        await withCheckedContinuation { continuation in
+            waiters.append(continuation)
+            test()
+        }
+    }
+    private func resolveWaiters(_ result: Bool) {
+        let pending = waiters; waiters.removeAll()
+        for waiter in pending { waiter.resume(returning: result) }
+    }
     private func finish(_ message: String) {
         checking = false; status = message
+        resolveWaiters(reachable)
         connection?.stateUpdateHandler = nil; connection?.cancel(); connection = nil
         timeout?.cancel(); timeout = nil
         Task { try? await GameDataStore.shared.refreshFromStorefronts(.steam) }
