@@ -438,11 +438,7 @@ extension GameCard {
                 }
             }
 
-#if DEBUG
-                                Text("(\(game.id))")
-                                    .font(.footnote)
-                                    .foregroundStyle(.secondary)
-#endif // DEBUG
+
         }
     }
 }
