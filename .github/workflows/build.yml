@@ -5,6 +5,8 @@ on:
       - '.github/workflows/build.yml'
       - 'Mythic.xcodeproj/**'
       - 'Mythic/**'
+      - 'Packages/**'
+      - 'scripts/**'
   pull_request:
     paths: *workflow_paths
   workflow_dispatch:
@@ -25,8 +27,12 @@ jobs:
         key: xcode-cache-deriveddata-${{ github.workflow }}-${{ github.sha }}
         restore-keys: xcode-cache-deriveddata-${{ github.workflow }}-
         
+    - name: Core tests
+      run: swift test --package-path Packages/GameHubCore
+    - name: License check
+      run: test -s LICENSE.md
     - run: |
-        xcodebuild -scheme Mythic \
+        xcodebuild -scheme Mythic -configuration Debug \
           CODE_SIGNING_ALLOWED=NO \
           SWIFTLINT=NO \
           -parallel-testing-enabled YES \

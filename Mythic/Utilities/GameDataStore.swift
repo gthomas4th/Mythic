@@ -16,6 +16,8 @@ import OSLog
     static let shared: GameDataStore = .init()
     let log: Logger = .custom(category: "GameDataStore")
     
+    private var catalog: CatalogStore?
+    private(set) var persistenceError: String?
     private let gamesObserver: CodableUserDefaultsObserver<[AnyGame]>
     private var isUpdatingFromObserver = false
     
@@ -31,9 +33,25 @@ import OSLog
         gamesObserver = .init(key: "games",
                               defaultValue: [])
         
+        do {
+            catalog = try CatalogStore(url: GameHubRuntime.support.appendingPathComponent("Catalog/catalog.sqlite"))
+        } catch { persistenceError = "The saved catalog could not be opened. Existing data has been preserved." }
         // load library on initialisation
         library = Set(gamesObserver.value.map({ $0.base }))
         
+        importLegacyCatalog()
+        for game in library { restorePreferences(for: game) }
+        if let cached = try? catalog?.records() {
+            discoveredGames = Set(cached.filter { $0.id.provider == .steam }.compactMap { record in
+                guard let target = record.launchTargets.first else { return nil }
+                let game = SteamGame(record: record, target: target)
+                if let saved = try? catalog?.preference(for: game.id) {
+                    game.isFavourited = saved.favorite; game.lastLaunched = saved.lastPlayed
+                    game.preferredTargetID = saved.preferredTargetID
+                }
+                return game
+            })
+        }
         // observe external changes
         gamesObserver.$value
             .sink { [weak self] newGames in
@@ -55,7 +73,7 @@ import OSLog
 
     private(set) var discoveredGames: Set<Game> = []
     private(set) var discoveryDiagnostics: [String] = []
-    var displayLibrary: Set<Game> { library.union(discoveredGames) }
+    var displayLibrary: Set<Game> { library.union(discoveredGames).union(ROMLibrary.shared.games) }
 
     var recent: Game? {
         guard !displayLibrary.allSatisfy({ $0.lastLaunched == nil }) else { return nil }
@@ -63,6 +81,38 @@ import OSLog
         return displayLibrary.max {
             $0.lastLaunched ?? .distantPast < $1.lastLaunched ?? .distantPast
         }
+    }
+
+    private func identity(for game: Game) -> String {
+        if game is SteamGame || game is ROMGame { return game.id }
+        return (game.storefront == .epicGames ? "epic:" : "local:") + game.id
+    }
+    private func importLegacyCatalog() {
+        do {
+            let folder = GameHubRuntime.support.appendingPathComponent("Catalog")
+            let backup = folder.appendingPathComponent("legacy-games-before-import.plist")
+            if !FileManager.default.fileExists(atPath: backup.path), let data = UserDefaults.standard.data(forKey: "games") {
+                try data.write(to: backup, options: .atomic)
+            }
+            let existing = Set(try catalog?.records().map { $0.id.description } ?? [])
+            for game in library where !existing.contains(identity(for: game)) {
+                let record = GameRecord(id: .init(provider: game.storefront == .epicGames ? .epic : .local, externalID: game.id),
+                    title: game.title, launchTargets: [], artwork: game.verticalImageURL)
+                try catalog?.upsert([record])
+                try catalog?.setPreference(.init(favorite: game.isFavourited, lastPlayed: game.lastLaunched), for: identity(for: game))
+            }
+        } catch { persistenceError = "The existing library could not be imported. Its original data is preserved." }
+    }
+    func restorePreferences(for game: Game) {
+        if let saved = try? catalog?.preference(for: identity(for: game)) {
+            game.isFavourited = saved.favorite; game.lastLaunched = saved.lastPlayed
+        }
+    }
+    func savePreferences(for game: Game) {
+        do {
+            try catalog?.setPreference(.init(favorite: game.isFavourited, lastPlayed: game.lastLaunched,
+                preferredTargetID: (game as? SteamGame)?.preferredTargetID), for: identity(for: game))
+        } catch { persistenceError = "Game preferences could not be saved." }
     }
 
     func refreshFromStorefronts(_ storefronts: Game.Storefront...) async throws {
@@ -80,11 +130,24 @@ import OSLog
             let result = await Task.detached(priority: .utility) {
                 await SteamNativeProvider().discoverInstalled()
             }.value
-            discoveryDiagnostics = result.diagnostics
+            let windows = await GameHubRuntime.windowsDiscovery()
+            let cached = ((try? catalog?.records()) ?? []).filter { $0.id.provider == .steam }.map { record in
+                GameRecord(id: record.id, title: record.title, launchTargets: record.launchTargets.map { target in
+                    var unavailable = target; unavailable.available = false; return unavailable
+                }, artwork: record.artwork)
+            }
+            let records = HubConnections.shared.targets(for: LaunchResolver.merge(cached + result.records + windows.records))
+            discoveryDiagnostics = result.diagnostics + windows.diagnostics
+            do { try catalog?.upsert(records) } catch { persistenceError = "Library changes could not be saved." }
             var refreshed: Set<Game> = []
-            for record in result.records {
-                guard let target = record.launchTargets.first else { continue }
+            for record in records {
+                guard let target = LaunchResolver.resolve(record.launchTargets) ?? record.launchTargets.first else { continue }
                 let game = SteamGame(record: record, target: target)
+                if let saved = try? catalog?.preference(for: game.id) {
+                    game.isFavourited = saved.favorite
+                    game.lastLaunched = saved.lastPlayed
+                    game.preferredTargetID = saved.preferredTargetID
+                }
                 if let old = discoveredGames.first(where: { $0.id == game.id }) {
                     game.isFavourited = old.isFavourited
                     game.lastLaunched = old.lastLaunched

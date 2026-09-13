@@ -57,6 +57,7 @@ extension GameCard {
                         }
                     }
                     .disabled(operationManager.queue.contains(where: { $0.game == game && $0.type.modifiesFiles }))
+                    .disabled(game.isLaunching)
                     // FIXME: .disabled(game.checkIfGameIsRunning())
                     .help("Play \"\(game.title)\"")
 
@@ -255,6 +256,7 @@ extension GameCard {
             var body: some View {
                 Button {
                     game.isFavourited.toggle()
+                    GameDataStore.shared.savePreferences(for: game)
                     withAnimation { animateFavouriteIcon = game.isFavourited }
                 } label: {
                     if withLabel {
@@ -376,6 +378,16 @@ extension GameCard {
                 OperationCard.StatusView(operation: .constant(operation), withLabel: withLabel)
             } else if case .installed = game.installationState {
                 Buttons.Prominent.PlayButton(game: $game, withLabel: withLabel)
+                if let steam = game as? SteamGame, let record = steam.record, record.launchTargets.count > 1 {
+                    Menu("Play using") {
+                        ForEach(record.launchTargets) { target in
+                            Button(target.kind == .nativeMac ? "Native Mac" : (target.kind == .moonlight ? "Home PC" : "Windows Steam")) {
+                                steam.preferredTargetID = target.id
+                                GameDataStore.shared.savePreferences(for: steam)
+                            }.disabled(!target.available)
+                        }
+                    }
+                }
                 MenuView(game: $game)
                     .layoutPriority(1)
             } else {
@@ -390,6 +402,10 @@ extension GameCard {
 
         var body: some View {
             SubscriptedTextView(game.storefront?.description ?? "Unknown")
+            if let steam = game as? SteamGame, let record = steam.record {
+                SubscriptedTextView(LaunchResolver.resolve(record.launchTargets) == nil ? "Unavailable" :
+                    (record.launchTargets.contains(where: { $0.kind == .wineSteam && $0.verified }) ? "Accepted profile" : "On this Mac"))
+            }
 
             if GameDataStore.shared.recent == game {
                 SubscriptedTextView("Recent")

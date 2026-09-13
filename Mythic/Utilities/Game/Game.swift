@@ -52,6 +52,7 @@ import AppKit
     var horizontalImageURL: URL? { _horizontalImageURL ?? computedHorizontalImageURL }
     internal var computedHorizontalImageURL: URL? { nil } // override in subclass — Auto-synthesized (default) image URL
 
+    var isLaunching = false
     var launchArguments: [String] = []
     final var isFavourited: Bool = false
     final var lastLaunched: Date?
@@ -109,12 +110,24 @@ import AppKit
 
     /// Launch the underlying game.
     @MainActor final func launch() async throws {
+        guard !isLaunching else { return }
+        isLaunching = true
+        defer { isLaunching = false }
         guard case .installed = installationState else {
             throw CocoaError(.fileNoSuchFile)
         }
 
+        let correlation = UUID()
+        LaunchDiagnostics.record(correlation, game: self, outcome: "requested")
+        do {
+            try await _launch()
+            LaunchDiagnostics.record(correlation, game: self, outcome: "handed-to-launcher")
+        } catch {
+            LaunchDiagnostics.record(correlation, game: self, outcome: "failed-preflight-or-launch")
+            throw error
+        }
         lastLaunched = .now
-        try await _launch()
+        GameDataStore.shared.savePreferences(for: self)
     }
 
     @MainActor final func update() async throws {

@@ -142,6 +142,18 @@
 		FD0000000000000000000106 /* SteamDeckLibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FD0000000000000000000006; };
 		FD0000000000000000000107 /* EngineArtifactVerifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = FD0000000000000000000007; };
 		FD0000000000000000000108 /* WineRegistryValue.swift in Sources */ = {isa = PBXBuildFile; fileRef = FD0000000000000000000008; };
+		FC0000000000000000010000 /* LaunchResolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC0000000000000000000000; };
+		FC0000000000000000010001 /* SteamWindowsProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC0000000000000000000001; };
+		FC0000000000000000010002 /* CompatibilityProfile.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC0000000000000000000002; };
+		FC0000000000000000010003 /* CatalogStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC0000000000000000000003; };
+		FC0000000000000000010004 /* GameHubRuntime.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC0000000000000000000004; };
+		FC0000000000000000010005 /* LaunchSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC0000000000000000000005; };
+		FC0000000000000000010006 /* RemoteHost.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC0000000000000000000006; };
+		FC0000000000000000010007 /* ConnectionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC0000000000000000000007; };
+		FC0000000000000000010008 /* Emulation.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC0000000000000000000008; };
+		FC0000000000000000010009 /* ROMLibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC0000000000000000000009; };
+		FC000000000000000001000A /* LaunchDiagnostics.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC000000000000000000000A; };
+		FC000000000000000001000B /* ControllerLibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC000000000000000000000B; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -283,6 +295,18 @@
 		FD0000000000000000000006 /* SteamDeckLibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Mythic/Views/Unified/Sheets/SteamDeckLibraryView.swift; sourceTree = SOURCE_ROOT; };
 		FD0000000000000000000007 /* EngineArtifactVerifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Packages/GameHubCore/Sources/GameHubCore/EngineArtifactVerifier.swift; sourceTree = SOURCE_ROOT; };
 		FD0000000000000000000008 /* WineRegistryValue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Packages/GameHubCore/Sources/GameHubCore/WineRegistryValue.swift; sourceTree = SOURCE_ROOT; };
+		FC0000000000000000000000 /* LaunchResolver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Packages/GameHubCore/Sources/GameHubCore/LaunchResolver.swift"; sourceTree = SOURCE_ROOT; };
+		FC0000000000000000000001 /* SteamWindowsProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Packages/GameHubCore/Sources/GameHubCore/SteamWindowsProvider.swift"; sourceTree = SOURCE_ROOT; };
+		FC0000000000000000000002 /* CompatibilityProfile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Packages/GameHubCore/Sources/GameHubCore/CompatibilityProfile.swift"; sourceTree = SOURCE_ROOT; };
+		FC0000000000000000000003 /* CatalogStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Packages/GameHubCore/Sources/GameHubCore/CatalogStore.swift"; sourceTree = SOURCE_ROOT; };
+		FC0000000000000000000004 /* GameHubRuntime.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Mythic/Utilities/GameHubRuntime.swift"; sourceTree = SOURCE_ROOT; };
+		FC0000000000000000000005 /* LaunchSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Mythic/Views/Unified/Sheets/LaunchSettingsView.swift"; sourceTree = SOURCE_ROOT; };
+		FC0000000000000000000006 /* RemoteHost.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Packages/GameHubCore/Sources/GameHubCore/RemoteHost.swift"; sourceTree = SOURCE_ROOT; };
+		FC0000000000000000000007 /* ConnectionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Mythic/Views/Navigation/ConnectionsView.swift"; sourceTree = SOURCE_ROOT; };
+		FC0000000000000000000008 /* Emulation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Packages/GameHubCore/Sources/GameHubCore/Emulation.swift"; sourceTree = SOURCE_ROOT; };
+		FC0000000000000000000009 /* ROMLibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Mythic/Views/Navigation/ROMLibraryView.swift"; sourceTree = SOURCE_ROOT; };
+		FC000000000000000000000A /* LaunchDiagnostics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Mythic/Utilities/LaunchDiagnostics.swift"; sourceTree = SOURCE_ROOT; };
+		FC000000000000000000000B /* ControllerLibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Mythic/Views/Navigation/ControllerLibraryView.swift"; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -591,6 +615,18 @@
 				FD0000000000000000000002 /* SteamNativeProvider.swift */,
 				FD0000000000000000000001 /* ValveKeyValues.swift */,
 				FD0000000000000000000000 /* GameRecord.swift */,
+				FC000000000000000000000B /* ControllerLibraryView.swift */,
+				FC000000000000000000000A /* LaunchDiagnostics.swift */,
+				FC0000000000000000000009 /* ROMLibraryView.swift */,
+				FC0000000000000000000008 /* Emulation.swift */,
+				FC0000000000000000000007 /* ConnectionsView.swift */,
+				FC0000000000000000000006 /* RemoteHost.swift */,
+				FC0000000000000000000005 /* LaunchSettingsView.swift */,
+				FC0000000000000000000004 /* GameHubRuntime.swift */,
+				FC0000000000000000000003 /* CatalogStore.swift */,
+				FC0000000000000000000002 /* CompatibilityProfile.swift */,
+				FC0000000000000000000001 /* SteamWindowsProvider.swift */,
+				FC0000000000000000000000 /* LaunchResolver.swift */,
 				6A2934F72BFCFAFD0035CE4B /* Mythic */,
 				6AB474962AACBBE900AB9C63 /* Products */,
 			);
@@ -826,6 +862,18 @@
 				FD0000000000000000000102 /* SteamNativeProvider.swift in Sources */,
 				FD0000000000000000000101 /* ValveKeyValues.swift in Sources */,
 				FD0000000000000000000100 /* GameRecord.swift in Sources */,
+				FC000000000000000001000B /* ControllerLibraryView.swift in Sources */,
+				FC000000000000000001000A /* LaunchDiagnostics.swift in Sources */,
+				FC0000000000000000010009 /* ROMLibraryView.swift in Sources */,
+				FC0000000000000000010008 /* Emulation.swift in Sources */,
+				FC0000000000000000010007 /* ConnectionsView.swift in Sources */,
+				FC0000000000000000010006 /* RemoteHost.swift in Sources */,
+				FC0000000000000000010005 /* LaunchSettingsView.swift in Sources */,
+				FC0000000000000000010004 /* GameHubRuntime.swift in Sources */,
+				FC0000000000000000010003 /* CatalogStore.swift in Sources */,
+				FC0000000000000000010002 /* CompatibilityProfile.swift in Sources */,
+				FC0000000000000000010001 /* SteamWindowsProvider.swift in Sources */,
+				FC0000000000000000010000 /* LaunchResolver.swift in Sources */,
 				6A2935592BFCFAFD0035CE4B /* ContainerCreationView.swift in Sources */,
 				6A1192852EC8D4FD005A3E05 /* GameManager.swift in Sources */,
 				6A2960FE2CE1017900917E90 /* NSApplication+Extensions.swift in Sources */,

@@ -1,0 +1,145 @@
+import SwiftUI
+import UniformTypeIdentifiers
+
+struct ROMSource: Codable, Identifiable {
+    var id = UUID()
+    var system: String
+    var emulator: EmulatorKind
+    var root: Data
+    var application: Data
+    var core: Data?
+    var index = ROMIndex()
+    func resolve(_ data: Data) throws -> URL {
+        var stale = false
+        let url = try URL(resolvingBookmarkData: data, options: [.withSecurityScope, .withoutUI], bookmarkDataIsStale: &stale)
+        guard !stale else { throw GameHubRuntime.RuntimeError.access }
+        return url
+    }
+}
+@MainActor @Observable final class ROMLibrary {
+    static let shared = ROMLibrary()
+    var sources: [ROMSource] = []
+    var status = "Choose a ROM folder when your files are ready. Steam Deck references remain available separately."
+    var scanning = false
+    @ObservationIgnored private var gameCache: [String: ROMGame] = [:]
+    private let file = GameHubRuntime.support.appendingPathComponent("rom-sources.json")
+    init() {
+        if let data = try? Data(contentsOf: file), let saved = try? JSONDecoder().decode([ROMSource].self, from: data) { sources = saved }
+    }
+    var games: Set<Game> {
+        Set(sources.flatMap { source in
+            source.index.entries.map { entry in
+                if let existing = gameCache[entry.id], existing.source?.id == source.id, existing.entry?.relativePath == entry.relativePath { return existing as Game }
+                let root = (try? source.resolve(source.root)) ?? URL(fileURLWithPath: "/unavailable")
+                let game = ROMGame(source: source, entry: entry, content: root.appendingPathComponent(entry.relativePath))
+                GameDataStore.shared.restorePreferences(for: game)
+                gameCache[entry.id] = game
+                return game as Game
+            }
+        })
+    }
+    func save() throws {
+        try FileManager.default.createDirectory(at: file.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try JSONEncoder().encode(sources).write(to: file, options: .atomic)
+    }
+    func add(system: String, emulator: EmulatorKind) {
+        guard CompatibilityProfile.safeID(system) else { status = "Enter a short system ID such as ps1, ps2 or snes."; return }
+        let rootPanel = NSOpenPanel(); rootPanel.canChooseDirectories = true; rootPanel.canChooseFiles = false
+        rootPanel.message = "Choose the folder containing your own games for this system."
+        guard rootPanel.runModal() == .OK, let root = rootPanel.url else { return }
+        let appPanel = NSOpenPanel(); appPanel.allowedContentTypes = [.application]
+        appPanel.message = "Choose the installed emulator application."
+        guard appPanel.runModal() == .OK, let app = appPanel.url else { return }
+        do {
+            var core: Data?
+            if emulator == .retroArch {
+                let corePanel = NSOpenPanel(); corePanel.message = "Choose the installed RetroArch core (.dylib) for this system."
+                guard corePanel.runModal() == .OK, let url = corePanel.url, url.pathExtension == "dylib" else { return }
+                core = try url.bookmarkData(options: .withSecurityScope)
+            }
+            sources.append(ROMSource(system: system, emulator: emulator, root: try root.bookmarkData(options: .withSecurityScope),
+                application: try app.bookmarkData(options: .withSecurityScope), core: core))
+            try save(); scan()
+        } catch { status = "Could not save folder access. Your existing sources are unchanged." }
+    }
+    func scan() {
+        guard !scanning else { return }
+        scanning = true
+        Task {
+            defer { scanning = false }
+            var count = 0
+            for position in sources.indices {
+                do {
+                    let source = sources[position]
+                    let root = try source.resolve(source.root)
+                    let access = root.startAccessingSecurityScopedResource()
+                    defer { if access { root.stopAccessingSecurityScopedResource() } }
+                    let index = try await Task.detached(priority: .utility) {
+                        var index = source.index
+                        try index.scan(root: root, system: source.system)
+                        return index
+                    }.value
+                    sources[position].index = index; count += index.entries.count
+                } catch { status = "A ROM folder or disc part is unavailable. Existing entries were kept."; return }
+            }
+            do { try save(); status = "Indexed \(count) games. Configure BIOS or firmware in each emulator before first play." } catch { status = "The scan finished but its index could not be saved." }
+        }
+    }
+}
+final class ROMGame: Game {
+    let source: ROMSource?
+    let entry: ROMEntry?
+    override var storefront: Storefront? { .local }
+    override var supportsFileManagement: Bool { false }
+    override var supportsLaunchArguments: Bool { false }
+    init(source: ROMSource, entry: ROMEntry, content: URL) {
+        self.source = source; self.entry = entry
+        super.init(id: entry.id, title: entry.title, installationState: .installed(location: content, platform: .macOS))
+    }
+    required init(from decoder: any Decoder) throws { source = nil; entry = nil; try super.init(from: decoder) }
+    @MainActor override func _launch() async throws {
+        guard let source, let entry else { throw ROMError.invalid }
+        let root = try source.resolve(source.root), app = try source.resolve(source.application)
+        let core = try source.core.map { try source.resolve($0) }
+        let urls = [root, app] + [core].compactMap { $0 }
+        let access = urls.map { $0.startAccessingSecurityScopedResource() }
+        defer { for (index, url) in urls.enumerated() where access[index] { url.stopAccessingSecurityScopedResource() } }
+        let content = root.appendingPathComponent(entry.relativePath).resolvingSymlinksInPath()
+        _ = try ROMIndex.parts(of: content, root: root)
+        guard FileManager.default.fileExists(atPath: app.path), core.map({ FileManager.default.fileExists(atPath: $0.path) }) ?? true else { throw ROMError.coreMissing }
+        let config = NSWorkspace.OpenConfiguration()
+        config.arguments = try EmulatorCommand.arguments(kind: source.emulator, content: content, core: core)
+        try await NSWorkspace.shared.openApplication(at: app, configuration: config)
+    }
+}
+struct ROMLibraryView: View {
+    @Bindable private var store = ROMLibrary.shared
+    @State private var system = "ps1"
+    @State private var emulator = EmulatorKind.duckStation
+    @State private var deckPresented = false
+    var body: some View {
+        Form {
+            Section("Add a system") {
+                TextField("System ID", text: $system)
+                Picker("Emulator", selection: $emulator) {
+                    ForEach(EmulatorKind.allCases, id: \.self) { Text($0.rawValue).tag($0) }
+                }
+                Button("Choose ROM folder and emulator…") { store.add(system: system, emulator: emulator) }.disabled(store.scanning)
+                Text("Use your existing emulator configuration. BIOS, firmware and game files are never downloaded by the hub.").font(.callout).foregroundStyle(.secondary)
+            }
+            Section("Sources") {
+                ForEach(store.sources) { source in
+                    LabeledContent(source.system, value: "\(source.index.entries.count) games · \(source.emulator.rawValue)")
+                }
+                Button("Rescan folders") { store.scan() }.disabled(store.scanning || store.sources.isEmpty)
+                Text(store.status).font(.callout)
+            }
+            Section("Steam Deck") {
+                Button("Import or browse Deck references") { deckPresented = true }
+                Text("Deck-only paths remain labelled unavailable on this Mac until the real files are copied.").font(.callout).foregroundStyle(.secondary)
+            }
+        }
+        .formStyle(.grouped).navigationTitle("ROM Library")
+        .sheet(isPresented: $deckPresented) { SteamDeckLibraryView() }
+    }
+}

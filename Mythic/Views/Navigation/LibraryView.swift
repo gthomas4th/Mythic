@@ -17,6 +17,7 @@ struct LibraryView: View {
     @ObservedObject private var variables: VariableManager = .shared
 
     @State private var isGameImportSheetPresented = false
+    @State private var launchSettingsPresented = false
     @Bindable var gameListViewModel: GameListViewModel = .shared
     @CodableAppStorage("gameListLayout") var gameListLayout: GameListViewModel.Layout = .grid
 
@@ -24,7 +25,12 @@ struct LibraryView: View {
         GameListView()
             .navigationTitle("Library")
         
+            .sheet(isPresented: $launchSettingsPresented) { LaunchSettingsView() }
+            .overlay(alignment: .bottom) {
+                if let error = gameDataStore.persistenceError { Text(error).padding().background(.regularMaterial) }
+            }
             .toolbar {
+                ToolbarItem { Button("Launch Settings", systemImage: "slider.horizontal.3") { launchSettingsPresented = true } }
                 ToolbarItem(placement: .status) {
                     if gameListViewModel.isUpdatingLibrary {
                         ProgressView()

@@ -40,6 +40,15 @@ struct ContentView: View {
                                 .help("View your games")
                         }
                         
+                        NavigationLink(destination: ControllerLibraryView()) {
+                            Label("Controller Library", systemImage: "gamecontroller.fill")
+                        }
+                        NavigationLink(destination: ROMLibraryView()) {
+                            Label("ROM Library", systemImage: "gamecontroller")
+                        }
+                        NavigationLink(destination: ConnectionsView()) {
+                            Label("Home PC & Xbox", systemImage: "desktopcomputer")
+                        }
                         NavigationLink(destination: StoreView()) {
                             Label("Store", systemImage: "bag")
                                 .help("Purchase new games from Epic")
