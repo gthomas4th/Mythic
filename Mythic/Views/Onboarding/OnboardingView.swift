@@ -130,7 +130,7 @@ struct OnboardingView: View {
                             viewModel.currentStage = .finished
                         }
                         .buttonStyle(.borderedProminent)
-                        Text("Windows game support can be set up later from Settings.")
+                        Text("Windows game support can be set up later.")
                             .font(.callout)
                             .foregroundStyle(.secondary)
                     }

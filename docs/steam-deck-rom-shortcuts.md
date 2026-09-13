@@ -21,11 +21,25 @@ on the Steam Deck and remain visible when that device/storage is disconnected.
   centralization updates locations, not ownership or favorites, and must not rewrite
   existing Steam Deck shortcuts without an explicit migration plan.
 
-The current Steam-native slice only scans installed store manifests and verifies a
-native Mac payload. It does not import non-Steam shortcuts or treat remote visibility
-as proof of installation. Mac inspection found a 13-byte shortcuts file; no Deck ROM
-inventory has yet been imported. Steam UI inspection was blocked by a ScreenCaptureKit
-capture error, so no claims about the visible Steam library or account state are made.
+## Implemented reference import
+
+Library → Steam Deck opens a persistent, searchable inventory. The owner selects a
+copied binary `shortcuts.vdf`; bounded parsing rejects truncation, duplicates,
+unsupported types and ambiguous entries. A literal supported EmuDeck ROM path in
+LaunchOptions produces `Files on Steam Deck`; unknown mappings stay unresolved.
+No shortcut command is executed or persisted. Only title, device UUID, shortcut ID
+and an optional ROM reference path enter the private local JSON inventory.
+
+Re-imports merge by device/shortcut identity and preserve entries absent from a later
+export. Invalid files and future/corrupt inventory schemas do not overwrite the prior
+inventory. No remote reachability is inferred from a file path. Local Play is not
+exposed until emulator/content preflight exists. Ten synthetic tests cover parser,
+identity and merge behavior; the app screen and file chooser were verified. The
+owner's real Deck export and a populated live import remain pending.
+
+Steam-native scanning remains separate. The Mac's local shortcut file was empty;
+no Deck inventory or ROM files have been transferred yet. See the
+[copy-only transfer guide](steam-deck-transfer-guide.md).
 
 ## Central storage recommendation
 
@@ -36,7 +50,7 @@ in the hub; copy on demand instead of relocating the owner's current library.
 Keep saves separate from ROM distribution. Plan backup/conflict handling and emulator
 compatibility before synchronizing saves; ROM availability must never overwrite saves.
 Direct NAS access can remain an opt-in launch location after testing that emulator,
-format and network path. No share, firewall, mount or file migration has been changed.
+format and network path. The empty central folders were created on the owner-selected archive NAS. No SMB share, firewall, mount or existing game files were changed.
 
 Steam ROM Manager documents its entries as non-Steam shortcuts:
 https://github.com/EmuDeck/emudeck.github.io/blob/main/docs/tools/steamos/steam-rom-manager.md

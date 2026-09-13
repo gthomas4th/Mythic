@@ -17,17 +17,20 @@ struct GameListView: View {
     @CodableAppStorage("gameListLayout") var layout: GameListViewModel.Layout = .grid
     @AppStorage("gameCardSize") private var gameCardSize: Double = 200.0
     
+    @State private var isSteamDeckLibraryPresented = false
+    @ObservedObject private var deckLibrary = SteamDeckLibraryStore.shared
+
     @State private var isGameImportViewPresented: Bool = false
     
     var body: some View {
         VStack {
             if gameDataStore.displayLibrary.isEmpty {
                 ContentUnavailableView(
-                    "No games found. 😢",
+                    "Your library starts here",
                     systemImage: "folder.badge.questionmark",
                     description: Text("""
-                        Games in your library will appear here.
-                        If there are games in your library and they're not appearing, try restarting Mythic.
+                        Install a Mac game in Steam, then refresh to see it here.
+                        Import local games below, or open Steam Deck to track your ROM shortcuts.
                         """)
                 )
                 .task {
@@ -84,6 +87,18 @@ struct GameListView: View {
                 }
             }
         }
+        .toolbar {
+            ToolbarItem {
+                Button {
+                    isSteamDeckLibraryPresented = true
+                } label: {
+                    Label(deckLibrary.inventory.shortcuts.isEmpty ? "Steam Deck" : "Steam Deck (\(deckLibrary.inventory.shortcuts.count))",
+                          systemImage: "gamecontroller")
+                }
+                .help("Import and view Steam Deck ROM shortcuts")
+            }
+        }
+        .sheet(isPresented: $isSteamDeckLibraryPresented) { SteamDeckLibraryView() }
         .animation(.easeInOut, value: layout)
         .animation(.default, value: viewModel.sortedLibrary)
     }

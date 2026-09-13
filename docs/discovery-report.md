@@ -10,8 +10,8 @@ launch validation is pending because the configured Steam libraries are empty.
 | Installed clients | Steam, Steam Link, Tailscale |
 | Steam discovery | 0 installed manifests, 0 native records, 0 diagnostics |
 | Other clients | Moonlight, RetroArch, PCSX2 and RPCS3 not found in standard locations |
-| Tests | 24 synthetic XCTest tests pass |
-| Debug | Full build passes; Firebase upload skipped; setup screen remains open |
+| Tests | 34 synthetic XCTest tests pass |
+| Debug | Full build passes; Firebase upload skipped; native-only onboarding, library and Deck import screen verified |
 | Data | No game installs, moves, deletions, logins or legacy catalog migration |
 
 ## Implemented boundaries
@@ -45,7 +45,8 @@ identity and actor-bound work/metadata. They do not replace live storefront vali
 
 - Install an owned native Mac game through Steam, then demonstrate tile → Play.
 - Complete Windows setup and interactive storefront login when that slice is ready.
-- Validate Steam Deck shortcut inventory using the owner's exported file.
+- Validate a populated Steam Deck inventory using the owner's exported file.
+- Tune engines against the actual laptop using [measured per-game validation](performance-validation.md).
 - Unified catalog persistence/resolution, pinned profiles, Windows Steam, Remote PC,
   emulation launching, Xbox and controller navigation remain subsequent milestones.
 - Unknown native layouts are deliberately excluded; executable evidence is not a

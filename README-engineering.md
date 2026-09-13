@@ -7,6 +7,9 @@ The Debug app builds and opens successfully. Installed native Steam discovery an
 launch integration are implemented. The local Steam libraries currently contain no
 installed manifests, so a real game launch remains pending an installed Mac title.
 Native-only onboarding avoids requiring Windows components for Steam discovery.
+Library → Steam Deck imports a copied shortcut list and keeps unavailable references
+visible offline. See the [transfer guide](docs/steam-deck-transfer-guide.md) and
+[hardware tuning requirements](docs/performance-validation.md).
 
 ```sh
 export DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer

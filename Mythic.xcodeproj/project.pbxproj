@@ -138,6 +138,8 @@
 		FD0000000000000000000102 /* SteamNativeProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = FD0000000000000000000002; };
 		FD0000000000000000000103 /* ActorBoundWork.swift in Sources */ = {isa = PBXBuildFile; fileRef = FD0000000000000000000003; };
 		FD0000000000000000000104 /* LegendaryInstallMetadata.swift in Sources */ = {isa = PBXBuildFile; fileRef = FD0000000000000000000004; };
+		FD0000000000000000000105 /* SteamDeckShortcuts.swift in Sources */ = {isa = PBXBuildFile; fileRef = FD0000000000000000000005; };
+		FD0000000000000000000106 /* SteamDeckLibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FD0000000000000000000006; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -275,6 +277,8 @@
 		FD0000000000000000000002 /* SteamNativeProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Packages/GameHubCore/Sources/GameHubCore/SteamNativeProvider.swift; sourceTree = SOURCE_ROOT; };
 		FD0000000000000000000003 /* ActorBoundWork.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Packages/GameHubCore/Sources/GameHubCore/ActorBoundWork.swift; sourceTree = SOURCE_ROOT; };
 		FD0000000000000000000004 /* LegendaryInstallMetadata.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Packages/GameHubCore/Sources/GameHubCore/LegendaryInstallMetadata.swift; sourceTree = SOURCE_ROOT; };
+		FD0000000000000000000005 /* SteamDeckShortcuts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Packages/GameHubCore/Sources/GameHubCore/SteamDeckShortcuts.swift; sourceTree = SOURCE_ROOT; };
+		FD0000000000000000000006 /* SteamDeckLibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Mythic/Views/Unified/Sheets/SteamDeckLibraryView.swift; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -574,6 +578,8 @@
 		6AB4748C2AACBBE900AB9C63 = {
 			isa = PBXGroup;
 			children = (
+				FD0000000000000000000005 /* SteamDeckShortcuts.swift */,
+				FD0000000000000000000006 /* SteamDeckLibraryView.swift */,
 				FD0000000000000000000004 /* LegendaryInstallMetadata.swift */,
 				FD0000000000000000000003 /* ActorBoundWork.swift */,
 				FD0000000000000000000002 /* SteamNativeProvider.swift */,
@@ -805,6 +811,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				FD0000000000000000000105 /* SteamDeckShortcuts.swift in Sources */,
+				FD0000000000000000000106 /* SteamDeckLibraryView.swift in Sources */,
 				FD0000000000000000000104 /* LegendaryInstallMetadata.swift in Sources */,
 				FD0000000000000000000103 /* ActorBoundWork.swift in Sources */,
 				FD0000000000000000000102 /* SteamNativeProvider.swift in Sources */,
