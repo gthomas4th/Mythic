@@ -18,7 +18,7 @@ extension Game {
     }
 
     /// Enumeration containing the two different game platforms available.
-    enum Platform: CustomStringConvertible, CaseIterable, Codable, Hashable, Equatable {
+    enum Platform: CustomStringConvertible, CaseIterable, Codable, Hashable, Equatable, Sendable {
         case macOS
         case windows
 
@@ -68,7 +68,7 @@ extension Game {
         }
     }
 
-    enum InstallationState: CustomStringConvertible, Codable {
+    enum InstallationState: CustomStringConvertible, Codable, Sendable {
         case uninstalled
         case installed(location: URL, platform: Platform)
 

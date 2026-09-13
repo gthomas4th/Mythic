@@ -93,3 +93,9 @@ fastlane/test_output
 # https://github.com/johnno1962/injectionforxcode
 
 iOSInjectionProject/
+
+# Game Hub local build output
+.build-local/
+
+# Pin the app dependency graph for reproducible baseline verification.
+!Mythic.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved

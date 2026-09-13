@@ -23,9 +23,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_: Notification) {
         // MARK: Firebase Configuration
         // Use the Firebase library to configure APIs.
+#if !DEBUG
         FirebaseApp.configure()
-
         FirebaseConfiguration.shared.setLoggerLevel(.min)
+#endif
 
         setenv("CX_ROOT", Bundle.main.bundlePath, 1)
 

@@ -62,20 +62,20 @@ class EpicGamesGame: Game {
         }
     }
     
-    nonisolated override func _launch() async throws {
+    @MainActor override func _launch() async throws {
         try await EpicGamesGameManager.launch(game: self)
     }
     
-    nonisolated override func _update() async throws {
+    @MainActor override func _update() async throws {
         try await EpicGamesGameManager.update(game: self, qualityOfService: .default)
     }
     
-    nonisolated override func _move(from currentLocation: URL,
+    @MainActor override func _move(from currentLocation: URL,
                                     to newLocation: URL) async throws {
         try await EpicGamesGameManager.move(game: self, to: newLocation)
     }
     
-    nonisolated override func _verifyInstallation() async throws {
+    @MainActor override func _verifyInstallation() async throws {
         try await EpicGamesGameManager.repair(game: self, qualityOfService: .default)
     }
 }

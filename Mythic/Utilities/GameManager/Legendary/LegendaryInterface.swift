@@ -202,7 +202,7 @@ final class Legendary {
      */
 
     @discardableResult
-    static func install(game: EpicGamesGame,
+    @MainActor static func install(game: EpicGamesGame,
                         forPlatform platform: Game.Platform,
                         qualityOfService: QualityOfService,
                         optionalPackIDs: [String] = .init(),
@@ -221,7 +221,7 @@ final class Legendary {
         }
         arguments += ["--base-path", baseDirectoryURL.path]
 
-        let operation: GameOperation = .init(game: game, type: .install) { [arguments] progress in
+        let operation: GameOperation = .init(game: game, type: .install) { @Sendable [arguments] progress in
             progress.totalUnitCount = 100
             progress.fileOperationKind = .downloading
 
@@ -250,15 +250,15 @@ final class Legendary {
         }
 
         operation.qualityOfService = qualityOfService
-        await Game.operationManager.queueOperation(operation)
+        Game.operationManager.queueOperation(operation)
         return operation
     }
 
     @discardableResult
-    static func update(game: EpicGamesGame, qualityOfService: QualityOfService) async throws -> GameOperation {
+    @MainActor static func update(game: EpicGamesGame, qualityOfService: QualityOfService) async throws -> GameOperation {
         let arguments: [String] = ["-y", "install", game.id, "--update-only"]
 
-        let operation: GameOperation = .init(game: game, type: .update) { progress in
+        let operation: GameOperation = .init(game: game, type: .update) { @Sendable progress in
             progress.totalUnitCount = 100
             progress.fileOperationKind = .downloading
 
@@ -280,15 +280,15 @@ final class Legendary {
         }
 
         operation.qualityOfService = qualityOfService
-        await Game.operationManager.queueOperation(operation)
+        Game.operationManager.queueOperation(operation)
         return operation
     }
 
     @discardableResult
-    static func repair(game: EpicGamesGame, qualityOfService: QualityOfService) async throws -> GameOperation {
+    @MainActor static func repair(game: EpicGamesGame, qualityOfService: QualityOfService) async throws -> GameOperation {
         let arguments: [String] = ["-y", "install", game.id, "--repair"]
 
-        let operation: GameOperation = .init(game: game, type: .repair) { progress in
+        let operation: GameOperation = .init(game: game, type: .repair) { @Sendable progress in
             progress.totalUnitCount = 100
             progress.fileOperationKind = .downloading
 
@@ -336,7 +336,7 @@ final class Legendary {
         }
 
         operation.qualityOfService = qualityOfService
-        await Game.operationManager.queueOperation(operation)
+        Game.operationManager.queueOperation(operation)
         return operation
     }
 
@@ -352,43 +352,42 @@ final class Legendary {
        --skip-uninstaller  Skip running the uninstaller
      */
     @discardableResult
-    static func uninstall(game: EpicGamesGame,
+    @MainActor static func uninstall(game: EpicGamesGame,
                           persistFiles: Bool,
                           runUninstallerIfPossible: Bool = true) async throws -> GameOperation {
-        let operation: GameOperation = .init(game: game, type: .uninstall) { _ in
-            var arguments: [String] = ["-y", "uninstall", game.id]
-
+        let operation = gameOperation(game: game, type: .uninstall, prepare: {
+            var arguments = ["-y", "uninstall", game.id]
             if persistFiles { arguments.append("--keep-files") }
             if !runUninstallerIfPossible { arguments.append("--skip-uninstaller") }
-
-            // legendary is inconsistent with this,
-            // may have to use FileManager.default.removeItem(atPath:)
-            let process: Process = .init()
+            let location: URL?
+            if case .installed(let installedLocation, _) = game.installationState {
+                location = installedLocation
+            } else { location = nil }
+            return (arguments, location)
+        }, perform: { input, _ in
+            let (arguments, location) = input
+            let process = Process()
             process.arguments = arguments
             await transformProcess(process)
-            
-            let processStandardErrorPipe: Pipe = .init()
-            process.standardError = processStandardErrorPipe
-            
+            let stderr = Pipe()
+            process.standardError = stderr
             try process.run()
-            
             do {
-                try handleCLIErrorOutput(fromStandardErrorPipe: processStandardErrorPipe)
+                try handleCLIErrorOutput(fromStandardErrorPipe: stderr)
             } catch {
-                // FIXME: dirtyfix for legendary bug resulting in unsuccessful game directory removal
-                if let error = error as? GenericError,
-                   error.reason.contains("OSError(66, 'Directory not empty')"),
-                   case .installed(let location, _) = game.installationState {
+                // Preserve the upstream workaround, but never delete preserved files.
+                if !persistFiles, let error = error as? GenericError,
+                   error.reason.contains("OSError(66, 'Directory not empty')"), let location {
                     try FileManager.default.removeItem(at: location)
                 }
-                
                 throw error
             }
-            
-            game.installationState = .uninstalled
-        }
-
-        await Game.operationManager.queueOperation(operation)
+            process.waitUntilExit()
+            guard process.terminationStatus == 0 else {
+                throw Process.NonZeroTerminationStatusError(process.terminationStatus)
+            }
+        }, apply: { _ in game.installationState = .uninstalled })
+        Game.operationManager.queueOperation(operation)
         return operation
     }
 
@@ -405,29 +404,29 @@ final class Legendary {
                         already moved)
      */
     @discardableResult
-    static func move(game: EpicGamesGame, to newLocation: URL) async throws -> GameOperation {
-        guard case .installed(let currentLocation, let platform) = game.installationState else {
-            throw CocoaError(.fileNoSuchFile)
-        }
-
-        let operation: GameOperation = .init(game: game, type: .move) { _ in
+    @MainActor static func move(game: EpicGamesGame, to newLocation: URL) async throws -> GameOperation {
+        let operation = gameOperation(game: game, type: .move, prepare: {
+            guard case .installed(let location, let platform) = game.installationState else {
+                throw CocoaError(.fileNoSuchFile)
+            }
+            return (game.id, location, platform)
+        }, perform: { input, _ in
+            let (gameID, currentLocation, platform) = input
             try FileManager.default.moveItem(at: currentLocation, to: newLocation)
-
-            let process: Process = .init()
-            process.arguments = ["move", game.id, newLocation.path, "--skip-move"]
+            let process = Process()
+            process.arguments = ["move", gameID, newLocation.path, "--skip-move"]
             await transformProcess(process)
-            
-            let processStandardErrorPipe: Pipe = .init()
-            process.standardError = processStandardErrorPipe
-            
+            let stderr = Pipe()
+            process.standardError = stderr
             try process.run()
-            
-            try handleCLIErrorOutput(fromStandardErrorPipe: processStandardErrorPipe)
-            
-            game.installationState = .installed(location: newLocation, platform: platform)
-        }
-
-        await Game.operationManager.queueOperation(operation)
+            try handleCLIErrorOutput(fromStandardErrorPipe: stderr)
+            process.waitUntilExit()
+            guard process.terminationStatus == 0 else {
+                throw Process.NonZeroTerminationStatusError(process.terminationStatus)
+            }
+            return Game.InstallationState.installed(location: newLocation, platform: platform)
+        }, apply: { game.installationState = $0 })
+        Game.operationManager.queueOperation(operation)
         return operation
     }
 
@@ -523,55 +522,52 @@ final class Legendary {
      Launches games.
      */
     @discardableResult
-    static func launch(game: EpicGamesGame) async throws -> GameOperation {
-        guard case .installed(_, let platform) = game.installationState else {
-            throw CocoaError(.fileNoSuchFile)
-        }
-
-        let operation: GameOperation = .init(game: game, type: .launch) { _ in
+    @MainActor static func launch(game: EpicGamesGame) async throws -> GameOperation {
+        let operation = gameOperation(game: game, type: .launch, prepare: {
+            guard case .installed(_, let platform) = game.installationState else {
+                throw CocoaError(.fileNoSuchFile)
+            }
             guard let containerURL = game.containerURL else { throw Wine.Container.DoesNotExistError() }
-
-            var arguments: [String] = ["launch", game.id]
-            var environment: [String: String] = .init()
-
             guard game.isFileVerificationRequired != true else { throw EpicGamesGame.VerificationRequiredError() }
-
-            // uses legendary's native launch process
-            switch platform {
-            case .macOS:
-                do {} // no environment variables need to be assembled.
-            case .windows:
+            var arguments = ["launch", game.id]
+            var environment: [String: String] = [:]
+            if case .windows = platform {
                 environment = try Wine.assembleEnvironmentVariables(forContainerAtURL: containerURL)
-                // legendary requires this, since it calls wine directly.
                 environment["WINEPREFIX"] = containerURL.path(percentEncoded: false)
-
                 arguments += ["--wine", Engine.wineExecutableURL.path]
             }
-
             arguments.append(contentsOf: game.launchArguments.map({ "'\($0)'" }))
-
-            let process: Process = .init()
-            process.arguments = arguments
-            process.environment = environment
+            return (arguments, environment)
+        }, perform: { input, _ in
+            let process = Process()
+            process.arguments = input.0
+            process.environment = input.1
             await transformProcess(process)
-            
-            let processStandardErrorPipe: Pipe = .init()
-            process.standardError = processStandardErrorPipe
-            
+            let stderr = Pipe()
+            process.standardError = stderr
             try await withTaskCancellationHandler {
                 try process.run()
-                
-                try handleCLIErrorOutput(fromStandardErrorPipe: processStandardErrorPipe)
+                try handleCLIErrorOutput(fromStandardErrorPipe: stderr)
             } onCancel: {
-                // FIXME: legendary will spawn wine completely detached from the cli itself
-                // FIXME: because of this, terminating the process used to launch it will NOT
-                // FIXME: terminate the wine subprocess.. this is a KNOWN ISSUE
-                process.terminate()
+                // Upstream limitation: detached Wine processes can outlive Legendary.
+                if process.isRunning { process.terminate() }
             }
-        }
-
-        await Game.operationManager.queueOperation(operation)
+        }, apply: { _ in })
+        Game.operationManager.queueOperation(operation)
         return operation
+    }
+
+    @MainActor private static func gameOperation<Input: Sendable, Output: Sendable>(
+        game: EpicGamesGame, type: GameOperation.ActiveOperationType,
+        prepare: @escaping @MainActor @Sendable () throws -> Input,
+        perform: @escaping @Sendable (Input, Progress) async throws -> Output,
+        apply: @escaping @MainActor @Sendable (Output) -> Void
+    ) -> GameOperation {
+        GameOperation(game: game, type: type) { @Sendable progress in
+            try await ActorBoundWork(prepare: prepare, perform: { input in
+                try await perform(input, progress)
+            }, apply: apply).run()
+        }
     }
 
     static func fetchUpdateAvailability(gameID: String) throws -> Bool {
@@ -589,76 +585,32 @@ final class Legendary {
         return assetInfo.buildVersion != installationData.version
     }
 
-    static func fetchPreInstallationMetadata(
-        game: EpicGamesGame,
-        platform: Game.Platform
+    @MainActor static func fetchPreInstallationMetadata(
+        game: EpicGamesGame, platform: Game.Platform
     ) async throws -> (installSize: Int64?, optionalPacks: [String: String]) {
-        guard case .uninstalled = game.installationState else {
-            throw CocoaError(.fileNoSuchFile)
-        }
+        guard case .uninstalled = game.installationState else { throw CocoaError(.fileNoSuchFile) }
+        return try await fetchPreInstallationMetadata(gameID: game.id, platform: platform)
+    }
 
-        let arguments: [String] = ["install", game.id, "--platform", matchPlatform(for: platform)]
-        
-        var installSize: Int64?
-        var optionalPacks: [String: String] = .init()
-
-        // if the data lock is present, legendary will terminate itself, so this is ok
-        // nice n safe
-        let process: Process = .init()
-        process.arguments = arguments
-        
-        // note that install size and optional packs are mutually exclusive in this context.
+    private static func fetchPreInstallationMetadata(
+        gameID: String, platform: Game.Platform
+    ) async throws -> (installSize: Int64?, optionalPacks: [String: String]) {
+        let metadata = OSAllocatedUnfairLock(initialState: LegendaryInstallMetadata())
+        let process = Process()
+        process.arguments = ["install", gameID, "--platform", matchPlatform(for: platform)]
         try await withTaskCancellationHandler {
             try await executeStreamed(process) { chunk in
-                switch chunk.stream {
-                case .standardError:
-                    // Handle install size
-                    Task {
-                        // legendary always returns install size in MiB
-                        if let match = try? Regex(#"Install size: (\d+(?:\.\d+)?) MiB"#).firstMatch(in: chunk.output),
-                           let sizeString = match[1].substring,
-                           let sizeValue = Double(sizeString) {
-                            await MainActor.run {
-                                installSize = Int64(Int(sizeValue) * 1_048_576) // MiB ➜ B
-                                
-                                process.interrupt()
-                            }
-                        }
-                    }
-                    
-                case .standardOutput:
-                    // Handle optional packs
-                    Task { @MainActor in
-                        if let match = try? Regex(#"\s*\* (?<identifier>\w+) - (?<name>.+)"#).firstMatch(in: chunk.output),
-                           let id = match["identifier"]?.substring,
-                           let name = match["name"]?.substring {
-                            optionalPacks[String(id)] = String(name)
-                        }
-                    }
-                    
-                    if chunk.output.contains("Please enter tags of pack(s) to install") {
-                        process.interrupt()
-                    }
-                    
-                    // Handle installation requirements check results
-                    /* TODO: not implemented, may be unnecessary
-                     if chunk.output.contains(" - Warning:") {
-                     
-                     }
-                     
-                     if chunk.output.contains(" ! Failure:") {
-                     
-                     }
-                     */
+                let complete = metadata.withLock {
+                    $0.consume(chunk.output, isStandardError: chunk.stream == .standardError)
                 }
-                
+                if complete, process.isRunning { process.interrupt() }
                 return nil
             }
         } onCancel: {
-            process.interrupt()
+            if process.isRunning { process.interrupt() }
         }
-        
-        return (installSize, optionalPacks)
+        try Task.checkCancellation()
+        return metadata.withLock { ($0.installSize, $0.optionalPacks) }
     }
 
     static func isFileVerificationRequired(gameID: String) throws -> Bool {

@@ -17,3 +17,5 @@ analyzer_rules:
 
 excluded:
   - .build
+  - Packages/GameHubCore/.build
+  - .build-local
