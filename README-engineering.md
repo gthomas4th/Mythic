@@ -8,7 +8,8 @@ launch integration are implemented. The local Steam libraries currently contain 
 installed manifests, so a real game launch remains pending an installed Mac title.
 Native-only onboarding avoids requiring Windows components for Steam discovery.
 Verified engine installation and Wine registry readback are implemented; the current
-core suite has 41 passing tests. Windows Steam setup is in progress.
+core suite has 41 passing tests. Windows Steam setup is in progress; an [isolated free Wine candidate](docs/free-runtime-validation.md)
+has initialized Steam's UI after the bundled runtime failed.
 Library → Steam Deck imports a copied shortcut list and keeps unavailable references
 visible offline. See the [transfer guide](docs/steam-deck-transfer-guide.md) and
 [hardware tuning requirements](docs/performance-validation.md).

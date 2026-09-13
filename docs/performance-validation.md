@@ -51,3 +51,9 @@ validates the staged engine, and records its exact version and digest. Preview 3
 has no checksum entry and is rejected. Existing engine folders are preserved by
 installation. The inherited explicit remove/update flow is not yet the required
 side-by-side upgrade and rollback implementation; do not use it for a pinned profile.
+
+## Free-runtime follow-up
+
+An isolated free Wine 10 candidate has passed the initial Steam UI startup failure
+seen above. See [free runtime validation](free-runtime-validation.md) for provenance,
+companion-library requirements and evidence. Login and gameplay remain unverified.

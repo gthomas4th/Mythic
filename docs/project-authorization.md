@@ -14,3 +14,11 @@ corrections take precedence over earlier decision packets.
 Interactive credentials/2FA and unavoidable system prompts still require the owner.
 Do not infer permission to expose infrastructure, spend money, publish private files,
 or bypass authentication. Protect existing games, ROMs, containers and saves.
+
+## Cost and persistence constraint
+
+The owner clarified that this project must continue without purchases. No paid
+CrossOver dependency or time-limited trial is an acceptable runtime solution.
+Continue investigating and testing free Wine engines within the existing project;
+this constraint is not a request to abandon the project or ask again for approval.
+Keep alternative-engine tests isolated and retain the verified original runtime.
