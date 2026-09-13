@@ -66,8 +66,20 @@ struct ROMSource: Codable, Identifiable {
                 applicationVersion: installation.version, dolphinPreset: emulator == .dolphin ? dolphinPreset : nil))
             do { try save() } catch { sources = previous; throw error }
             scan()
-        } catch let error as ROMError { status = error.localizedDescription }
-        catch { status = "Could not save folder access. Your existing sources are unchanged." }
+        } catch let error as ROMError { status = error.localizedDescription } catch { status = "Could not save folder access. Your existing sources are unchanged." }
+    }
+    func setDolphinPreset(_ preset: DolphinGraphicsPreset, sourceID: UUID) {
+        guard let position = sources.firstIndex(where: { $0.id == sourceID && $0.emulator == .dolphin }) else { return }
+        let previous = sources[position].dolphinPreset
+        sources[position].dolphinPreset = preset
+        do {
+            try save()
+            gameCache = gameCache.filter { $0.value.source?.id != sourceID }
+            status = "Graphics preset saved. It will apply the next time you launch a game from this source."
+        } catch {
+            sources[position].dolphinPreset = previous
+            status = "Could not save the graphics preset. The previous setting was kept."
+        }
     }
     func scan() {
         guard !scanning else { return }
@@ -150,7 +162,12 @@ struct ROMLibraryView: View {
                         Text("Version when added: \(source.applicationVersion ?? "Not checked")")
                             .font(.caption).foregroundStyle(.secondary)
                         if source.emulator == .dolphin {
-                            Text((source.dolphinPreset ?? .emulatorSettings).displayName).font(.caption).foregroundStyle(.secondary)
+                            Picker("Graphics", selection: Binding(
+                                get: { source.dolphinPreset ?? .emulatorSettings },
+                                set: { store.setDolphinPreset($0, sourceID: source.id) }
+                            )) {
+                                ForEach(DolphinGraphicsPreset.allCases, id: \.self) { Text($0.displayName).tag($0) }
+                            }
                         }
                     }
                 }

@@ -13,7 +13,9 @@ silently converted or treated as interchangeable identities.
 The source picker offers existing Dolphin settings, Metal/native resolution, or
 Metal/3× resolution (approximately 1080p). The latter is a starting preset for the
 owner's M3 Pro, not a measured per-game performance claim. Launch arguments apply
-the preset to that session; the hub does not rewrite Dolphin's graphics files,
+the preset to that session. Existing sources expose a saved graphics picker; changing
+it refreshes the next launch without re-importing games. A failed save retains the
+previous setting. The hub does not rewrite Dolphin's graphics files,
 controller mappings, firmware or saves. Fullscreen batch launch uses Dolphin's
 verified `-b`, `-e`, `-C` and `-v` options.
 
