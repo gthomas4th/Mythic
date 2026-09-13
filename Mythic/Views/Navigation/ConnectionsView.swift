@@ -109,8 +109,7 @@ struct ConnectionsView: View {
                 TextField("Steam app ID", text: $steamID)
                 TextField("Exact Sunshine application name", text: $remoteApplication)
                 Button("Add Home PC target") {
-                    do { try model.saveMapping(appID: steamID, application: remoteApplication); message = "Home PC target saved. Test the connection, then select Play using in Library." }
-                    catch { message = "Enter a valid Steam app ID, host address and Sunshine application name." }
+                    do { try model.saveMapping(appID: steamID, application: remoteApplication); message = "Home PC target saved. Test the connection, then select Play using in Library." } catch { message = "Enter a valid Steam app ID, host address and Sunshine application name." }
                 }
                 Text("Map an application that already exists in Sunshine. The hub does not change the PC configuration.").font(.caption).foregroundStyle(.secondary)
             }
