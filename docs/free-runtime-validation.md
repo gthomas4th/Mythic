@@ -57,3 +57,25 @@ verified from its manifest and content log. Sustained Rebirth gameplay remains a
 acceptance gate.
 No Rebirth compatibility or FPS claim is made. Production runtime selection,
 renderer integration and per-game pinning still require implementation after validation.
+
+## Rebirth first-launch preparation
+
+D3DMetal 3.0 was staged separately from the same verified Template-1.0.15 archive,
+with its original license, acknowledgements, README and a local file-hash receipt.
+The test host accepts TestRendererRoot in its local bundle configuration. The
+Sikarugir loader requires WINEDLLPATH_PREPEND and CX_APPLEGPTK_LIBD3DSHARED_PATH;
+setting WINEDLLPATH alone caused Steam webhelper to fail before game launch. With
+the loader hooks configured, Steam's UI initialized successfully again.
+
+The initial test enables AVX advertisement and the Metal HUD/logging, uses default
+synchronization (MSync/ESync off), and requests 1920x1080 windowed mode through
+Steam -applaunch 2909400. These are candidate settings, not a measured optimum or
+confirmation that the game honored its requested resolution.
+
+Steam completed its Visual C++/DirectX first-run installers, then held the launch at
+SynchronizingCloud with pendingcloudsessions. Its cloud log reports one pending
+remote operation while the locally downloaded saves match cloud change number 23.
+Five downloaded saves were copied and hash-verified outside Git before resolving
+the remote-session prompt. No game process, gameplay benchmark or FPS result has
+yet been verified. Do not dismiss the prompt without resolving the owner's other
+device session or an explicit owner decision about the available save state.

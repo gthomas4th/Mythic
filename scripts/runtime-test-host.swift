@@ -10,7 +10,7 @@ final class RuntimeTestHost: NSObject, NSApplicationDelegate {
     private var logHandle: FileHandle?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 520, height: 200),
+        window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 700, height: 220),
                           styleMask: [.titled, .closable, .miniaturizable], backing: .buffered, defer: false)
         window.title = "Game Hub — Free Runtime Test"
         let title = NSTextField(labelWithString: "Windows Steam · Sikarugir Wine 10")
@@ -18,8 +18,9 @@ final class RuntimeTestHost: NSObject, NSApplicationDelegate {
         let detail = NSTextField(wrappingLabelWithString: "This test uses a copied Steam container. The original Game Hub engine is preserved.")
         let start = NSButton(title: "Launch Windows Steam", target: self, action: #selector(startSteam))
         let install = NSButton(title: "Install Rebirth", target: self, action: #selector(installRebirth))
+        let play = NSButton(title: "Test Rebirth · 1080p", target: self, action: #selector(playRebirth))
         let stop = NSButton(title: "Stop Test Container", target: self, action: #selector(stopSteam))
-        let buttons = NSStackView(views: [start, install, stop])
+        let buttons = NSStackView(views: [start, install, play, stop])
         let stack = NSStackView(views: [title, detail, buttons, status])
         stack.orientation = .vertical
         stack.alignment = .leading
@@ -58,6 +59,18 @@ final class RuntimeTestHost: NSObject, NSApplicationDelegate {
         environment["WINEPREFIX"] = prefix.path
         environment["WINEDEBUG"] = "-all,err+all"
         environment["PATH"] = runtime.appendingPathComponent("bin").path + ":/usr/bin:/bin"
+        if Bundle.main.object(forInfoDictionaryKey: "TestRendererRoot") != nil {
+            let renderer = try path("TestRendererRoot")
+            environment["WINEDLLPATH"] = renderer.appendingPathComponent("wine").path + ":" + runtime.appendingPathComponent("lib/wine").path
+            environment["WINEDLLPATH_PREPEND"] = renderer.appendingPathComponent("wine").path
+            environment["CX_APPLEGPTK_LIBD3DSHARED_PATH"] = renderer.appendingPathComponent("external/libd3dshared.dylib").path
+            environment["WINEDLLOVERRIDES"] = "d3d11,d3d12,dxgi=b"
+            environment["ROSETTA_ADVERTISE_AVX"] = "1"
+            environment["WINEMSYNC"] = "0"
+            environment["WINEESYNC"] = "0"
+            environment["MTL_HUD_ENABLED"] = "1"
+            environment["MTL_HUD_LOG_ENABLED"] = "1"
+        }
         process.environment = environment
         return process
     }
@@ -89,6 +102,17 @@ final class RuntimeTestHost: NSObject, NSApplicationDelegate {
             request.currentDirectoryURL = executable.deletingLastPathComponent()
             try request.run()
             status.stringValue = "Rebirth installation requested in Windows Steam."
+        } catch { status.stringValue = error.localizedDescription }
+    }
+
+    @objc private func playRebirth() {
+        do {
+            let prefix = try path("TestPrefix")
+            let executable = prefix.appendingPathComponent("drive_c/Program Files (x86)/Steam/steam.exe")
+            let request = try process(tool: "wine", arguments: [executable.path, "-applaunch", "2909400", "-windowed", "-ResX=1920", "-ResY=1080"])
+            request.currentDirectoryURL = executable.deletingLastPathComponent()
+            try request.run()
+            status.stringValue = "Rebirth launch requested through Steam at 1080p."
         } catch { status.stringValue = error.localizedDescription }
     }
 
