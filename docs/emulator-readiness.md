@@ -135,3 +135,10 @@ The emulator application picker now explicitly selects files rather than folders
 The full Debug build and installed code-signature verification passed. A stale
 Computer Use picker state also required refreshing the automation session; the
 code change is defensive and does not prove that stale state was caused by the app.
+
+Direct NAS launch passed: Dolphin's running command references the RVZ under the
+mounted SMB volume, and the game reached its main menu with the existing save.
+Metal 3× remained active. The local ROM folder remains empty. Sustained NAS
+match performance is still awaiting owner feedback; a menu-transition FPS sample
+is not a gameplay benchmark. The hub's generic “Local” label currently describes
+its emulator provider and does not identify the ROM storage location.

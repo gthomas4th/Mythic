@@ -123,6 +123,7 @@ remain labelled honestly. Do not describe this delivery as every handoff phase c
 
 Owner requires NAS-only ROMs, with no local ROM copies. The 1.13 GB local
 Melee test image was removed after matching its hash against a fresh NAS read;
-its save remains intact. Future testing must use a mounted NAS source. The
-ROM directory is not currently exposed by an SMB share; NAS launch acceptance
-remains open. See `emulator-readiness.md` for measured network observations.
+its save remains intact. Future testing must use a mounted NAS source. An authenticated read-only SMB trial now exposes the verified Melee path
+through a dedicated no-login account. Direct NAS launch reached the main menu
+using the existing save; sustained NAS gameplay remains open. Future ROM access
+permissions still need transfer integration. See `emulator-readiness.md` for measured network observations.
