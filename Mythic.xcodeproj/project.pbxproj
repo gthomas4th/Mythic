@@ -146,6 +146,7 @@
 		FC0000000000000000010001 /* SteamWindowsProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC0000000000000000000001; };
 		FC0000000000000000010002 /* CompatibilityProfile.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC0000000000000000000002; };
 		FC0000000000000000010003 /* CatalogStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC0000000000000000000003; };
+		FA0000000000000000010001 /* LaunchEventJournal.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000000000000000000001; };
 		FC0000000000000000010004 /* GameHubRuntime.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC0000000000000000000004; };
 		FC0000000000000000010005 /* LaunchSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC0000000000000000000005; };
 		FC0000000000000000010006 /* RemoteHost.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC0000000000000000000006; };
@@ -299,6 +300,7 @@
 		FC0000000000000000000001 /* SteamWindowsProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Packages/GameHubCore/Sources/GameHubCore/SteamWindowsProvider.swift"; sourceTree = SOURCE_ROOT; };
 		FC0000000000000000000002 /* CompatibilityProfile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Packages/GameHubCore/Sources/GameHubCore/CompatibilityProfile.swift"; sourceTree = SOURCE_ROOT; };
 		FC0000000000000000000003 /* CatalogStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Packages/GameHubCore/Sources/GameHubCore/CatalogStore.swift"; sourceTree = SOURCE_ROOT; };
+		FA0000000000000000000001 /* LaunchEventJournal.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Packages/GameHubCore/Sources/GameHubCore/LaunchEventJournal.swift"; sourceTree = SOURCE_ROOT; };
 		FC0000000000000000000004 /* GameHubRuntime.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Mythic/Utilities/GameHubRuntime.swift"; sourceTree = SOURCE_ROOT; };
 		FC0000000000000000000005 /* LaunchSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Mythic/Views/Unified/Sheets/LaunchSettingsView.swift"; sourceTree = SOURCE_ROOT; };
 		FC0000000000000000000006 /* RemoteHost.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Packages/GameHubCore/Sources/GameHubCore/RemoteHost.swift"; sourceTree = SOURCE_ROOT; };
@@ -624,6 +626,7 @@
 				FC0000000000000000000005 /* LaunchSettingsView.swift */,
 				FC0000000000000000000004 /* GameHubRuntime.swift */,
 				FC0000000000000000000003 /* CatalogStore.swift */,
+				FA0000000000000000000001 /* LaunchEventJournal.swift */,
 				FC0000000000000000000002 /* CompatibilityProfile.swift */,
 				FC0000000000000000000001 /* SteamWindowsProvider.swift */,
 				FC0000000000000000000000 /* LaunchResolver.swift */,
@@ -871,6 +874,7 @@
 				FC0000000000000000010005 /* LaunchSettingsView.swift in Sources */,
 				FC0000000000000000010004 /* GameHubRuntime.swift in Sources */,
 				FC0000000000000000010003 /* CatalogStore.swift in Sources */,
+				FA0000000000000000010001 /* LaunchEventJournal.swift in Sources */,
 				FC0000000000000000010002 /* CompatibilityProfile.swift in Sources */,
 				FC0000000000000000010001 /* SteamWindowsProvider.swift in Sources */,
 				FC0000000000000000010000 /* LaunchResolver.swift in Sources */,

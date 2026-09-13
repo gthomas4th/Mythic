@@ -45,10 +45,10 @@ are not the user entry point. Do not remove recovery copies before final live ac
 | Remote | Home PC form, automatic startup and prelaunch checks, five-second timeout, direct Rebirth tile; Moonlight 1080p60/20 Mb/s/HDR off; TCP reachability is not labelled stream quality |
 | Xbox | Official Xbox Cloud library link; no purchase or Wine-based Microsoft Store promise |
 | Controller | Keyboard search, Return/details, Escape/back, favorite/filter, and immediate target switching verified; local Rebirth input and mouse-click/reconnect sequence owner-confirmed with current configuration; first connection after launch and physical hub navigation still open |
-| Diagnostics | Correlation IDs and bounded in-session events; export excludes raw runtime logs, bookmarks, credentials, filesystem paths and network addresses |
-| Build | Full Debug build; 64 synthetic tests pass; SwiftLint zero errors, nine inherited warnings |
+| Diagnostics | Correlation IDs and private durable journal capped at 200 events; bounded reads, atomic writes, and unreadable-snapshot preservation; non-Steam identifiers are hashed; export excludes raw runtime logs, bookmarks, credentials, filesystem paths and network addresses |
+| Build | Full Debug build; 68 synthetic tests pass; SwiftLint zero errors, nine inherited warnings |
 
-Home now includes Continue Playing, Favourites, Recently Played, Final Fantasy,
+Home now includes Continue Playing, Favourites, Recently Played, Recently Added, Final Fantasy,
 Retro, and Ready on Home PC collections (empty collections are omitted). Containers
 remain available under Management. Artwork contrast and fallback images were
 visually checked; release notes remain dismissed after restarting. Debug game IDs
@@ -59,6 +59,14 @@ The runtime currently supplies its authorized C drive. Other drives are reported
 as unmapped until separately configured; no external filesystem mapping was added.
 Fixtures cover duplicate preference, malformed/oversized library lists, unmapped
 paths, traversal, and symlink escape. The real Rebirth installation remains visible.
+
+Controller details now show destination, availability, controller connection, profile
+acceptance and requested resolution. Menu/S opens the selected profile's advanced
+settings; B/Menu closes the sheet without operating the library behind it. Keyboard
+opening/closing and local/Home PC detail switching were verified in the installed
+app. Physical controller shortcuts remain a live test. Save-location discovery and
+per-game controller compatibility metadata are still incomplete. Legacy catalog
+refreshes now update title/artwork without resetting preferences or first-seen dates.
 
 ## External/live gates still open
 
