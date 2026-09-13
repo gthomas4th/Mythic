@@ -89,8 +89,11 @@ refreshes now update title/artwork without resetting preferences or first-seen d
    were checked. The hub supports ISO/GCM/RVZ/WIA/WBFS/CISO discovery and Dolphin
    fullscreen launch with optional Metal/native or Metal/3× presets. Emulator app
    version detection and executable validation are tested. Actual GameCube gameplay,
-   required BIOS/firmware setup for other emulators, and a native Mac Steam title
-   launch remain open. See `emulator-readiness.md`.
+   PS2 gameplay, firmware setup for other emulators, and a native Mac Steam title
+   launch remain open. PCSX2 v2.8.2 recognizes the copied owner BIOS and boots it
+   using Metal on the M3 Pro at 3× native resolution. Both emulator sources are
+   saved in Game Hub; physical controller mapping is not yet verified.
+   See `emulator-readiness.md`.
 4. **App updater — resolved:** owner explicitly approved manual fork updates on
    2026-09-13. Sparkle initialization and update requests are disabled by default for
    this fork, and the menu/settings explain manual app and security updates.

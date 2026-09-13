@@ -32,3 +32,30 @@ as backups and are not presented as installed macOS applications.
 Sources: [official release download](https://dl.dolphin-emu.org/releases/2606a/dolphin-2606a-universal.dmg),
 [official command parser](https://github.com/dolphin-emu/dolphin/blob/master/Source/Core/UICommon/CommandLineParse.cpp),
 [official graphics settings](https://github.com/dolphin-emu/dolphin/blob/master/Source/Core/Core/Config/GraphicsSettings.cpp).
+
+## PS2 setup verification
+
+PCSX2 v2.8.2 is installed from its official macOS release. Its package matches
+SHA-256 `3ed9eb40a33eae67134142c24255a079be444f0616ca29575a04a37981f7d426`.
+Strict signature verification and Gatekeeper assessment pass as a notarized
+Developer ID application. This build is Intel x86_64 and runs through Rosetta;
+it is not described as a native Apple Silicon build.
+
+The owner's BIOS was copied from the verified central backup, retaining its hash.
+PCSX2 recognizes USA v01.90 and successfully boots it. The emulator log confirms
+Metal initialized on the Apple M3 Pro. Graphics are set to Metal and 3× native
+(~1080p), with compatibility defaults retained and automatic updates disabled.
+No external BIOS download was used, and Deck/NAS originals remain unchanged.
+The BIOS session was shut down normally. This validates initialization, not PS2
+game performance or controller behavior.
+
+Both GameCube/Dolphin and PS2/PCSX2 source bookmarks are saved in Game Hub. Their
+real versions were displayed and the settings layout checked visually. Local
+working-copy folders are separate from the NAS master. No game is labelled
+playable until a real local copy has been indexed. No gamepad was connected during
+Dolphin's device check; physical controller mapping remains an acceptance task.
+Dolphin's optional telemetry was declined and its FPS, speed and internal-resolution
+overlays enabled for the forthcoming gameplay test.
+
+Source: [official PCSX2 setup](https://pcsx2.net/docs/setup/running/) and
+[release package](https://github.com/PCSX2/pcsx2/releases/download/v2.8.2/pcsx2-v2.8.2-macos-Qt.tar.xz).
