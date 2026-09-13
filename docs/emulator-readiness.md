@@ -142,3 +142,20 @@ Metal 3× remained active. The local ROM folder remains empty. Sustained NAS
 match performance is still awaiting owner feedback; a menu-transition FPS sample
 is not a gameplay benchmark. The hub's generic “Local” label currently describes
 its emulator provider and does not identify the ROM storage location.
+
+## Owner acceptance and continuing transfer integration
+
+The owner reported that direct NAS Melee gameplay works great. This confirms the
+NAS trial separately from the earlier local-copy check. No local ROM remains.
+The dedicated reader now has read/traverse access to 375 already-verified files
+under the ROM tree; prior ACLs are preserved in the private transfer directory.
+The PS2 NAS folder and PCSX2 bookmark are saved in Game Hub, currently with zero
+games until the disc image is transferred and verified.
+
+A tested worker update is queued for the next verified batch boundary. It applies
+reader ACLs after checksum verification and prioritizes the smallest PS2 image
+(Hulk) next. It preserves the prior worker, completed checkpoints and ACLs.
+The isolated tests cover read access, content preservation, rejecting paths
+outside ROMs, rejecting symlinks and avoiding broadened masked ACL entries.
+The update is scheduled, not yet confirmed active; its private status receipt
+is authoritative. Existing transfer and hourly notification services continue.

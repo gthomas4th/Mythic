@@ -125,5 +125,6 @@ Owner requires NAS-only ROMs, with no local ROM copies. The 1.13 GB local
 Melee test image was removed after matching its hash against a fresh NAS read;
 its save remains intact. Future testing must use a mounted NAS source. An authenticated read-only SMB trial now exposes the verified Melee path
 through a dedicated no-login account. Direct NAS launch reached the main menu
-using the existing save; sustained NAS gameplay remains open. Future ROM access
-permissions still need transfer integration. See `emulator-readiness.md` for measured network observations.
+using the existing save; the owner confirmed NAS gameplay works great. Existing verified ROM read
+access is extended; the tested future-file permission update is queued at the
+next verified batch boundary. PS2 NAS source setup is saved. See `emulator-readiness.md` for measured network observations.
