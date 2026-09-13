@@ -37,8 +37,10 @@ configured with SDL button/axis bindings, preserving the prior configuration and
 Apex profile. The owner confirmed gameplay and disconnect/reconnect checks,
 including reconnect after mouse interaction, worked well. The owner clarified
 that the reported mild lag was network lag, not input lag; its connection has
-not yet been identified. Relaunch retained the controller mapping, but the game
-still requested save creation; save persistence remains unverified. The full build and all 72 tests passed after the correction. Linux Deck emulator backups are preserved
+not yet been identified. After the owner created game data, a normal exit wrote the Melee GCI save.
+A fresh Game Hub launch advanced directly into the intro without the save-creation
+prompt; basic save persistence passed. The Xbox mapping and Metal 3× preset
+persisted. This does not verify every unlock or future save operation. The full build and all 72 tests passed after the correction. Linux Deck emulator backups are preserved
 as backups and are not presented as installed macOS applications.
 
 Sources: [official release download](https://dl.dolphin-emu.org/releases/2606a/dolphin-2606a-universal.dmg),
