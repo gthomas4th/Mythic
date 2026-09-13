@@ -41,7 +41,7 @@ are not the user entry point. Do not remove recovery copies before final live ac
 | Legacy data | Epic/local records now persist in SQLite after a one-way import; original defaults and schema-1 backup are retained; existing launch/install APIs remain intact |
 | Profiles | Validation, export/import, clone, selection and revision rollback; original profile remains available |
 | Deck | Device-scoped shortcut references remain offline-readable; imported commands are never executed |
-| ROMs | Folder/application/core bookmarks, incremental content hashes, cue/m3u grouping, missing-part/traversal/cycle checks; real Deck inventory imported; central copy in progress; local emulator gameplay pending |
+| ROMs | Folder/application/core bookmarks, incremental content hashes, cue/m3u grouping, missing-part/traversal/cycle checks; real Deck inventory imported; central copy in progress; Melee launch/Metal 3× rendering verified; gameplay/input pending |
 | Remote | Home PC form, automatic startup and prelaunch checks, five-second timeout, direct Rebirth tile; Moonlight 1080p60/20 Mb/s/HDR off; TCP reachability is not labelled stream quality |
 | Xbox | Official Xbox Cloud library link; no purchase or Wine-based Microsoft Store promise |
 | Controller | Keyboard search, Return/details, Escape/back, favorite/filter, and immediate target switching verified; local Rebirth input and mouse-click/reconnect sequence owner-confirmed with current configuration; first connection after launch and physical hub navigation still open |
@@ -88,7 +88,9 @@ refreshes now update title/artwork without resetting preferences or first-seen d
    is installed as a native Apple Silicon application; its signature and actual CLI
    were checked. The hub supports ISO/GCM/RVZ/WIA/WBFS/CISO discovery and Dolphin
    fullscreen launch with optional Metal/native or Metal/3× presets. Emulator app
-   version detection and executable validation are tested. Actual GameCube gameplay,
+   version detection and executable validation are tested. Melee launches from the hub
+   at Metal 3× (1920×1584 internal), about 60 FPS at its initial prompt. Automated
+   keyboard input did not advance it; this is not gameplay acceptance. Actual GameCube gameplay,
    PS2 gameplay, firmware setup for other emulators, and a native Mac Steam title
    launch remain open. PCSX2 v2.8.2 recognizes the copied owner BIOS and boots it
    using Metal on the M3 Pro at 3× native resolution. Both emulator sources are

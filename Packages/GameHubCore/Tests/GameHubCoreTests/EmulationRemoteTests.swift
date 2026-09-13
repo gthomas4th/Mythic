@@ -62,7 +62,7 @@ final class EmulationRemoteTests: XCTestCase {
         let content = URL(fileURLWithPath: "/games/A game; $(ignored).rvz")
         let args = try EmulatorCommand.arguments(kind: .dolphin, content: content, dolphinPreset: .metal1080)
         XCTAssertEqual(Array(args.suffix(2)), ["-e", content.path])
-        XCTAssertTrue(args.contains("GFX.Settings.InternalResolution=3"))
+        XCTAssertTrue(args.contains("Graphics.Settings.InternalResolution=3"))
         XCTAssertTrue(args.contains("Metal"))
         let defaults = try EmulatorCommand.arguments(kind: .dolphin, content: content)
         XCTAssertFalse(defaults.contains("Metal"))

@@ -27,8 +27,13 @@ or graphics preset remain decodable and keep existing emulator settings.
 Validation: 72 core tests and the full locally signed Debug build pass. New tests
 cover Dolphin argument boundaries, rename-stable GameCube discovery, version
 inspection without execution, missing executables, traversal and symlink escape.
-No real GameCube game has been launched yet; content transfer and controller/game
-acceptance remain separate live checks. Linux Deck emulator backups are preserved
+A checksum-verified local Melee RVZ was indexed and launched from Game Hub.
+The live test exposed and corrected the CLI graphics system name: `Graphics`,
+not the `GFX.ini` filename. The corrected launch showed Metal, 1920×1584
+internal resolution (3×), about 59.96 FPS and 100% speed at the initial memory-card
+prompt. This is a boot/rendering check, not a gameplay benchmark. Automated
+keyboard events did not advance the prompt; physical input and gameplay remain
+open acceptance checks. The full build and all 72 tests passed after the correction. Linux Deck emulator backups are preserved
 as backups and are not presented as installed macOS applications.
 
 Sources: [official release download](https://dl.dolphin-emu.org/releases/2606a/dolphin-2606a-universal.dmg),
@@ -57,7 +62,9 @@ working-copy folders are separate from the NAS master. No game is labelled
 playable until a real local copy has been indexed. No gamepad was connected during
 Dolphin's device check; physical controller mapping remains an acceptance task.
 Dolphin's optional telemetry was declined and its FPS, speed and internal-resolution
-overlays enabled for the forthcoming gameplay test.
+overlays enabled for live verification.
 
 Source: [official PCSX2 setup](https://pcsx2.net/docs/setup/running/) and
 [release package](https://github.com/PCSX2/pcsx2/releases/download/v2.8.2/pcsx2-v2.8.2-macos-Qt.tar.xz).
+
+CLI system-name reference: [Dolphin 2606a configuration mapping](https://github.com/dolphin-emu/dolphin/blob/2606a/Source/Core/Common/Config/Config.cpp).

@@ -25,8 +25,8 @@ public enum DolphinGraphicsPreset: String, Codable, CaseIterable, Sendable {
     public var arguments: [String] {
         switch self {
         case .emulatorSettings: []
-        case .metalNative: ["-v", "Metal", "-C", "GFX.Settings.InternalResolution=1"]
-        case .metal1080: ["-v", "Metal", "-C", "GFX.Settings.InternalResolution=3"]
+        case .metalNative: ["-v", "Metal", "-C", "Graphics.Settings.InternalResolution=1"]
+        case .metal1080: ["-v", "Metal", "-C", "Graphics.Settings.InternalResolution=3"]
         }
     }
 }
