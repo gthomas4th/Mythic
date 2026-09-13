@@ -8,6 +8,7 @@ import subprocess
 parser = argparse.ArgumentParser()
 parser.add_argument("--package-cache", type=Path)
 parser.add_argument("--derived-data", type=Path)
+parser.add_argument("--local-sign", action="store_true", help="Ad-hoc sign the local Debug app through Xcode; not a notarized release")
 args = parser.parse_args()
 source = Path(__file__).resolve().parents[1]
 output = source / ".build-local"
@@ -18,6 +19,9 @@ command = ["xcodebuild", "-project", str(source / "Mythic.xcodeproj"),
            "-derivedDataPath", str(args.derived_data or output / "DerivedData"),
            "-disableAutomaticPackageResolution", "-skipPackageUpdates",
            "CODE_SIGNING_ALLOWED=NO", "build"]
+if args.local_sign:
+    command[command.index("CODE_SIGNING_ALLOWED=NO")] = "CODE_SIGNING_ALLOWED=YES"
+    command[-1:-1] = ["CODE_SIGN_IDENTITY=-", "CODE_SIGN_STYLE=Manual", "DEVELOPMENT_TEAM="]
 if args.package_cache:
     command[1:1] = ["-clonedSourcePackagesDirPath", str(args.package_cache)]
 environment = dict(os.environ)
