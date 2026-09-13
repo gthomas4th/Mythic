@@ -1,8 +1,8 @@
 # Unified Mac Game Hub — VS Code/Codex Engineering Handoff
 
-Status: Ready to execute  
-Prepared: 2026-09-13  
-Working title: **GameDeck** (placeholder only; do not spend time branding yet)  
+Status: Ready to execute
+Prepared: 2026-09-13
+Working title: **GameDeck** (placeholder only; do not spend time branding yet)
 Foundation candidate: [Mythic](https://github.com/MythicApp/Mythic), GPL-3.0
 
 ## 1. Mission

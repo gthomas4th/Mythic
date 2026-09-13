@@ -32,7 +32,7 @@ struct GameImageCard: View {
             if let url, url.isFileURL, let image = NSImage(contentsOf: url) {
                 Image(nsImage: image)
                     .resizable()
-                    .aspectRatio(contentMode: .fill)
+                    .scaledToFill()
                     .frame(width: geometry.size.width, height: geometry.size.height)
                     .onAppear { isImageEmpty = false }
             } else if let url = url {
