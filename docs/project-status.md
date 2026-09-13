@@ -8,7 +8,7 @@ into passes.
 ## Installed candidate
 
 Authoritative local app: `~/Applications/Game Hub.app`.
-Built from source revision `56cf3a209d9b5e559b89efee364deb09efcacf56` on
+Built from source revision `9ccf30847c424545e81463f4162e9eaec45b3356` on
 `feat/steam-native`. Xcode performed the local ad-hoc signing; the installed copy
 passes `codesign --verify --deep --strict`. This is not a notarized public release.
 The original app and runtime are preserved. Development builds and the test host
