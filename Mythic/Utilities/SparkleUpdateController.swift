@@ -24,7 +24,6 @@ final class SparkleUpdateController: NSObject, SPUUserDriver, ObservableObject {
 
     private var updateSettingsCancellables: Set<AnyCancellable> = []
     private var backgroundTask: AnyCancellable?
-    private let backgroundQueue: DispatchQueue = .init(label: "BackgroudEventService", qos: .background)
 
     override init() {
         super.init()
@@ -49,7 +48,8 @@ final class SparkleUpdateController: NSObject, SPUUserDriver, ObservableObject {
     private func manageBackgroundTask(_ enabled: Bool) {
         if enabled {
             backgroundTask = AnyCancellable(
-                backgroundQueue.schedule(
+                // Sparkle callbacks inherit main-actor isolation; schedule them on the main queue.
+                DispatchQueue.main.schedule(
                     after: .init(.now()),
                     interval: .seconds(60 * 60 * 6)
                 ) {
