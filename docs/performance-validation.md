@@ -70,3 +70,13 @@ The owner clarified that the game's displayed resolution remains 1080p and rough
 was not requested. See [current project status](project-status.md) for the persisted
 profile and remaining live acceptance gates. The roughly 78 FPS follow-up sample
 cannot establish improvement because scene and resolution were not controlled.
+
+## Local Game Hub launch integration
+
+The installed hub launched Steam Rebirth using the accepted local profile from its
+keyboard-controlled game-details flow. Steam tracked both the launcher and game
+process with `-windowed -ResX=1920 -ResY=1080`. The owner confirmed the game was on
+the Mac's other monitor. No fresh FPS benchmark is claimed; the previously accepted
+approximately 40 FPS profile remains unchanged. Yoda was not running Rebirth during
+this local test. The Home PC preference was restored afterward without launching a
+second copy or changing game saves.
