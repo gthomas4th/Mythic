@@ -145,6 +145,11 @@ final class CatalogProfileTests: XCTestCase {
         try FileManager.default.createSymbolicLink(at: modern, withDestinationURL: outside)
         XCTAssertEqual(SteamNativeProvider.cachedArtwork(appID: "42", steamRoot: root), legacy.resolvingSymlinksInPath())
         XCTAssertNil(SteamNativeProvider.cachedArtwork(appID: "../42", steamRoot: root))
+        try FileManager.default.removeItem(at: legacy)
+        let hashed = cache.appendingPathComponent("42/" + String(repeating: "a", count: 40) + "/library_600x900.jpg")
+        try FileManager.default.createDirectory(at: hashed.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try Data([4]).write(to: hashed)
+        XCTAssertEqual(SteamNativeProvider.cachedArtwork(appID: "42", steamRoot: root), hashed.resolvingSymlinksInPath())
     }
     func testWindowsManifestDiscoveryAndMissingProfile() throws {
         let root = try folder()

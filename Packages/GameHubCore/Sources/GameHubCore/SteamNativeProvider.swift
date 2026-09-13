@@ -107,8 +107,17 @@ public struct SteamNativeProvider: GameProvider {
     public static func cachedArtwork(appID: String, steamRoot: URL) -> URL? {
         guard SteamLaunch.url(appID: appID) != nil else { return nil }
         let cache = steamRoot.appendingPathComponent("appcache/librarycache").resolvingSymlinksInPath()
-        let names = ["\(appID)/library_600x900.jpg", "\(appID)/library_600x900_2x.jpg",
+        var names = ["\(appID)/library_600x900.jpg", "\(appID)/library_600x900_2x.jpg",
                      "\(appID)_library_600x900.jpg", "\(appID)_library_600x900_2x.jpg"]
+        let appCache = cache.appendingPathComponent(appID)
+        if let children = try? FileManager.default.contentsOfDirectory(at: appCache, includingPropertiesForKeys: nil), children.count <= 1024 {
+            for child in children.sorted(by: { $0.lastPathComponent < $1.lastPathComponent }) {
+                let hash = child.lastPathComponent
+                guard hash.count == 40, hash.allSatisfy({ $0.isHexDigit }) else { continue }
+                names.append("\(appID)/\(hash)/library_600x900.jpg")
+                names.append("\(appID)/\(hash)/library_600x900_2x.jpg")
+            }
+        }
         for name in names {
             let file = cache.appendingPathComponent(name).resolvingSymlinksInPath()
             guard file.path.hasPrefix(cache.path + "/"),
