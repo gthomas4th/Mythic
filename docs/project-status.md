@@ -214,3 +214,10 @@ continues. Switch's normal GUI launch reaches Sonic Mania's title screen;
 explicit Apex 5 assignment and owner-requested A/B swap are saved. Final Switch
 gameplay acceptance remains pending. Installed revision 972281d4 adds Switch
 format discovery and GUI launch; 76 tests/build/signature checks passed.
+
+
+Owner has now accepted Switch/Sonic Mania gameplay and the requested A/B
+mapping. Eight systems have an accepted gameplay session: GameCube, PS1, PS2,
+SNES, N64, Genesis, Dreamcast and Switch. This is not blanket compatibility
+for every title. Switch full-library indexing is still running. PS3 firmware
+4.93 is installed; its game pilot is still transferring before launch testing.

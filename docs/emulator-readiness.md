@@ -561,3 +561,11 @@ not only Sonic Mania. The source file is written atomically only after the
 scan completes; do not start another source writer or reopen the hub with an
 assumption that this entry is already saved. Local helper session 54026,
 process SourceSetup. No game data is copied to the Mac by this scan.
+
+
+Owner confirmed “all good” after the Switch A/B remap. Sonic Mania's normal
+Ryujinx GUI launch, gameplay, Apex 5 controls and sound are accepted for this
+configuration. The requested physical A→Switch A and B→Switch B mapping is
+accepted. This supersedes pending gameplay acceptance above; the full Switch
+source scan and hub Play check remain separate. PS3 firmware 4.93 is ready,
+but its Spider-Man pilot copy and gameplay check remain pending.
