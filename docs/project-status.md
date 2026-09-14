@@ -19,12 +19,15 @@ are not the user entry point. Do not remove recovery copies before final live ac
 Library has an always-visible System picker, normalized console labels, All systems,
 and an empty-result reset. It combines with text and existing filters in grid and list.
 Containers is hidden from both navigation styles; container data and implementation remain.
-The Xbox Cloud section is replaced by PlayStation Remote Play with a Sony/chiaki-ng client
-selector. Sony RemotePlay 9.0.0 is already installed and signature-verified; the owner
-confirms PS5 Remote Play is enabled. Connection acceptance remains pending. chiaki-ng
-1.10.0 ARM is installed for comparison, with upstream SHA-256 and strict signature
-verified. PSN sign-in/local registration and a separate-network test remain pending.
-Away-from-home play is the owner priority; LAN success is not remote acceptance.
+PlayStation Remote Play now uses chiaki-ng permanently; the Sony/client selector is removed.
+The owner accepted the gameplay test and chose to close this acceptance branch despite
+minor persistent delay/stutter. No further wired-network test is required for owner acceptance.
+chiaki-ng 1.10.0 ARM is installed, with upstream SHA-256 and strict signature verified;
+PSN sign-in and PS5 registration are complete. Accepted configuration: H.264, 1080p60,
+10 Mb/s, HDR off, Fast rendering, VSync on, large adjustable aspect-fit window.
+Away-from-home play remains a supported intended use; an external-network session was
+not observed, and owner acceptance must not be presented as a measured external test.
+The owner authorized resuming the Deck-to-NAS transfer after closing this gameplay test.
 
 ## Interface theme
 
