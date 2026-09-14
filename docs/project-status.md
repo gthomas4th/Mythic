@@ -146,3 +146,8 @@ recovery copies are retained privately. New UI visual acceptance remains pending
 because native desktop control is unavailable in this session. The owner is
 testing Hulk with Xbox connected; PS2 card formatting/write is confirmed in logs
 and by its filesystem signature. Do not mark gameplay accepted until feedback.
+
+The owner has now accepted Hulk controller operation, but not NAS playback
+performance. Live latency spikes are common to the Mac's router, NAS and Yoda
+paths; the NAS-to-router sample remains fast. Network isolation testing is in
+progress. See `emulator-readiness.md`; do not describe PS2 performance as accepted.

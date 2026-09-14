@@ -266,3 +266,27 @@ missing enabled-surfaces configuration); no system permission changes were made.
 
 The progress change passes the full Debug build and all 75 existing core tests.
 Visual verification of the new progress UI awaits restored desktop automation.
+
+## Owner PS2 control acceptance and network stall diagnosis
+
+The owner confirmed Hulk controls are good, but reported excessive network lag.
+PS2 input acceptance is recorded separately from playback performance, which is
+not accepted. No emulator graphics changes or local ROM caching were introduced.
+
+During the affected session, Mac-to-NAS ping measured 265.79 ms average and
+907.32 ms maximum over 12 replies. A subsequent concurrent 20-packet comparison
+showed approximately 403 ms average to the Mac's gateway, 411 ms to the NAS and
+403 ms to Yoda; each had 35% unanswered when the short test ended. Delayed replies
+can affect this short-test loss figure. NAS-to-Mac-gateway ping measured 0.94 ms
+average and 1.20 ms maximum with all ten replies received. These observations
+localize the common delay toward the Mac/access-point path, rather than proving
+a NAS disk fault. The brief NAS pool sample showed no physical disk I/O; cache
+and the short duration limit that observation. Ethernet error counters were zero,
+with historical missed/drop counters present; no interval increase was measured.
+
+The Mac routes through en0 and the local gateway. Wi-Fi reported channel 40,
+5 GHz / 160 MHz, 802.11ax and a negotiated 2401 Mb/s (not measured throughput).
+Its reported 0 dBm signal value is unusable. SMB is 3.1.1, with zero recorded
+reconnections. A controller-off comparison was requested to test wireless
+coexistence as a hypothesis, not an established cause. No router, security,
+Bluetooth or network configuration was changed; the NAS transfer remains active.
