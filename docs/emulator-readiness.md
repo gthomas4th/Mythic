@@ -195,8 +195,10 @@ or controller behavior. No local ROM copies were created.
 
 Remaining integration: much of the SNES/N64/32X/PS1 inventory is ZIP-compressed,
 and some system folders appear misfiled. Inspect archive contents on the NAS
-before assigning systems. Game Hub currently excludes archives and lacks some
-raw Sega formats and Dreamcast GDI track grouping. Do not mark these sources
+before assigning systems. At initial setup Game Hub excluded archives and lacked some
+raw Sega formats and Dreamcast GDI track grouping; the implementation below
+adds the unambiguous cartridge formats and grouped GDI handling. ZIP archives
+still require preparation on the NAS. Do not mark these sources
 ready or silently extract ROMs onto the Mac. The large-game transfer continues;
 additional NAS source bookmarks and per-system live launches follow verified
 content availability and format handling.
@@ -224,3 +226,25 @@ All 75 core tests pass, including archive exclusion, grouped tracks, renamed
 tracks, changed layouts, malformed descriptors and symlink escape.
 
 Format reference: [Flycast GDI reader](https://github.com/flyinghead/flycast/blob/master/core/imgread/gdi.cpp).
+
+The full Debug build and installed signature verification passed after the format
+change. Direct NAS Gundam boot reached its opening sequence with Metal at 1280×960,
+30 game FPS / 60 video FPS and 100% emulation speed. A local 128 KiB memory card
+was created. This verifies boot and a card write, not physical input, gameplay,
+or save/relaunch acceptance. The PS1 folder/application bookmark is saved; the
+first combined scan also hashes the newly verified 4.12 GB Hulk PS2 image.
+
+Direct NAS Hulk boot also reached the memory-card prompt using Metal 3×
+(1920×1344), displaying 60 FPS / 60 VPS. The virtual card was reported unformatted;
+no formatting was performed. PS2 gameplay, physical input and save/relaunch remain
+open. Both test emulator sessions were shut down normally.
+
+The combined scan completed with three NAS entries: Melee, Hulk and Gundam.
+A subsequent unchanged rescan returned immediately with the same three entries.
+Game Hub's Gundam Play button launched DuckStation with the PBP path on the
+mounted share; the opening sequence rendered successfully at Metal 4×. The
+fullscreen render window was not initially visible to automation; F11 exposed
+windowed game output for visual verification. This was an observation limitation,
+not a failed launch. The session was shut down normally. The local ROM folder
+remains empty. Installed code revision: `eca3a002`; later documentation commits
+do not require another app build.

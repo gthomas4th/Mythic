@@ -46,7 +46,7 @@ are not the user entry point. Do not remove recovery copies before final live ac
 | Xbox | Official Xbox Cloud library link; no purchase or Wine-based Microsoft Store promise |
 | Controller | Keyboard search, Return/details, Escape/back, favorite/filter, and immediate target switching verified; local Rebirth input and mouse-click/reconnect sequence owner-confirmed with current configuration; first connection after launch and physical hub navigation still open |
 | Diagnostics | Correlation IDs and private durable journal capped at 200 events; bounded reads, atomic writes, and unreadable-snapshot preservation; non-Steam identifiers are hashed; export excludes raw runtime logs, bookmarks, credentials, filesystem paths and network addresses |
-| Build | Full Debug build; 72 synthetic tests pass; SwiftLint zero errors, nine inherited warnings |
+| Build | Full Debug build; 75 synthetic tests pass; SwiftLint zero errors, nine inherited warnings |
 
 Home now includes Continue Playing, Favourites, Recently Played, Recently Added, Final Fantasy,
 Retro, and Ready on Home PC collections (empty collections are omitted). Containers
@@ -133,3 +133,9 @@ DuckStation and RetroArch are installed as native Apple Silicon engines. PS1 BIO
 Metal boot and RetroArch Vulkan startup passed; four native cores load successfully.
 NAS archive/format integration and new-system gameplay checks remain open. See
 `emulator-readiness.md` for exact versions, firmware provenance and limitations.
+
+Latest emulator integration: installed code `eca3a002` adds PBP, V64, Sega
+cartridge formats and validated GDI track sets. Full build/signature verification
+and 75 tests pass. Melee, Hulk and Gundam are indexed from NAS sources. Gundam's
+hub launch and Hulk's direct emulator boot passed. New-system physical gameplay
+and PS2 memory-card setup remain open; ROMs have not been staged locally.
