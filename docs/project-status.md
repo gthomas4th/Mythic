@@ -181,3 +181,9 @@ PicoDrive/Vulkan screenshot check directly from the NAS, with core-only
 left-stick movement enabled. Gameplay acceptance remains pending. SNES, N64
 and Sega Game Hub source bookmarks are still outstanding; save-reload testing
 remains deferred.
+
+
+Latest: owner accepted Sonic 2 gameplay. SNES, N64 and Genesis sources are now
+saved and indexed (one title each), with all prior sources preserved. Hub visual
+and Play checks remain pending. Power Stone is copying directly to NAS for the
+Dreamcast pilot; Flycast settings are prepared but game boot remains unverified.

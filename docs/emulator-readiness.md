@@ -428,3 +428,25 @@ D-pad and other core profiles. No local ROM copy was created. The game was
 reopened for gameplay; physical input, sound and performance acceptance and
 the Sega Game Hub source bookmark remain pending. Rear-paddle configuration
 and save-reload testing remain deferred by owner direction.
+
+
+## Sega acceptance and RetroArch library integration
+
+The owner accepted Sonic 2 gameplay with “all good.” This completes the current
+Mega Drive gameplay/input/audio check. It does not establish 32X compatibility.
+SNES, N64 and Genesis NAS sources were added with the existing ROMSource schema
+and production ROMIndex scanner. All three produced one entry each. Bookmarks
+resolved without staleness, the saved eight-source file decoded successfully,
+and the previous five sources were preserved and backed up privately. Genesis
+uses the Sonic 2 subfolder to avoid treating the mixed sega32x archive collection
+as a consistently classified Genesis library. Visual hub tile/Play acceptance
+for these three entries remains pending. No application code was changed.
+
+Power Stone's four-file Dreamcast GDI set (1.19 GB) is being copied directly
+from Deck to NAS as the next pilot. The main worker and checkpoint are unchanged.
+Do not launch until dreamcast-pilot-receipt.json confirms every part was verified
+and promoted. Native Flycast is installed, owner BIOS is already local, and a
+Flycast-only 1920×1440 internal-resolution/threaded-rendering profile is prepared.
+The installed core uses reicast_ option names (confirmed from its binary), rather
+than the flycast_ names in current documentation. Rendering and gameplay have
+not yet been tested; do not mark Dreamcast accepted.
