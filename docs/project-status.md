@@ -151,3 +151,8 @@ The owner has now accepted Hulk controller operation, but not NAS playback
 performance. Live latency spikes are common to the Mac's router, NAS and Yoda
 paths; the NAS-to-router sample remains fast. Network isolation testing is in
 progress. See `emulator-readiness.md`; do not describe PS2 performance as accepted.
+
+Follow-up network testing did not reproduce severe stalls with Xbox connected,
+including a 45-second Hulk-running sample (NAS ping 12.90 ms average, 106.25 ms
+maximum, all 90 replies). Intermittent spikes remain; the cause is unresolved.
+Owner playback feedback is pending, so PS2 performance is not marked accepted.

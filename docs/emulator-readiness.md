@@ -305,3 +305,22 @@ This is an improved baseline, not a controlled explanation of yesterday's stalls
 the game state, controller state and observation time all changed. A repeat with
 controller connected and games still closed was requested. The copy worker had
 174.73 GB verified, remained active, and the hourly notification timer was active.
+
+## Controller-on comparison and running-game latency
+
+The owner connected the controller with games closed; Bluetooth inventory confirmed
+Xbox Wireless Controller connected. Repeating the same offsets hit the Mac's RAM
+cache, so those read timings are not a network benchmark. Concurrent ping was
+10.96 ms average / 69.98 ms maximum, all 30 replies received. A new random-offset
+sample of the same size then measured 13.44 ms median / 42.09 ms p95 / 99.43 ms
+maximum per read, with 13.94 ms average NAS ping and all replies received. This
+did not reproduce the prior severe stalls merely by connecting the controller.
+It does not rule out intermittent interference or other load-dependent behavior.
+
+Hulk was reopened from the NAS; PCSX2 confirmed Xbox input, Metal and execution
+of SLUS-20422. During a 45-second running-game sample, router ping averaged
+12.55 ms (111.26 ms maximum) and NAS ping averaged 12.90 ms (106.25 ms maximum),
+with all 90 replies from each destination. Owner gameplay feedback for this
+session remains pending; emulator execution alone is not active-gameplay
+acceptance. The running session is preserved. No network or graphics settings
+were changed, and no local ROM copies were made.
