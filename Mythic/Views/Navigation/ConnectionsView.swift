@@ -124,6 +124,7 @@ struct ConnectionsView: View {
     @State private var remoteApplication = ""
     @State private var remotePlayApp: URL?
     @State private var playStationStatus = ""
+    @State private var closingRemotePlay = false
     private func findRemotePlay() {
         remotePlayApp = NSWorkspace.shared.urlForApplication(withBundleIdentifier: "org.streetpea.chiaking")
         if remotePlayApp == nil {
@@ -140,11 +141,37 @@ struct ConnectionsView: View {
         }
         Task {
             do {
-                try await NSWorkspace.shared.openApplication(at: app, configuration: NSWorkspace.OpenConfiguration())
+                let configuration = NSWorkspace.OpenConfiguration()
+                configuration.arguments = ["--exit-app-on-stream-exit"]
+                try await NSWorkspace.shared.openApplication(at: app, configuration: configuration)
                 playStationStatus = "chiaki-ng opened. Select your PS5 to connect."
             } catch {
                 playStationStatus = "chiaki-ng could not open: " + error.localizedDescription
             }
+        }
+    }
+    private func closeRemotePlay() {
+        guard !closingRemotePlay else { return }
+        let applications = NSRunningApplication.runningApplications(withBundleIdentifier: "org.streetpea.chiaking")
+        guard !applications.isEmpty else { playStationStatus = "chiaki-ng is already closed."; return }
+        closingRemotePlay = true
+        playStationStatus = "Closing chiaki-ng…"
+        Task { @MainActor in
+            defer { closingRemotePlay = false }
+            for application in applications { application.terminate() }
+            for _ in 0..<25 {
+                if applications.allSatisfy(\.isTerminated) { break }
+                try? await Task.sleep(for: .milliseconds(200))
+            }
+            let stalled = applications.filter { !$0.isTerminated }
+            for application in stalled { application.forceTerminate() }
+            for _ in 0..<10 {
+                if applications.allSatisfy(\.isTerminated) { break }
+                try? await Task.sleep(for: .milliseconds(100))
+            }
+            playStationStatus = applications.allSatisfy(\.isTerminated)
+                ? (stalled.isEmpty ? "chiaki-ng closed." : "chiaki-ng stopped responding and was force-closed.")
+                : "chiaki-ng could not close. Use macOS Force Quit."
         }
     }
     var body: some View {
@@ -176,10 +203,11 @@ struct ConnectionsView: View {
                       systemImage: remotePlayApp == nil ? "arrow.down.app" : "checkmark.circle")
                 HStack {
                     Button("Open chiaki-ng") { openRemotePlay() }.disabled(remotePlayApp == nil)
+                    Button("Close chiaki-ng") { closeRemotePlay() }.disabled(closingRemotePlay)
                     Button("Check installation") { findRemotePlay() }
                     Link("Setup guide", destination: URL(string: "https://streetpea.github.io/chiaki-ng/setup/configuration/")!)
                 }
-                Text("Select your console in chiaki-ng. Away from home, use its Remote Connection via PSN option.")
+                Text("Select your console in chiaki-ng. Closing a stream exits the app. Away from home, use its Remote Connection via PSN option.")
                     .font(.callout).foregroundStyle(.secondary)
                 if !playStationStatus.isEmpty { Text(playStationStatus).font(.callout) }
             }

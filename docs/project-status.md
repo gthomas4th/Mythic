@@ -29,6 +29,13 @@ Away-from-home play remains a supported intended use; an external-network sessio
 not observed, and owner acceptance must not be presented as a measured external test.
 The owner authorized resuming the Deck-to-NAS transfer after closing this gameplay test.
 
+chiaki-ng exit behavior: Game Hub launches it with `--exit-app-on-stream-exit`.
+The local disconnect action is `nothing` (disconnect without asking or sleeping the PS5).
+Connections has a Close chiaki-ng action: request normal termination, wait five seconds,
+then force-terminate only chiaki-ng if still running and report the outcome.
+Debug build passed. The test instance exited after its failed connection; an active-stream
+close test was unavailable because the PS5 was not responding to LAN discovery.
+
 ## Interface theme
 
 The display headings now bundle Final Frontier by Allen R. Walden (source and notice
