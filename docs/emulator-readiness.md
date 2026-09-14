@@ -479,3 +479,52 @@ The owner subsequently reported “all good” for the live Power Stone session.
 Dreamcast gameplay, physical controls and sound are accepted for this NAS-backed
 Flycast configuration. This supersedes the pending live-gameplay status above;
 hub tile/Play acceptance and save-reload checks remain separate (reload deferred).
+
+
+## PS1 accepted; PS3 and Switch preparation
+
+Owner reported “the test passed” for Gundam Battle Assault 2 in DuckStation.
+PS1 gameplay, controls and sound are now accepted; its NAS hub Play launch was
+previously verified. Save-reload remains deferred.
+
+RPCS3 0.0.42-19990 (41f0ecc1), official mac-arm64 release, is installed in the
+user Applications directory. The executable is native arm64 and the package
+passes strict signature verification. Download digest/provenance receipt is
+private. The separate Intel package was inspected but not installed.
+The owner-backup 4.91 firmware was installed via --installfw; --headless with
+--installfw failed at the missing-firmware check and was not successful. Owner
+then requested 4.93: Sony's official page links its PUP over HTTP. HTTPS on that
+host failed hostname validation, so the exact published HTTP URL was used. Its
+PUP header and MD5 from Sony's HTTPS-published URL matched; SHA-256 is recorded.
+The normal 4.93 installer is open; installation confirmation is pending because
+the last on-disk version check still reads 4.91. Do not claim 4.93 installed yet.
+
+Ryubing Canary 1.3.351 (+475615f), from projects controlled by the verified
+Ryubing/ryujinx.app organization, is installed as Ryujinx.app. Universal binary
+contains arm64 and passes strict signature verification. The default main config
+has update checks disabled. Existing owner firmware/key backup restored into
+Library/Application Support/Ryujinx: 231 files, 336.35 MB, individually checked
+against the previous home-transfer SHA-256 receipts. Keys were never printed.
+No ROM or save files were copied locally. Runtime recognizes firmware 18.1.0.
+
+A separate durable NAS pilot queue copies Sonic Mania (Switch, 0.40 GB) then
+Spider-Man: Web of Shadows (PS3, 4.05 GB). The Switch pilot is fully source/NAS
+verified and promoted; PS3 copying is still in progress. Main transfer and
+checkpoint remain unchanged. Private job files: priority-pilots.py/.log/.lock,
+switch-pilot-receipt.json and eventually ps3-pilot-receipt.json.
+
+Sonic Mania launched using --no-gui --use-main-config --disable-main-input-config
+with --input-id-1 set to the actual connected Apex 5 SDL3 identifier. Ryubing's
+own --list-input-ids confirmed the ID, and runtime confirms Player1, firmware
+and Vulkan on Apple M3 Pro. Visible gameplay, controller acceptance and hub
+integration remain pending. Native desktop control still errors with
+CUA_REPL_ENABLED_SURFACES is required; no screen verification is claimed.
+
+Xbox 360 research: XeniOS provides current Mac universal/native builds based
+on Xenia-Edge. It remains alpha; official reports include Halo 3 and Gears of
+War 3 on Mac as in-game with poor performance. iOS reports cannot establish
+Mac compatibility for the other inventory titles. No Xbox 360 emulator has
+been installed or accepted in this phase.
+Sources: https://xenios.jp/download/mac ; https://xenios.jp/compatibility ;
+https://www.playstation.com/en-us/support/hardware/ps3/system-software/ ;
+https://github.com/RPCS3/rpcs3-binaries-mac-arm64 ; https://github.com/Ryubing .
