@@ -33,6 +33,52 @@ struct ContentView: View {
             if theme == "lcars" { console } else { standardNavigation }
         }
         .modifier(HubThemeModifier())
+#if DEBUG
+        .task {
+            guard ProcessInfo.processInfo.arguments.contains("--render-game-cards") else { return }
+            try? await GameDataStore.shared.refreshFromStorefronts()
+            let games = GameDataStore.shared.displayLibrary
+            let examples = [games.first { $0 is ROMGame }, games.first { $0.title.localizedStandardContains("REBIRTH") }].compactMap { $0 }
+            var artwork: [String: URL] = [:]
+            for (index, game) in examples.enumerated() {
+                if let url = game.verticalImageURL, !url.isFileURL,
+                   let (data, _) = try? await URLSession.shared.data(from: url), NSImage(data: data) != nil {
+                    let local = URL(fileURLWithPath: "/private/tmp/gamehub-card-art-\(index).image")
+                    try? data.write(to: local)
+                    artwork[game.title] = local
+                }
+            }
+            for width in [240.0, 300.0] {
+                let preview = VStack(alignment: .leading, spacing: 24) {
+                    Text("GAME HUB — RECENTLY PLAYED").font(HubTheme.heading(28))
+                    HStack(alignment: .top, spacing: 24) {
+                        ForEach(examples) { game in
+                            GameCard(game: .constant(game), artworkURL: artwork[game.title]).frame(width: width)
+                        }
+                    }
+                }.padding(28).background(HubTheme.canvas)
+                    .environmentObject(NetworkMonitor.shared).environment(\.colorScheme, .light)
+                let host = NSHostingView(rootView: preview)
+                let size = host.fittingSize
+                let window = NSWindow(contentRect: NSRect(origin: .zero, size: size), styleMask: .borderless, backing: .buffered, defer: false)
+                window.contentView = host
+                host.frame = NSRect(origin: .zero, size: size)
+                host.layoutSubtreeIfNeeded()
+                if let bitmap = host.bitmapImageRepForCachingDisplay(in: host.bounds) {
+                    host.cacheDisplay(in: host.bounds, to: bitmap)
+                    if let png = bitmap.representation(using: .png, properties: [:]) {
+                        try? png.write(to: URL(fileURLWithPath: "/private/tmp/gamehub-native-cards-\(Int(width)).png"))
+                    }
+                }
+                let renderer = ImageRenderer(content: preview)
+                renderer.scale = 2
+                if let image = renderer.nsImage, let tiff = image.tiffRepresentation,
+                   let png = NSBitmapImageRep(data: tiff)?.representation(using: .png, properties: [:]) {
+                    try? png.write(to: URL(fileURLWithPath: "/private/tmp/gamehub-cards-\(Int(width)).png"))
+                }
+            }
+        }
+#endif
     }
 
     private enum HubDestination: String, CaseIterable {
@@ -57,7 +103,7 @@ struct ContentView: View {
         VStack(spacing: 8) {
             HStack(alignment: .bottom, spacing: 8) {
                 VStack(alignment: .trailing, spacing: 2) {
-                    Text("GAME HUB").font(HubTheme.heading(36))
+                    Text("GAME HUB").font(HubTheme.heading(28))
                     Text("PERSONAL GAME LIBRARY").font(.system(size: 11, weight: .bold)).tracking(1)
                 }
                 .foregroundStyle(.white).padding(.trailing, 22)
@@ -80,7 +126,7 @@ struct ContentView: View {
                             Button { destination = item } label: {
                                 HStack(spacing: 10) {
                                     Image(systemName: item.symbol).frame(width: 24)
-                                    Text(item.rawValue).font(HubTheme.heading(23))
+                                    Text(item.rawValue.uppercased()).font(HubTheme.heading(18)).lineLimit(1).minimumScaleFactor(0.8)
                                     Spacer(minLength: 0)
                                 }
                                 .padding(.horizontal, 18).frame(height: 51)

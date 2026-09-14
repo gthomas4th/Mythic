@@ -14,14 +14,16 @@ import OSLog
 
 struct GameCard: View {
     @Binding var game: Game
+    var artworkURL: URL? = nil
     @State private var isImageEmpty = true
     @State private var hovered = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @AppStorage("hubTheme") private var theme = "lcars"
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            GameImageCard(game: game, url: game.verticalImageURL, isImageEmpty: $isImageEmpty, withBlur: false)
-                .aspectRatio(4 / 3, contentMode: .fit)
+            GameImageCard(game: game, url: artworkURL ?? game.verticalImageURL, isImageEmpty: $isImageEmpty, withBlur: false, contentMode: .fit)
+                .frame(height: 210)
+                .frame(maxWidth: .infinity)
                 .overlay(alignment: .topTrailing) {
                     if game.isFavourited {
                         Image(systemName: "star.fill").foregroundStyle(HubTheme.ink)
@@ -33,16 +35,15 @@ struct GameCard: View {
                 Text(game.title).font(.system(size: 20, weight: .semibold))
                     .lineLimit(2).frame(height: 50, alignment: .topLeading)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                HStack {
-                    Text(game.sourceLabel).font(.system(size: 14, weight: .semibold))
-                        .padding(.horizontal, 12).padding(.vertical, 6)
-                        .background(theme == "lcars" ? HubTheme.canvas : Color.secondary.opacity(0.12), in: .capsule)
-                    Spacer()
-                    if game.isUpdateAvailable == true {
-                        Image(systemName: "arrow.down.circle").help("Update available")
-                    }
-                    GameCard.ButtonsView(game: $game).controlSize(.large)
-                }
+                Text(game.sourceLabel).font(.system(size: 14, weight: .semibold))
+                    .lineLimit(1).fixedSize(horizontal: true, vertical: false)
+                    .padding(.horizontal, 12).padding(.vertical, 6)
+                    .background(theme == "lcars" ? HubTheme.canvas : Color.secondary.opacity(0.12), in: .capsule)
+                Divider()
+                GameCard.ButtonsView(game: $game, withLabel: true, cardLayout: true)
+                    .controlSize(.large)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+
             }.padding(18)
         }
         .background(theme == "lcars" ? HubTheme.panel : Color(nsColor: .controlBackgroundColor))

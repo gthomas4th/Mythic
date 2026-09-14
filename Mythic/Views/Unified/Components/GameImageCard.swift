@@ -10,21 +10,24 @@
 import Foundation
 import SwiftUI
 import Shimmer
+import CoreText
 
 struct GameImageCard: View {
     var game: Game?
     var url: URL?
     @Binding var isImageEmpty: Bool
     
+    var contentMode: ContentMode
     var withBlur: Bool
     @AppStorage("gameImageCardBlur") private var imageCardBlur: Double = 0.0
     
     /// - Note: `game` must be passed as a parameter in order to include fallback image URLs.
-    init(game: Game? = nil, url: URL?, isImageEmpty: Binding<Bool>, withBlur: Bool = true) {
+    init(game: Game? = nil, url: URL?, isImageEmpty: Binding<Bool>, withBlur: Bool = true, contentMode: ContentMode = .fill) {
         self.game = game
         self.url = url
         self._isImageEmpty = isImageEmpty
         self.withBlur = withBlur
+        self.contentMode = contentMode
     }
     
     var body: some View {
@@ -34,7 +37,7 @@ struct GameImageCard: View {
             } else if let url, url.isFileURL, let image = NSImage(contentsOf: url) {
                 Image(nsImage: image)
                     .resizable()
-                    .scaledToFill()
+                    .aspectRatio(contentMode: contentMode)
                     .frame(width: geometry.size.width, height: geometry.size.height)
                     .onAppear { isImageEmpty = false }
             } else if let url = url {
@@ -72,12 +75,13 @@ struct GameImageCard: View {
                             
                             image
                                 .resizable()
+                                .aspectRatio(contentMode: contentMode)
+                                .frame(width: geometry.size.width, height: geometry.size.height)
                                 .modifier(FadeInModifier())
                                 .onAppear {
                                     withAnimation { isImageEmpty = false }
                                 }
                         }
-                        .aspectRatio(contentMode: .fill)
                         .frame(width: geometry.size.width,
                                height: geometry.size.height)
                     case .failure(let error):
@@ -201,7 +205,14 @@ enum HubTheme {
     static let green = Color(red: 0.43, green: 0.64, blue: 0.51)
     static let purple = Color(red: 0.57, green: 0.49, blue: 0.70)
     static let red = Color(red: 0.79, green: 0.32, blue: 0.30)
-    static func heading(_ size: CGFloat) -> Font { .custom("AvenirNextCondensed-DemiBold", size: size, relativeTo: .title) }
+    static let displayFontName: String = {
+        guard let url = Bundle.main.url(forResource: "Finalnew", withExtension: "ttf", subdirectory: "Fonts") else { return "AvenirNextCondensed-DemiBold" }
+        CTFontManagerRegisterFontsForURL(url as CFURL, .process, nil)
+        guard let descriptors = CTFontManagerCreateFontDescriptorsFromURL(url as CFURL) as? [CTFontDescriptor],
+              let descriptor = descriptors.first else { return "AvenirNextCondensed-DemiBold" }
+        return CTFontDescriptorCopyAttribute(descriptor, kCTFontNameAttribute) as? String ?? "AvenirNextCondensed-DemiBold"
+    }()
+    static func heading(_ size: CGFloat) -> Font { .custom(displayFontName, size: size, relativeTo: .title) }
 }
 struct HubThemeModifier: ViewModifier {
     @AppStorage("hubTheme") private var theme = "lcars"
@@ -225,7 +236,7 @@ struct HubSectionBanner: View {
                     .accessibilityHidden(true)
             }
             VStack(alignment: .leading, spacing: 3) {
-                Text(title.uppercased()).font(HubTheme.heading(34)).tracking(1)
+                Text(title.uppercased()).font(HubTheme.heading(28)).lineLimit(1).minimumScaleFactor(0.7)
                 Text(subtitle).font(.system(size: 16)).foregroundStyle(.secondary)
             }
             Spacer(minLength: 8)
@@ -259,10 +270,21 @@ struct HubPlaceholderArtwork: View {
                     Text(system.uppercased()).font(HubTheme.heading(18)).tracking(2)
                     Spacer(minLength: 0)
                     Image(systemName: "gamecontroller.fill").font(.system(size: 38, weight: .light)).foregroundStyle(HubTheme.blue)
-                    Text(title).font(HubTheme.heading(30)).lineLimit(4).minimumScaleFactor(0.85)
+                    Text("GAME LIBRARY").font(.system(size: 13, weight: .semibold)).tracking(2)
                     Spacer(minLength: 0)
                 }.padding(24)
             }.foregroundStyle(HubTheme.ink).clipped()
         }
+    }
+}
+
+struct HubLaunchButtonStyle: ButtonStyle {
+    @Environment(\.isEnabled) private var isEnabled
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.system(size: 17, weight: .semibold))
+            .foregroundStyle(isEnabled ? Color.white : HubTheme.ink.opacity(0.6))
+            .padding(.horizontal, 18).frame(minHeight: 36)
+            .background(isEnabled ? HubTheme.blue.opacity(configuration.isPressed ? 0.75 : 1) : HubTheme.canvas, in: .capsule)
     }
 }

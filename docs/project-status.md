@@ -16,6 +16,14 @@ are not the user entry point. Do not remove recovery copies before final live ac
 
 ## Interface theme
 
+The display headings now bundle Final Frontier by Allen R. Walden (source and notice
+in Resources/Fonts). Artwork uses aspect-fit in cards and the Home hero; source badges
+have their own nonwrapping row. Play/options and target selection occupy separate rows.
+Actual populated ROM/Rebirth cards were rendered at 240 and 300 points using SwiftUI
+and native NSHostingView snapshots; the latter verifies menu labels and spacing.
+The debug-only `--render-game-cards` argument reproduces these snapshots in /private/tmp.
+
+
 The LCARS-inspired Silver console theme uses a light blue/gray foundation, dark blue
 structure, green/yellow/red highlights and purple accents. Condensed headings, larger
 body text, separated game-card actions and ROM placeholder artwork improve readability.

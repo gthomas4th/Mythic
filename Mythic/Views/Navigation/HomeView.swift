@@ -39,7 +39,7 @@ struct HomeView: View {
                 if let recentGame = gameDataStore.recent {
                     HStack(spacing: 0) {
                         GameImageCard(game: recentGame, url: recentGame.horizontalImageURL ?? recentGame.verticalImageURL,
-                                      isImageEmpty: $isImageEmpty, withBlur: false)
+                                      isImageEmpty: $isImageEmpty, withBlur: false, contentMode: .fit)
                             .frame(width: max(260, (geometry.size.width - 56) * 0.53), height: 300)
                             .clipped()
                         VStack(alignment: .leading, spacing: 18) {
@@ -51,7 +51,7 @@ struct HomeView: View {
                                 .padding(.horizontal, 14).padding(.vertical, 7)
                                 .background(HubTheme.canvas, in: .capsule)
                             Spacer(minLength: 0)
-                            GameCard.ButtonsView(game: .constant(recentGame), withLabel: true)
+                            GameCard.ButtonsView(game: .constant(recentGame), withLabel: true, cardLayout: true)
                                 .controlSize(.large)
                         }.padding(24).frame(maxWidth: .infinity, alignment: .leading)
                     }
@@ -77,7 +77,7 @@ struct HomeView: View {
                 VStack(alignment: .leading, spacing: 28) {
                     if favouriteGames.isEmpty {
                         VStack(alignment: .leading, spacing: 6) {
-                            Text("Favourites").font(.title2.bold())
+                            Text("FAVOURITES").font(HubTheme.heading(26))
                             Text("Favourite a game from its options menu to keep it here.")
                                 .foregroundStyle(.secondary)
                         }
@@ -130,7 +130,7 @@ struct HomeView: View {
         if !games.isEmpty {
             VStack(alignment: .leading, spacing: 12) {
                 HStack(spacing: 14) {
-                    Text(title.uppercased()).font(HubTheme.heading(30)).tracking(1)
+                    Text(title.uppercased()).font(HubTheme.heading(26)).lineLimit(1).minimumScaleFactor(0.75)
                     RoundedRectangle(cornerRadius: 4).fill(HubTheme.blue.opacity(0.35)).frame(height: 10)
                     Text(String(games.count)).font(HubTheme.heading(20))
                         .padding(.horizontal, 16).padding(.vertical, 5)
@@ -139,7 +139,7 @@ struct HomeView: View {
                 ScrollView(.horizontal) {
                     LazyHStack(spacing: 16) {
                         ForEach(Array(games.prefix(20))) { game in
-                            GameCard(game: .constant(game)).frame(width: max(260, gameCardSize))
+                            GameCard(game: .constant(game)).frame(width: max(300, gameCardSize))
                         }
                     }
                 }

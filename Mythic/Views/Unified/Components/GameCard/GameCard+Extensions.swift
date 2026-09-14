@@ -50,7 +50,7 @@ extension GameCard {
                         .symbolVariant(.fill)
                         .customTransform { view in
                             if #unavailable(macOS 26.0) {
-                                view.foregroundStyle(.black)
+                                view.foregroundStyle(.white)
                             } else {
                                 view
                             }
@@ -61,8 +61,9 @@ extension GameCard {
                     // FIXME: .disabled(game.checkIfGameIsRunning())
                     .help("Play \"\(game.title)\"")
 
-                    .background(.white)
-                    .foregroundStyle(.black)
+                    .buttonStyle(HubLaunchButtonStyle())
+                    .tint(HubTheme.blue)
+                    .foregroundStyle(.white)
 
                     .alert(isPresented: $isLaunchErrorAlertPresented) {
                         if launchError is Engine.NotInstalledError {
@@ -369,7 +370,7 @@ extension GameCard {
     struct ButtonsView: View {
         @Binding var game: Game
         var withLabel = false
-
+        var cardLayout = false
         @Bindable private var operationManager: GameOperationManager = .shared
         @EnvironmentObject var networkMonitor: NetworkMonitor
 
@@ -377,21 +378,34 @@ extension GameCard {
             if let operation = operationManager.queue.first(where: { $0.isExecuting && $0.game == game }) {
                 OperationCard.StatusView(operation: .constant(operation), withLabel: withLabel)
             } else if case .installed = game.installationState {
-                Buttons.Prominent.PlayButton(game: $game, withLabel: withLabel)
-                if let steam = game as? SteamGame, let record = steam.record, record.launchTargets.count > 1 {
-                    Menu("Play using") {
-                        ForEach(record.launchTargets) { target in
-                            Button(target.kind == .nativeMac ? "Native Mac" : (target.kind == .moonlight ? "Home PC" : "Windows Steam")) {
-                                steam.preferredTargetID = target.id
-                                GameDataStore.shared.savePreferences(for: steam)
-                            }.disabled(!target.available)
+                if cardLayout {
+                    VStack(alignment: .leading, spacing: 10) {
+                        HStack(spacing: 12) {
+                            Buttons.Prominent.PlayButton(game: $game, withLabel: true).fixedSize()
+                            Spacer(minLength: 0)
+                            MenuView(game: $game).fixedSize()
                         }
-                    }
+                        targetMenu
+                    }.frame(minHeight: 84, alignment: .top)
+                } else {
+                    Buttons.Prominent.PlayButton(game: $game, withLabel: withLabel)
+                    targetMenu
+                    MenuView(game: $game).layoutPriority(1)
                 }
-                MenuView(game: $game)
-                    .layoutPriority(1)
             } else {
                 Buttons.Prominent.InstallButton(game: $game, withLabel: withLabel)
+            }
+        }
+        @ViewBuilder private var targetMenu: some View {
+            if let steam = game as? SteamGame, let record = steam.record, record.launchTargets.count > 1 {
+                Menu("Play using") {
+                    ForEach(record.launchTargets) { target in
+                        Button(target.kind == .nativeMac ? "Native Mac" : (target.kind == .moonlight ? "Home PC" : "Windows Steam")) {
+                            steam.preferredTargetID = target.id
+                            GameDataStore.shared.savePreferences(for: steam)
+                        }.disabled(!target.available)
+                    }
+                }.fixedSize()
             }
         }
     }
