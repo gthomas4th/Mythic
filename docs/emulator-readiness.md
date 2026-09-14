@@ -357,3 +357,14 @@ ARM64 bsnes-hd beta core. Logs confirm Vulkan on Apple M3 Pro and Xbox Wireless
 Controller autoconfigured in port 1 via MFI. Owner feedback on gameplay, sound
 and scrolling is pending. No local ROM copies were created. This launch is an
 emulator check; a SNES Game Hub source bookmark has not yet been added.
+
+## SNES acceptance and analog-stick convenience
+
+The owner reported Super Mario World feels great and requested joystick support.
+A bsnes-hd beta core remap now sets player 1 analog-to-D-pad to left stick (mode 1),
+retaining physical D-pad input. The global setting remains unchanged, so N64 and
+Dreamcast analog controls are not affected. RetroArch was closed before editing;
+the relaunched NAS game log confirms the core remap loaded and Xbox port 1 was
+autoconfigured. Physical left-stick response awaits owner confirmation.
+
+Reference: [RetroArch input and controls](https://docs.libretro.com/guides/input-and-controls/).
