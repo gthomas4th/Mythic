@@ -14,6 +14,20 @@ passes `codesign --verify --deep --strict`. This is not a notarized public relea
 The original app and runtime are preserved. Development builds and the test host
 are not the user entry point. Do not remove recovery copies before final live acceptance.
 
+## Current emulator snapshot
+
+Owner-accepted gameplay: GameCube/Melee, PS2/Hulk, SNES/Super Mario World,
+N64/Super Mario 64 and Mega Drive/Sonic 2. PS1/Gundam boots successfully;
+physical gameplay acceptance remains pending. Dreamcast/Power Stone now passes a NAS boot-logo screenshot check and is
+indexed in the hub; its live gameplay check is open. Save-reload tests and Apex 5 rear-paddle customization are deferred.
+
+SNES, N64 and Genesis sources are indexed in the hub alongside GameCube, PS2
+and PS1. Their hub Play checks remain pending. Installed revision `a348a9b3`
+labels network-volume ROMs **Server**, local-volume ROMs **Local**, and unavailable
+volume metadata **ROM**. Both regular and controller library views use the label;
+storefront identity and recent-launch history are unchanged. Build, signature and
+actual NAS/local volume classification checks passed.
+
 ## Working configuration
 
 - FFVII Rebirth, Steam app 2909400; 171.06 GB installed in the shared Windows Steam

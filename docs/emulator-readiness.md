@@ -450,3 +450,26 @@ Flycast-only 1920×1440 internal-resolution/threaded-rendering profile is prepar
 The installed core uses reicast_ option names (confirmed from its binary), rather
 than the flycast_ names in current documentation. Rendering and gameplay have
 not yet been tested; do not mark Dreamcast accepted.
+
+
+## Dreamcast pilot boot and library integration
+
+Power Stone's four-file GDI set finished the direct Deck-to-NAS pilot: 1.19 GB
+at 1.47 MB/s, with source-stream SHA-256 plus fresh NAS disk verification for
+every file before promotion. The main worker/checkpoint was not altered. The
+NAS receipt is dreamcast-pilot-receipt.json in the existing private job directory.
+Owner BIOS files still match the verified firmware receipt.
+
+Native Flycast completed a 900-frame Vulkan render check on Apple M3 Pro and
+captured the visible Capcom boot logo. The core-specific saved options retain
+1920×1440 internal resolution and threaded rendering. Xbox-compatible Apex 5
+autodetection selected port 1. The runtime emitted missing optional texture-option
+queries and MoltenVK primitive-restart warnings; despite these, the boot logo
+rendered and the bounded check exited successfully. Full 3D rendering, physical
+controls, audio and sustained gameplay remain for the live session now opened.
+
+The production grouped-disc scanner indexed one Dreamcast entry and the saved
+source file now contains nine sources. All previous entries were preserved;
+the eight-source predecessor was backed up before the atomic update. Source
+bookmarks resolved without staleness. The hub was reopened, but its Dreamcast
+tile/Play action has not been visually checked. No local ROM copy was created.
