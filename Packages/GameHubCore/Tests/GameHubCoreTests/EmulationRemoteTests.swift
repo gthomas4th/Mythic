@@ -47,6 +47,18 @@ final class EmulationRemoteTests: XCTestCase {
         XCTAssertThrowsError(try EmulatorCommand.arguments(kind: .retroArch, content: content))
         XCTAssertEqual(try EmulatorCommand.arguments(kind: .retroArch, content: content, core: URL(fileURLWithPath: "/cores/test.dylib")).last, content.path)
     }
+    func testSwitchFormatsAndGUILaunchPreservePaths() throws {
+        let root = try folder()
+        let game = root.appendingPathComponent("Switch Game [USA]; sample.xci")
+        try Data([1, 2, 3]).write(to: game)
+        try Data([4, 5, 6]).write(to: root.appendingPathComponent("Other.nsp"))
+        try Data([7]).write(to: root.appendingPathComponent("prod.keys"))
+        var index = ROMIndex(); try index.scan(root: root, system: "switch")
+        XCTAssertEqual(index.entries.count, 2)
+        XCTAssertEqual(Set(index.entries.map { URL(fileURLWithPath: $0.relativePath).pathExtension }), ["xci", "nsp"])
+        XCTAssertEqual(try EmulatorCommand.arguments(kind: .ryujinx, content: game), [game.path])
+        XCTAssertThrowsError(try EmulatorCommand.arguments(kind: .ryujinx, content: XCTUnwrap(URL(string: "https://example.com/game.xci"))))
+    }
     func testRemoteInputAndHealthDoNotClaimQuality() throws {
         let valid = RemoteHost(name: "PC", address: "yoda.local", application: "Desktop")
         XCTAssertNoThrow(try valid.validate())

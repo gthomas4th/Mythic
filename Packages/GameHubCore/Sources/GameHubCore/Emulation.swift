@@ -2,13 +2,14 @@ import Foundation
 import CryptoKit
 
 public enum EmulatorKind: String, Codable, CaseIterable, Sendable {
-    case retroArch, duckStation, pcsx2, rpcs3, dolphin
+    case retroArch, duckStation, pcsx2, rpcs3, dolphin, ryujinx
     public var displayName: String {
         switch self {
         case .retroArch: "RetroArch"
         case .duckStation: "DuckStation"
         case .pcsx2: "PCSX2"
         case .rpcs3: "RPCS3"
+        case .ryujinx: "Ryujinx (Switch)"
         case .dolphin: "Dolphin (GameCube / Wii)"
         }
     }
@@ -67,7 +68,7 @@ public enum EmulatorCommand {
             guard let core, core.isFileURL else { throw ROMError.coreMissing }
             return ["-f", "-L", core.path, content.path]
         case .duckStation, .pcsx2: return ["-batch", "-fullscreen", "--", content.path]
-        case .rpcs3: return [content.path]
+        case .rpcs3, .ryujinx: return [content.path]
         case .dolphin:
             return ["-b", "-C", "Dolphin.Display.Fullscreen=True"] + dolphinPreset.arguments + ["-e", content.path]
         }
@@ -116,7 +117,7 @@ public struct ROMIndex: Codable, Sendable {
             let values = try url.resourceValues(forKeys: [.isRegularFileKey, .isSymbolicLinkKey])
             if values.isSymbolicLink == true { iterator.skipDescendants(); continue }
             guard values.isRegularFile == true else { continue }
-            if ["nes", "sfc", "smc", "gb", "gbc", "gba", "n64", "z64", "v64", "pbp", "gen", "md", "smd", "32x", "iso", "chd", "cue", "gdi", "m3u", "gcm", "rvz", "wia", "wbfs", "ciso"].contains(url.pathExtension.lowercased()) || url.lastPathComponent.uppercased() == "EBOOT.BIN" { candidates.append(url.resolvingSymlinksInPath()) }
+            if ["xci", "nsp", "nes", "sfc", "smc", "gb", "gbc", "gba", "n64", "z64", "v64", "pbp", "gen", "md", "smd", "32x", "iso", "chd", "cue", "gdi", "m3u", "gcm", "rvz", "wia", "wbfs", "ciso"].contains(url.pathExtension.lowercased()) || url.lastPathComponent.uppercased() == "EBOOT.BIN" { candidates.append(url.resolvingSymlinksInPath()) }
         }
         var suppressed: Set<String> = []
         for descriptor in candidates where ["cue", "gdi", "m3u"].contains(descriptor.pathExtension.lowercased()) {
