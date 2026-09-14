@@ -368,3 +368,23 @@ the relaunched NAS game log confirms the core remap loaded and Xbox port 1 was
 autoconfigured. Physical left-stick response awaits owner confirmation.
 
 Reference: [RetroArch input and controls](https://docs.libretro.com/guides/input-and-controls/).
+
+## N64 live test
+
+The owner confirmed SNES left-stick movement works well and agreed to proceed
+to N64. Super Mario 64 (USA) was fetched directly from Deck to NAS using the
+existing restricted reader and separate pilot staging, without modifying the
+main worker's checkpoints. Source/NAS stream hashes and NAS disk hash matched.
+The original ZIP remains; its single 8.39 MB Z64 member was CRC-checked and
+its big-endian N64 header and extracted disk SHA-256 verified:
+`17ce077343c6133f8c9f2d6d6d9a4ab62c8cd2aa57c40aea1f490b4c8bb21d91`.
+
+The native Mupen64Plus-Next core launched the NAS image. It requested OpenGL 3.3
+and initialized GLCore on Apple M3 Pro; do not describe this session as Vulkan.
+Its log reports Cached Interpreter CPU execution, not a confirmed dynarec.
+Xbox port 1 autoconfiguration passed; the SNES analog-to-D-pad remap does not
+apply to this core. Physical N64 gameplay, camera and audio feedback are pending.
+The N64 Game Hub source bookmark remains pending alongside the SNES bookmark
+because native desktop automation is unavailable. No local ROM copies exist.
+
+Reference: [Mupen64Plus-Next](https://docs.libretro.com/library/mupen64plus/).

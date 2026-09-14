@@ -167,3 +167,8 @@ SNES/Super Mario World is now running directly from the NAS in native RetroArch
 bsnes-hd beta, with Xbox port 1 detected. Gameplay feedback and the SNES Game Hub
 source bookmark remain pending. The pilot transfer preserves the original ZIP
 and does not alter or stop the main copy worker.
+
+SNES gameplay and left-stick convenience are owner-confirmed. N64 testing is
+now active with Super Mario 64 from the NAS, native Mupen64Plus-Next, Apple M3
+Pro GLCore and Xbox port 1. N64 gameplay acceptance and both RetroArch source
+bookmarks remain open; save-reload testing stays deferred by owner direction.
