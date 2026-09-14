@@ -205,3 +205,22 @@ Sources: [DuckStation](https://github.com/stenzek/duckstation),
 [RetroArch macOS setup](https://docs.libretro.com/guides/install-macos/),
 [official ARM64 core distribution](https://buildbot.libretro.com/nightly/apple/osx/arm64/latest/),
 [DuckStation SDL bindings](https://github.com/stenzek/duckstation/blob/master/src/util/sdl_input_source.cpp).
+
+## NAS image preparation and format integration
+
+The verified Gundam Battle Assault 2 ZIP contains one PBP image. It was extracted
+on the NAS into its own game folder, retaining the original archive. The original
+archive SHA-256, member CRC, PBP header, extracted size and fresh on-disk SHA-256
+were checked before granting the dedicated reader access. No game bytes were
+written to Mac storage. The extraction receipt remains with the private NAS job.
+
+Game Hub now discovers PBP, V64 and unambiguous Sega cartridge extensions
+(GEN/MD/SMD/32X). Loose BIN/RAW files and ZIP archives remain excluded. Dreamcast
+GDI descriptors group their tracks into one game; M3U can group GDI discs. Bounded
+parsing checks track counts, numbering, types, sectors, offsets and referenced
+files. Missing files and paths outside the selected root are rejected. Ordered
+track payloads and layout determine identity, while renamed tracks keep identity.
+All 75 core tests pass, including archive exclusion, grouped tracks, renamed
+tracks, changed layouts, malformed descriptors and symlink escape.
+
+Format reference: [Flycast GDI reader](https://github.com/flyinghead/flycast/blob/master/core/imgread/gdi.cpp).

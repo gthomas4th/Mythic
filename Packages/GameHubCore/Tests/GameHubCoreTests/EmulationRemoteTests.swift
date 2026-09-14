@@ -99,6 +99,52 @@ final class EmulationRemoteTests: XCTestCase {
         try PropertyListSerialization.data(fromPropertyList: info, format: .xml, options: 0).write(to: app.appendingPathComponent("Contents/Info.plist"))
         XCTAssertThrowsError(try EmulatorApplicationInfo.inspect(application: app))
     }
+    func testAdditionalImagesExcludeArchivesAndLooseTracks() throws {
+        let root = try folder()
+        for (index, ext) in ["pbp", "v64", "gen", "md", "smd", "32x", "zip", "bin", "raw"].enumerated() {
+            try Data([UInt8(index)]).write(to: root.appendingPathComponent("Game.\(ext)"))
+        }
+        var index = ROMIndex(); try index.scan(root: root, system: "retro")
+        XCTAssertEqual(index.entries.count, 6)
+        XCTAssertFalse(index.entries.contains { ["zip", "bin", "raw"].contains(URL(fileURLWithPath: $0.relativePath).pathExtension) })
+    }
+    func testGDIGroupsTracksAndIdentityIncludesLayoutNotNames() throws {
+        let root = try folder()
+        for (trackIndex, name) in ["track one.bin", "audio.raw", "data.bin"].enumerated() {
+            try Data([UInt8(trackIndex)]).write(to: root.appendingPathComponent(name))
+        }
+        let descriptor = root.appendingPathComponent("Game.gdi")
+        let text = "3\n1 0 4 2352 \"track one.bin\" 0\n2 450 0 2352 audio.raw 0\n3 45000 4 2352 data.bin 0\n"
+        try text.write(to: descriptor, atomically: true, encoding: .utf8)
+        var index = ROMIndex(); try index.scan(root: root, system: "dreamcast")
+        XCTAssertEqual(index.entries.count, 1)
+        let id = index.entries.first?.id
+        try FileManager.default.moveItem(at: root.appendingPathComponent("track one.bin"), to: root.appendingPathComponent("renamed.bin"))
+        try text.replacingOccurrences(of: "track one.bin", with: "renamed.bin").write(to: descriptor, atomically: true, encoding: .utf8)
+        try index.scan(root: root, system: "dreamcast")
+        XCTAssertEqual(index.entries.first?.id, id)
+        try text.replacingOccurrences(of: "track one.bin", with: "renamed.bin").replacingOccurrences(of: "2 450 ", with: "2 600 ").write(to: descriptor, atomically: true, encoding: .utf8)
+        try index.scan(root: root, system: "dreamcast")
+        XCTAssertNotEqual(index.entries.first?.id, id)
+        try "Game.gdi\n".write(to: root.appendingPathComponent("Collection.m3u"), atomically: true, encoding: .utf8)
+        try index.scan(root: root, system: "dreamcast")
+        XCTAssertEqual(index.entries.count, 1)
+        XCTAssertEqual(index.entries.first?.relativePath, "Collection.m3u")
+    }
+    func testGDIRejectsMalformedMissingAndEscapingTracks() throws {
+        let root = try folder()
+        let descriptor = root.appendingPathComponent("bad.gdi")
+        let base = "3\n1 0 4 2352 first.bin 0\n2 450 0 2352 audio.raw 0\n3 45000 4 2352 last.bin 0\n"
+        for name in ["first.bin", "audio.raw", "last.bin"] { try Data([1]).write(to: root.appendingPathComponent(name)) }
+        for text in [base.replacingOccurrences(of: "3\n", with: "4\n"), base.replacingOccurrences(of: "2 450", with: "1 450"), base.replacingOccurrences(of: "2352", with: "99"), base.replacingOccurrences(of: "first.bin", with: "../outside.bin"), base.replacingOccurrences(of: "first.bin", with: "missing.bin"), String(repeating: "x", count: 16384)] {
+            try text.write(to: descriptor, atomically: true, encoding: .utf8)
+            XCTAssertThrowsError(try ROMIndex.parts(of: descriptor, root: root))
+        }
+        try FileManager.default.removeItem(at: root.appendingPathComponent("first.bin"))
+        try FileManager.default.createSymbolicLink(at: root.appendingPathComponent("first.bin"), withDestinationURL: URL(fileURLWithPath: "/etc/hosts"))
+        try base.write(to: descriptor, atomically: true, encoding: .utf8)
+        XCTAssertThrowsError(try ROMIndex.parts(of: descriptor, root: root))
+    }
     private func fixtureEmulator() throws -> URL {
         let app = try folder().appendingPathComponent("Test.app")
         try FileManager.default.createDirectory(at: app.appendingPathComponent("Contents/MacOS"), withIntermediateDirectories: true)
