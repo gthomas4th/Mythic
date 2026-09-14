@@ -172,3 +172,12 @@ SNES gameplay and left-stick convenience are owner-confirmed. N64 testing is
 now active with Super Mario 64 from the NAS, native Mupen64Plus-Next, Apple M3
 Pro GLCore and Xbox port 1. N64 gameplay acceptance and both RetroArch source
 bookmarks remain open; save-reload testing stays deferred by owner direction.
+
+
+Current emulator follow-up: N64 Vulkan gameplay is owner-accepted. The controller
+is an owner-confirmed Flydigi Apex 5 using an Xbox-compatible Bluetooth identity;
+rear-paddle configuration is deferred. Mega Drive Sonic 2 now passes a native
+PicoDrive/Vulkan screenshot check directly from the NAS, with core-only
+left-stick movement enabled. Gameplay acceptance remains pending. SNES, N64
+and Sega Game Hub source bookmarks are still outstanding; save-reload testing
+remains deferred.

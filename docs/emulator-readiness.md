@@ -403,5 +403,28 @@ CPU mode remains Cached Interpreter; global SNES controls remain unchanged.
 The owner reports that the Vulkan N64 session feels good. Gameplay performance
 is accepted for this session, with controller ergonomics still being adjusted:
 the owner wants the back buttons assigned to useful actions instead of camera
-controls. The specific physical buttons/actions are being clarified before
-changing mappings. No N64 remap has been applied for this request yet.
+controls. The owner identified the controller as a Flydigi Apex 5 with rear paddles,
+then deferred paddle configuration. Its Bluetooth identity appears as Xbox
+Wireless Controller; earlier Xbox labels describe the reported device identity.
+No N64 remap has been applied for this request.
+
+
+## Mega Drive / Genesis pilot
+
+Sonic the Hedgehog 2 was copied directly from the Deck to the NAS using the
+existing pilot helper, independently of the main worker checkpoint. The source
+archive remains intact in the Deck's sega32x folder; its single .md member and
+SEGA header identify this pilot as Mega Drive, not a 32X acceptance test.
+
+- Archive SHA-256: `2f7eb51ebc1d174a363b3d4181f123c66c578d81e19f2d00d35bd95ea3554b04`.
+- Extracted SHA-256: `568e5e9557c4c1ef67305fcda429ce503149144e80de6f9aba80e709a8fcde66`.
+- NAS image: `sega32x/Sonic the Hedgehog 2/Sonic the Hedgehog 2 (USA) (Rev-B).md`.
+
+Native PicoDrive completed a 600-frame render check with Vulkan on Apple M3 Pro;
+the emulator screenshot visibly shows the Sonic 2 title sequence. Controller
+autodetection reports Xbox Wireless Controller in port 1 (owner's Apex 5). A
+PicoDrive-only remap enables left-stick-to-D-pad input, preserving physical
+D-pad and other core profiles. No local ROM copy was created. The game was
+reopened for gameplay; physical input, sound and performance acceptance and
+the Sega Game Hub source bookmark remain pending. Rear-paddle configuration
+and save-reload testing remain deferred by owner direction.
