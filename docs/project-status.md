@@ -139,3 +139,10 @@ cartridge formats and validated GDI track sets. Full build/signature verificatio
 and 75 tests pass. Melee, Hulk and Gundam are indexed from NAS sources. Gundam's
 hub launch and Hulk's direct emulator boot passed. New-system physical gameplay
 and PS2 memory-card setup remain open; ROMs have not been staged locally.
+
+Installed code is now `376b845c`: visible ROM source folders and throttled scan
+progress, with the full build and all 75 tests passing. Prior app/source-index
+recovery copies are retained privately. New UI visual acceptance remains pending
+because native desktop control is unavailable in this session. The owner is
+testing Hulk with Xbox connected; PS2 card formatting/write is confirmed in logs
+and by its filesystem signature. Do not mark gameplay accepted until feedback.
