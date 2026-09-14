@@ -7,6 +7,13 @@ import AppKit
     var record: GameRecord?
     var preferredTargetID: String?
     override var storefront: Storefront? { .steam }
+    override var locationLabel: String? {
+        guard let record else { return nil }
+        let target = record.launchTargets.first { $0.id == preferredTargetID && $0.kind == .moonlight }
+            ?? LaunchResolver.resolve(record.launchTargets, preferredID: preferredTargetID)
+        guard let target else { return nil }
+        return target.kind == .moonlight ? "PC" : "Local"
+    }
     override var supportsFileManagement: Bool { false }
     override var supportsLaunchArguments: Bool { false }
     override func getSupportedPlatforms() -> Set<Game.Platform>? {

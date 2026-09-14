@@ -38,6 +38,15 @@ An active PS5 stream was launched on the rediscovered Wi-Fi address. Normal macO
 quit/force-quit calls failed; the process-identity-checked recovery stopped the stuck
 processes successfully. This verifies recovery, not a fix inside chiaki itself.
 
+## Game tags
+
+Game cards, Home, list information and controller rows show independent location and
+library-type badges. Location is Server/Local from the content volume, or PC/Local from
+the Steam launch target (including an explicit offline PC preference). Type is ROM,
+Steam or Epic. PC and PS5 connection sections have their corresponding location badges.
+Unknown location or an unclassified local app is left unlabelled instead of inventing a
+location/type. Badge colors distinguish location from type and text never wraps.
+
 ## Interface theme
 
 The display headings now bundle Final Frontier by Allen R. Walden (source and notice

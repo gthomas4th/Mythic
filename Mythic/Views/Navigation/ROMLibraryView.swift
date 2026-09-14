@@ -121,10 +121,12 @@ final class ROMGame: Game {
     let source: ROMSource?
     let entry: ROMEntry?
     override var storefront: Storefront? { .local }
-    override var sourceLabel: String {
+    override var sourceLabel: String { locationLabel ?? "ROM" }
+    override var typeLabel: String? { "ROM" }
+    override var locationLabel: String? {
         guard let source, let root = try? source.resolve(source.root),
               let values = try? root.resourceValues(forKeys: [.volumeIsLocalKey]),
-              let isLocal = values.volumeIsLocal else { return "ROM" }
+              let isLocal = values.volumeIsLocal else { return super.locationLabel }
         return isLocal ? "Local" : "Server"
     }
     override var supportsFileManagement: Bool { false }

@@ -39,6 +39,22 @@ import AppKit
 
     var sourceLabel: String { storefront?.description ?? "Unknown" }
 
+    /// Location and library type are independent: a Steam target may run on this Mac or on the PC.
+    var locationLabel: String? {
+        guard case .installed(let location, _) = installationState,
+              let values = try? location.resourceValues(forKeys: [.volumeIsLocalKey]),
+              let local = values.volumeIsLocal else { return nil }
+        return local ? "Local" : "Server"
+    }
+    var typeLabel: String? {
+        switch storefront {
+        case .steam: return "Steam"
+        case .epicGames: return "Epic"
+        default: return nil
+        }
+    }
+
+
     var supportsFileManagement: Bool { true }
     var supportsLaunchArguments: Bool { true }
 

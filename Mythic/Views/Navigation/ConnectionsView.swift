@@ -187,6 +187,7 @@ struct ConnectionsView: View {
     var body: some View {
         Form {
             Section("Home PC") {
+                HubTagBadge(title: "PC", category: "Location")
                 TextField("Name", text: $model.host.name)
                 TextField("Address", text: $model.host.address)
                 TextField("Sunshine application", text: $model.host.application)
@@ -208,6 +209,7 @@ struct ConnectionsView: View {
                 Text("Map an application that already exists in Sunshine. The hub does not change the PC configuration.").font(.caption).foregroundStyle(.secondary)
             }
             Section("PlayStation 5 · chiaki-ng") {
+                HubTagBadge(title: "PS5", category: "Location")
                 Text("Play your PS5 through chiaki-ng. Your paired console, account and streaming preferences are saved in the app.")
                 Label(remotePlayApp == nil ? "chiaki-ng not installed" : "chiaki-ng installed",
                       systemImage: remotePlayApp == nil ? "arrow.down.app" : "checkmark.circle")

@@ -35,10 +35,7 @@ struct GameCard: View {
                 Text(game.title).font(.system(size: 20, weight: .semibold))
                     .lineLimit(2).frame(height: 50, alignment: .topLeading)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                Text(game.sourceLabel).font(.system(size: 14, weight: .semibold))
-                    .lineLimit(1).fixedSize(horizontal: true, vertical: false)
-                    .padding(.horizontal, 12).padding(.vertical, 6)
-                    .background(theme == "lcars" ? HubTheme.canvas : Color.secondary.opacity(0.12), in: .capsule)
+                HubGameBadges(game: game)
                 Divider()
                 GameCard.ButtonsView(game: $game, withLabel: true, cardLayout: true)
                     .controlSize(.large)
@@ -74,4 +71,29 @@ struct FadeInModifier: ViewModifier {
 #Preview {
     GameCard(game: .constant(placeholderGame(type: Game.self)))
         .environmentObject(NetworkMonitor.shared)
+}
+
+
+struct HubTagBadge: View {
+    var title: String
+    var category: String
+    @AppStorage("hubTheme") private var theme = "lcars"
+    var body: some View {
+        Text(title).font(.system(size: 14, weight: .semibold))
+            .lineLimit(1).fixedSize(horizontal: true, vertical: false)
+            .padding(.horizontal, 12).padding(.vertical, 6)
+            .foregroundStyle(theme == "lcars" ? HubTheme.ink : Color.primary)
+            .background(theme == "lcars" ? (category == "Type" ? HubTheme.purple.opacity(0.22) : HubTheme.canvas) : Color.secondary.opacity(0.12), in: .capsule)
+            .help("\(category): \(title)")
+            .accessibilityLabel("\(category): \(title)")
+    }
+}
+struct HubGameBadges: View {
+    var game: Game
+    var body: some View {
+        HStack(spacing: 8) {
+            if let location = game.locationLabel { HubTagBadge(title: location, category: "Location") }
+            if let type = game.typeLabel { HubTagBadge(title: type, category: "Type") }
+        }.fixedSize(horizontal: true, vertical: false)
+    }
 }
