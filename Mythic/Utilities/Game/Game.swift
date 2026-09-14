@@ -55,6 +55,10 @@ import AppKit
     }
 
 
+    var canPlayFromLocation: Bool {
+        if case .installed = installationState { return true }
+        return false
+    }
     var supportsFileManagement: Bool { true }
     var supportsLaunchArguments: Bool { true }
 

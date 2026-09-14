@@ -32,6 +32,19 @@ struct ContentView: View {
         Group {
             if theme == "lcars" { console } else { standardNavigation }
         }
+        .safeAreaInset(edge: .bottom) {
+            if !ROMLibrary.shared.downloadStatus.isEmpty {
+                HStack {
+                    Text(ROMLibrary.shared.downloadStatus).font(.system(size: 15))
+                    Spacer()
+                    if ROMLibrary.shared.downloadingID != nil {
+                        Button("Cancel download") { ROMLibrary.shared.cancelDownload() }
+                    } else {
+                        Button("Dismiss") { ROMLibrary.shared.downloadStatus = "" }
+                    }
+                }.padding().background(HubTheme.canvas)
+            }
+        }
         .modifier(HubThemeModifier())
 #if DEBUG
         .task {

@@ -7,11 +7,14 @@ import AppKit
     var record: GameRecord?
     var preferredTargetID: String?
     override var storefront: Storefront? { .steam }
-    override var locationLabel: String? {
+    var selectedLaunchTarget: LaunchTarget? {
         guard let record else { return nil }
-        let target = record.launchTargets.first { $0.id == preferredTargetID && $0.kind == .moonlight }
-            ?? LaunchResolver.resolve(record.launchTargets, preferredID: preferredTargetID)
-        guard let target else { return nil }
+        return record.launchTargets.first { $0.id == preferredTargetID }
+            ?? LaunchResolver.resolve(record.launchTargets)
+    }
+    override var canPlayFromLocation: Bool { selectedLaunchTarget != nil }
+    override var locationLabel: String? {
+        guard let target = selectedLaunchTarget else { return nil }
         return target.kind == .moonlight ? "PC" : "Local"
     }
     override var supportsFileManagement: Bool { false }
@@ -30,9 +33,7 @@ import AppKit
 
     @MainActor override func _launch() async throws {
         guard let record else { throw GameHubRuntime.RuntimeError.unconfigured }
-        // An explicit Home PC choice must be checked before availability-based fallback.
-        let preferredRemote = record.launchTargets.first { $0.id == preferredTargetID && $0.kind == .moonlight }
-        guard let target = preferredRemote ?? LaunchResolver.resolve(record.launchTargets, preferredID: preferredTargetID) else {
+        guard let target = selectedLaunchTarget else {
             throw GameHubRuntime.RuntimeError.unconfigured
         }
         if target.kind == .moonlight {
@@ -42,6 +43,7 @@ import AppKit
             try await HubConnections.shared.openMoonlight(stream: true, application: application)
             return
         }
+        guard target.available else { throw GameHubRuntime.RuntimeError.unconfigured }
         if target.kind == .wineSteam {
             guard let profileID = target.profileID else { throw GameHubRuntime.RuntimeError.unconfigured }
             try await GameHubRuntime.launch(appID: record.id.externalID, profileID: profileID)
@@ -66,7 +68,7 @@ import AppKit
         case clientMissing, payloadUnavailable, openFailed, managedBySteam, remoteUnavailable
         var errorDescription: String? {
             switch self {
-            case .remoteUnavailable: "Your Home PC is unavailable. Turn it on and check Sunshine, or choose another target with Play using."
+            case .remoteUnavailable: "Your Home PC is unavailable. Turn it on and check Sunshine, or choose another Play location."
             case .clientMissing: "Install or open the native Steam client, then try Play again."
             case .payloadUnavailable: "The Mac game files are unavailable. Refresh the library or check the installation in Steam."
             case .openFailed: "macOS could not hand this game to Steam. Open Steam and try again."

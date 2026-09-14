@@ -9,11 +9,7 @@ import Foundation
     static func record(_ id: UUID, game: Game, outcome: String) {
         guard let outcome = LaunchDiagnosticEvent.Outcome(rawValue: outcome) else { return }
         let steam = game as? SteamGame
-        let profile = steam?.record.flatMap { record in
-            let target = record.launchTargets.first { $0.id == steam?.preferredTargetID && $0.kind == .moonlight }
-                ?? LaunchResolver.resolve(record.launchTargets, preferredID: steam?.preferredTargetID)
-            return target?.profileID
-        }
+        let profile = steam?.selectedLaunchTarget?.profileID
         events.append(.init(correlationID: id, gameID: game.id, outcome: outcome, profileID: profile))
         events = Array(events.suffix(LaunchEventJournal.limit))
         // Preserve an unreadable or newer snapshot instead of overwriting recovery evidence.

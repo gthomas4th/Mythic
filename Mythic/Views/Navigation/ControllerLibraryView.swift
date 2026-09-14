@@ -150,8 +150,7 @@ struct ControllerLibraryView: View {
         .onDisappear { input.stop(); input.onAction = nil }
     }
     private func displayedTarget(for game: SteamGame, record: GameRecord) -> LaunchTarget? {
-        record.launchTargets.first { $0.id == game.preferredTargetID && $0.kind == .moonlight }
-            ?? LaunchResolver.resolve(record.launchTargets, preferredID: game.preferredTargetID)
+        game.selectedLaunchTarget
     }
     private func targetName(_ kind: LaunchTarget.Kind?) -> String {
         switch kind {

@@ -24,10 +24,6 @@ extension GameCard {
                 @State private var isLaunchErrorAlertPresented = false
                 @State private var launchError: Error?
 
-                @State private var isEngineInstallationViewPresented: Bool = false
-                @State private var engineInstallationError: Error?
-                @State private var engineInstallationSuccess: Bool = false
-
                 var body: some View {
                     Button {
                         Task(priority: .userInitiated) {
@@ -57,7 +53,7 @@ extension GameCard {
                         }
                     }
                     .disabled(operationManager.queue.contains(where: { $0.game == game && $0.type.modifiesFiles }))
-                    .disabled(game.isLaunching)
+                    .disabled(game.isLaunching || !game.canPlayFromLocation)
                     // FIXME: .disabled(game.checkIfGameIsRunning())
                     .help("Play \"\(game.title)\"")
 
@@ -65,74 +61,10 @@ extension GameCard {
                     .tint(HubTheme.blue)
                     .foregroundStyle(.white)
 
-                    .alert(isPresented: $isLaunchErrorAlertPresented) {
-                        if launchError is Engine.NotInstalledError {
-                            return Alert(
-                                title: Text("Mythic Engine is not installed."),
-                                message: Text("""
-                                    Mythic Engine is required to launch this game.
-                                    Would you like to install it now?
-                                    """),
-                                primaryButton: .default(.init("Install")) {
-                                    isEngineInstallationViewPresented = true
-                                },
-                                secondaryButton: .cancel()
-                            )
-                        } else {
-                            return Alert(
-                                title: Text("Error launching \"\(game.title)\"."),
-                                message: Text(launchError?.localizedDescription ?? "Unknown Error.")
-                            )
-                        }
-                    }
-                    .sheet(isPresented: $isEngineInstallationViewPresented) {
-                        EngineInstallationView(
-                            isPresented: $isEngineInstallationViewPresented,
-                            installationError: $engineInstallationError,
-                            installationComplete: $engineInstallationSuccess
-                        )
-                        .padding()
-                    }
-                }
-            }
-
-            struct InstallButton: View {
-                @Binding var game: Game
-                var withLabel: Bool = false
-
-                @EnvironmentObject var networkMonitor: NetworkMonitor
-                @Bindable private var operationManager: GameOperationManager = .shared
-
-                @State private var isInstallSheetPresented = false
-
-                var body: some View {
-                    Button {
-                        isInstallSheetPresented = true
-                    } label: {
-                        if withLabel {
-                            Label("Install", systemImage: "arrow.down.to.line")
-                        } else {
-                            Image(systemName: "arrow.down.to.line")
-                                .padding(2)
-                        }
-                    }
-                    .disabled(networkMonitor.epicAccessibilityState != .accessible)
-                    .disabled(game.storefront == .local || !game.supportsFileManagement)
-                    .disabled(operationManager.queue.contains(where: { $0.game == game && $0.type == .install }))
-                    .help("Install \(game.description)")
-
-                    .sheet(isPresented: $isInstallSheetPresented) {
-                        switch game {
-                        case let epicGame as EpicGamesGame:
-                            EpicGamesGameInstallationView(
-                                game: .init(get: { epicGame },
-                                            set: { game = $0 }),
-                                isPresented: $isInstallSheetPresented
-                            )
-                            .padding()
-                            .frame(width: 700, height: 380)
-                        default: EmptyView()
-                        }
+                    .alert("Could not play from this location", isPresented: $isLaunchErrorAlertPresented) {
+                        Button("OK", role: .cancel) { }
+                    } message: {
+                        Text(launchError?.localizedDescription ?? "The selected location is unavailable.")
                     }
                 }
             }
@@ -328,8 +260,19 @@ extension GameCard {
             Group { // annoying, but the only way two sheets'll fit in here
                 Menu {
                     GameCard.Buttons.SettingsButton(game: $game, withLabel: true, isGameSettingsSheetPresented: $isGameSettingsSheetPresented)
-                    GameCard.Buttons.UpdateButton(game: $game, withLabel: true)
                     GameCard.Buttons.FavouriteButton(game: $game, withLabel: true)
+                    if let rom = game as? ROMGame {
+                        if ROMLibrary.shared.downloadingID == game.id {
+                            Button("Cancel download") { ROMLibrary.shared.cancelDownload() }
+                        } else if let copy = ROMLibrary.shared.localCopies[game.id] {
+                            Button(copy.selected ? "Play from Server" : "Play from Local") {
+                                ROMLibrary.shared.selectLocal(!copy.selected, gameID: game.id)
+                            }
+                        } else if game.locationLabel != "Local" {
+                            Button("Download locally") { ROMLibrary.shared.download(rom) }
+                                .disabled(ROMLibrary.shared.downloadingID != nil)
+                        }
+                    }
                     GameCard.Buttons.DeleteButton(game: $game, withLabel: true, isUninstallSheetPresented: $isUninstallSheetPresented)
                 } label: {
                     Button { } label: {
@@ -377,7 +320,7 @@ extension GameCard {
         var body: some View {
             if let operation = operationManager.queue.first(where: { $0.isExecuting && $0.game == game }) {
                 OperationCard.StatusView(operation: .constant(operation), withLabel: withLabel)
-            } else if case .installed = game.installationState {
+            } else {
                 if cardLayout {
                     VStack(alignment: .leading, spacing: 10) {
                         HStack(spacing: 12) {
@@ -392,18 +335,16 @@ extension GameCard {
                     targetMenu
                     MenuView(game: $game).layoutPriority(1)
                 }
-            } else {
-                Buttons.Prominent.InstallButton(game: $game, withLabel: withLabel)
             }
         }
         @ViewBuilder private var targetMenu: some View {
             if let steam = game as? SteamGame, let record = steam.record, record.launchTargets.count > 1 {
-                Menu("Play using") {
+                Menu("Play location") {
                     ForEach(record.launchTargets) { target in
-                        Button(target.kind == .nativeMac ? "Native Mac" : (target.kind == .moonlight ? "Home PC" : "Windows Steam")) {
+                        Button(target.kind == .nativeMac ? "Local · macOS" : (target.kind == .moonlight ? "PC" : "Local · Windows Steam")) {
                             steam.preferredTargetID = target.id
                             GameDataStore.shared.savePreferences(for: steam)
-                        }.disabled(!target.available)
+                        }
                     }
                 }.fixedSize()
             }
@@ -416,9 +357,10 @@ extension GameCard {
 
         var body: some View {
             HubGameBadges(game: game)
-            if let steam = game as? SteamGame, let record = steam.record {
-                SubscriptedTextView(LaunchResolver.resolve(record.launchTargets) == nil ? "Unavailable" :
-                    (record.launchTargets.contains(where: { $0.kind == .wineSteam && $0.verified }) ? "Accepted profile" : "On this Mac"))
+            if let steam = game as? SteamGame {
+                SubscriptedTextView(steam.selectedLaunchTarget.map { target in
+                    target.kind == .moonlight ? "Stream from PC" : (target.available ? (target.verified ? "Accepted profile" : "On this Mac") : "Unavailable")
+                } ?? "Unavailable")
             }
 
             if GameDataStore.shared.recent == game {

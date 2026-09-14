@@ -153,6 +153,7 @@
 		FC0000000000000000010006 /* RemoteHost.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC0000000000000000000006; };
 		FC0000000000000000010007 /* ConnectionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC0000000000000000000007; };
 		FC0000000000000000010008 /* Emulation.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC0000000000000000000008; };
+		FA0000000000000000010031 /* ROMLocalDownload.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000000000000000000031; };
 		FC0000000000000000010009 /* ROMLibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC0000000000000000000009; };
 		FC000000000000000001000A /* LaunchDiagnostics.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC000000000000000000000A; };
 		FC000000000000000001000B /* ControllerLibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC000000000000000000000B; };
@@ -308,6 +309,7 @@
 		FC0000000000000000000006 /* RemoteHost.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Packages/GameHubCore/Sources/GameHubCore/RemoteHost.swift"; sourceTree = SOURCE_ROOT; };
 		FC0000000000000000000007 /* ConnectionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Mythic/Views/Navigation/ConnectionsView.swift"; sourceTree = SOURCE_ROOT; };
 		FC0000000000000000000008 /* Emulation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Packages/GameHubCore/Sources/GameHubCore/Emulation.swift"; sourceTree = SOURCE_ROOT; };
+		FA0000000000000000000031 /* ROMLocalDownload.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Packages/GameHubCore/Sources/GameHubCore/ROMLocalDownload.swift"; sourceTree = SOURCE_ROOT; };
 		FC0000000000000000000009 /* ROMLibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Mythic/Views/Navigation/ROMLibraryView.swift"; sourceTree = SOURCE_ROOT; };
 		FC000000000000000000000A /* LaunchDiagnostics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Mythic/Utilities/LaunchDiagnostics.swift"; sourceTree = SOURCE_ROOT; };
 		FC000000000000000000000B /* ControllerLibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Mythic/Views/Navigation/ControllerLibraryView.swift"; sourceTree = SOURCE_ROOT; };
@@ -623,6 +625,7 @@
 				FC000000000000000000000A /* LaunchDiagnostics.swift */,
 				FC0000000000000000000009 /* ROMLibraryView.swift */,
 				FC0000000000000000000008 /* Emulation.swift */,
+				FA0000000000000000000031 /* ROMLocalDownload.swift */,
 				FC0000000000000000000007 /* ConnectionsView.swift */,
 				FC0000000000000000000006 /* RemoteHost.swift */,
 				FC0000000000000000000005 /* LaunchSettingsView.swift */,
@@ -872,6 +875,7 @@
 				FC000000000000000001000A /* LaunchDiagnostics.swift in Sources */,
 				FC0000000000000000010009 /* ROMLibraryView.swift in Sources */,
 				FC0000000000000000010008 /* Emulation.swift in Sources */,
+				FA0000000000000000010031 /* ROMLocalDownload.swift in Sources */,
 				FC0000000000000000010007 /* ConnectionsView.swift in Sources */,
 				FC0000000000000000010006 /* RemoteHost.swift in Sources */,
 				FC0000000000000000010005 /* LaunchSettingsView.swift in Sources */,

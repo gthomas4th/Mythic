@@ -18,15 +18,25 @@ struct ROMSource: Codable, Identifiable {
         return url
     }
 }
+struct ROMLocalCopy: Codable {
+    var root: Data
+    var selected: Bool
+}
 @MainActor @Observable final class ROMLibrary {
     static let shared = ROMLibrary()
     var sources: [ROMSource] = []
     var status = "Choose a ROM folder when your files are ready. Steam Deck references remain available separately."
     var scanning = false
+    var localCopies: [String: ROMLocalCopy] = [:]
+    var downloadingID: String?
+    var downloadStatus = ""
+    @ObservationIgnored private var downloadTask: Task<URL, Error>?
+    private let copiesFile = GameHubRuntime.support.appendingPathComponent("rom-local-copies.json")
     private var scanToken: UUID?
     @ObservationIgnored private var gameCache: [String: ROMGame] = [:]
     private let file = GameHubRuntime.support.appendingPathComponent("rom-sources.json")
     init() {
+        if let data = try? Data(contentsOf: copiesFile), let saved = try? JSONDecoder().decode([String: ROMLocalCopy].self, from: data) { localCopies = saved }
         if let data = try? Data(contentsOf: file), let saved = try? JSONDecoder().decode([ROMSource].self, from: data) { sources = saved }
     }
     var games: Set<Game> {
@@ -35,11 +45,65 @@ struct ROMSource: Codable, Identifiable {
                 if let existing = gameCache[entry.id], existing.source?.id == source.id, existing.entry?.relativePath == entry.relativePath { return existing as Game }
                 let root = (try? source.resolve(source.root)) ?? URL(fileURLWithPath: "/unavailable")
                 let game = ROMGame(source: source, entry: entry, content: root.appendingPathComponent(entry.relativePath))
+                game.localCopySelected = localCopies[entry.id]?.selected == true
                 GameDataStore.shared.restorePreferences(for: game)
                 gameCache[entry.id] = game
                 return game as Game
             }
         })
+    }
+    func selectLocal(_ selected: Bool, gameID: String) {
+        let previous = localCopies
+        localCopies[gameID]?.selected = selected
+        do { try saveCopies(); gameCache[gameID]?.localCopySelected = selected } catch { localCopies = previous; downloadStatus = "Could not save the play location." }
+    }
+    private func saveCopies() throws {
+        try FileManager.default.createDirectory(at: copiesFile.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try JSONEncoder().encode(localCopies).write(to: copiesFile, options: .atomic)
+    }
+    func cancelDownload() { downloadTask?.cancel() }
+    func download(_ game: ROMGame) {
+        guard downloadingID == nil, let source = game.source, let entry = game.entry else { return }
+        let panel = NSOpenPanel()
+        panel.canChooseDirectories = true; panel.canChooseFiles = false; panel.canCreateDirectories = true
+        panel.message = "Choose a local folder for this ROM. Its server copy will be kept."
+        panel.prompt = "Download here"
+        guard panel.runModal() == .OK, let destination = panel.url else { return }
+        do {
+            let root = try source.resolve(source.root)
+            guard (try destination.resourceValues(forKeys: [.volumeIsLocalKey])).volumeIsLocal == true else {
+                downloadStatus = "Choose a folder on this Mac or an attached drive."; return
+            }
+            let sourceAccess = root.startAccessingSecurityScopedResource()
+            let destinationAccess = destination.startAccessingSecurityScopedResource()
+            downloadingID = game.id; downloadStatus = "Preparing download…"
+            let gameID = game.id
+            let task = Task.detached(priority: .utility) {
+                try ROMLocalDownload.copy(content: root.appendingPathComponent(entry.relativePath), sourceRoot: root, destinationParent: destination) { received, total in
+                    Task { @MainActor in
+                        guard self.downloadingID == gameID else { return }
+                        self.downloadStatus = String(format: "Downloading · %.2f / %.2f GB", Double(received) / 1_000_000_000, Double(total) / 1_000_000_000)
+                    }
+                }
+            }
+            downloadTask = task
+            Task {
+                defer {
+                    downloadingID = nil; downloadTask = nil
+                    if sourceAccess { root.stopAccessingSecurityScopedResource() }
+                    if destinationAccess { destination.stopAccessingSecurityScopedResource() }
+                }
+                do {
+                    let local = try await task.value
+                    let previous = localCopies
+                    localCopies[game.id] = ROMLocalCopy(root: try local.bookmarkData(options: .withSecurityScope), selected: true)
+                    do { try saveCopies() } catch { localCopies = previous; throw error }
+                    game.localCopySelected = true
+                    downloadStatus = "Download verified. Play now uses the Local copy."
+                } catch is CancellationError { downloadStatus = "Download cancelled. The server copy is unchanged." }
+                catch { downloadStatus = "Download could not finish: " + error.localizedDescription }
+            }
+        } catch { downloadStatus = "The server ROM could not be opened: " + error.localizedDescription }
     }
     func save() throws {
         try FileManager.default.createDirectory(at: file.deletingLastPathComponent(), withIntermediateDirectories: true)
@@ -117,13 +181,15 @@ struct ROMSource: Codable, Identifiable {
         }
     }
 }
-final class ROMGame: Game {
+@Observable final class ROMGame: Game {
+    var localCopySelected = false
     let source: ROMSource?
     let entry: ROMEntry?
     override var storefront: Storefront? { .local }
     override var sourceLabel: String { locationLabel ?? "ROM" }
     override var typeLabel: String? { "ROM" }
     override var locationLabel: String? {
+        if localCopySelected { return "Local" }
         guard let source, let root = try? source.resolve(source.root),
               let values = try? root.resourceValues(forKeys: [.volumeIsLocalKey]),
               let isLocal = values.volumeIsLocal else { return super.locationLabel }
@@ -138,7 +204,13 @@ final class ROMGame: Game {
     required init(from decoder: any Decoder) throws { source = nil; entry = nil; try super.init(from: decoder) }
     @MainActor override func _launch() async throws {
         guard let source, let entry else { throw ROMError.invalid }
-        let root = try source.resolve(source.root), app = try source.resolve(source.application)
+        let root: URL
+        if let copy = ROMLibrary.shared.localCopies[id], copy.selected {
+            var stale = false
+            root = try URL(resolvingBookmarkData: copy.root, options: [.withSecurityScope, .withoutUI], bookmarkDataIsStale: &stale)
+            guard !stale else { throw ROMError.missingPart }
+        } else { root = try source.resolve(source.root) }
+        let app = try source.resolve(source.application)
         let core = try source.core.map { try source.resolve($0) }
         let urls = [root, app] + [core].compactMap { $0 }
         let access = urls.map { $0.startAccessingSecurityScopedResource() }
@@ -173,7 +245,7 @@ struct ROMLibraryView: View {
                         .font(.callout).foregroundStyle(.secondary)
                 }
                 Button("Choose ROM folder and emulator…") { store.add(system: system, emulator: emulator, dolphinPreset: dolphinPreset) }.disabled(store.scanning)
-                Text("Use your existing emulator configuration. BIOS, firmware and game files are never downloaded by the hub.").font(.callout).foregroundStyle(.secondary)
+                Text("Use your existing emulator configuration. BIOS and firmware must be supplied separately. ROMs stay on their source unless you choose Download locally.").font(.callout).foregroundStyle(.secondary)
             }
             Section("Sources") {
                 ForEach(store.sources) { source in

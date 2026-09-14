@@ -14,6 +14,26 @@ passes `codesign --verify --deep --strict`. This is not a notarized public relea
 The original app and runtime are preserved. Development builds and the test host
 are not the user entry point. Do not remove recovery copies before final live acceptance.
 
+## Play options
+
+Play cards never offer Install or an engine-install fallback. Unavailable games remain
+unavailable instead of offering installation. The selected Steam target drives the badge,
+Play action, controller details and diagnostics; an unavailable explicit selection does
+not silently switch to another location. PC uses Moonlight; PS5 remains chiaki-ng.
+
+Only server ROMs offer Download locally. This explicit owner action selects a local
+folder, copies the selected title and its referenced discs/tracks (the complete disc
+folder for PS3), verifies SHA-256, and then selects Local. The server original is kept.
+The ROM menu can switch between Server and Local afterward. No automatic caching or
+real ROM download was performed during this change. Progress/cancellation appears across
+all app sections. Partial downloads are removed on error or cancellation; completed
+copies are preserved if saving their bookmark fails.
+
+Validation: 81 core tests passed, including five synthetic download tests for source
+preservation, multipart layout, invalid references, complete PS3 folders and cancellation.
+Debug build and native card rendering passed. Full live menu/folder-picker interaction
+was not inspected because desktop capture is unavailable.
+
 ## Library and connections update
 
 Library has an always-visible System picker, normalized console labels, All systems,
