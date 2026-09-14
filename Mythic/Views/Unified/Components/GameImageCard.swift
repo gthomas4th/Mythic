@@ -29,7 +29,9 @@ struct GameImageCard: View {
     
     var body: some View {
         GeometryReader { geometry in
-            if let url, url.isFileURL, let image = NSImage(contentsOf: url) {
+            if url == nil, let game, game is ROMGame {
+                HubPlaceholderArtwork(title: game.title, system: (game as? ROMGame)?.source?.system ?? "Games")
+            } else if let url, url.isFileURL, let image = NSImage(contentsOf: url) {
                 Image(nsImage: image)
                     .resizable()
                     .scaledToFill()
@@ -187,4 +189,80 @@ extension GameImageCard {
     }
     .aspectRatio(contentMode: .fit)
     .padding()
+}
+
+// Shared presentation tokens. LCARS uses a light console palette and generous type.
+enum HubTheme {
+    static let canvas = Color(red: 0.86, green: 0.91, blue: 0.95)
+    static let panel = Color(red: 0.94, green: 0.95, blue: 0.96)
+    static let ink = Color(red: 0.12, green: 0.17, blue: 0.24)
+    static let blue = Color(red: 0.16, green: 0.31, blue: 0.48)
+    static let yellow = Color(red: 0.92, green: 0.77, blue: 0.34)
+    static let green = Color(red: 0.43, green: 0.64, blue: 0.51)
+    static let purple = Color(red: 0.57, green: 0.49, blue: 0.70)
+    static let red = Color(red: 0.79, green: 0.32, blue: 0.30)
+    static func heading(_ size: CGFloat) -> Font { .custom("AvenirNextCondensed-DemiBold", size: size, relativeTo: .title) }
+}
+struct HubThemeModifier: ViewModifier {
+    @AppStorage("hubTheme") private var theme = "lcars"
+    func body(content: Content) -> some View {
+        content
+            .font(theme == "lcars" ? .system(size: 17) : .body)
+            .tint(theme == "lcars" ? HubTheme.blue : .accentColor)
+            .preferredColorScheme(theme == "lcars" ? .light : nil)
+    }
+}
+struct HubSectionBanner: View {
+    var title: String
+    var subtitle: String
+    @AppStorage("hubTheme") private var theme = "lcars"
+    var body: some View {
+        HStack(spacing: 18) {
+            if theme == "lcars" {
+                UnevenRoundedRectangle(topLeadingRadius: 30, bottomLeadingRadius: 8, bottomTrailingRadius: 8, topTrailingRadius: 8)
+                    .fill(HubTheme.blue).frame(width: 72)
+                    .overlay(alignment: .bottom) { Capsule().fill(HubTheme.yellow).frame(height: 12).padding(8) }
+                    .accessibilityHidden(true)
+            }
+            VStack(alignment: .leading, spacing: 3) {
+                Text(title.uppercased()).font(HubTheme.heading(34)).tracking(1)
+                Text(subtitle).font(.system(size: 16)).foregroundStyle(.secondary)
+            }
+            Spacer(minLength: 8)
+            if theme == "lcars" {
+                HStack(spacing: 6) {
+                    Capsule().fill(HubTheme.green).frame(width: 44)
+                    Capsule().fill(HubTheme.red).frame(width: 32)
+                    Capsule().fill(HubTheme.purple).frame(width: 44)
+                }.frame(height: 12).accessibilityHidden(true)
+            }
+        }.frame(height: 80).foregroundStyle(theme == "lcars" ? HubTheme.ink : Color.primary)
+    }
+}
+struct HubPlaceholderArtwork: View {
+    var title: String
+    var system: String
+    var body: some View {
+        GeometryReader { proxy in
+            ZStack(alignment: .topLeading) {
+                HubTheme.canvas
+                RoundedRectangle(cornerRadius: 65)
+                    .stroke(HubTheme.blue.opacity(0.16), lineWidth: 30)
+                    .frame(width: proxy.size.width * 0.85, height: proxy.size.height * 0.9)
+                    .offset(x: proxy.size.width * 0.42, y: proxy.size.height * 0.24)
+                VStack(alignment: .leading, spacing: 16) {
+                    HStack(spacing: 6) {
+                        Capsule().fill(HubTheme.blue).frame(width: 48, height: 10)
+                        Capsule().fill(HubTheme.yellow).frame(width: 28, height: 10)
+                        Capsule().fill(HubTheme.green).frame(width: 20, height: 10)
+                    }
+                    Text(system.uppercased()).font(HubTheme.heading(18)).tracking(2)
+                    Spacer(minLength: 0)
+                    Image(systemName: "gamecontroller.fill").font(.system(size: 38, weight: .light)).foregroundStyle(HubTheme.blue)
+                    Text(title).font(HubTheme.heading(30)).lineLimit(4).minimumScaleFactor(0.85)
+                    Spacer(minLength: 0)
+                }.padding(24)
+            }.foregroundStyle(HubTheme.ink).clipped()
+        }
+    }
 }

@@ -151,11 +151,18 @@ extension SettingsView {
     }
 
     struct ViewSettingsView: View {
+        @AppStorage("hubTheme") private var hubTheme = "lcars"
         @AppStorage("gameCardSize") private var gameCardSize: Double = 200.0
         @AppStorage("gameImageCardBlur") private var imageCardBlur: Double = 0.0
         @CodableAppStorage("gameListLayout") var gameListLayout: GameListViewModel.Layout = .grid
 
         var body: some View {
+            Picker("Interface theme", selection: $hubTheme) {
+                Text("LCARS · Silver console").tag("lcars")
+                Text("Follow macOS").tag("system")
+            }
+            Text("LCARS uses larger text, condensed headings and a soft console palette.")
+                .font(.system(size: 15)).foregroundStyle(.secondary)
             Slider(value: $gameCardSize, in: 200...400, step: 25) {
                 Label("Gamecard Size", systemImage: "square.resize")
                 Text("Default is 1 tick.")

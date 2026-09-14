@@ -43,6 +43,7 @@ import SwiftUI
 }
 struct ControllerLibraryView: View {
     @State private var input = HubControllerInput()
+    @AppStorage("hubTheme") private var theme = "lcars"
     @State private var selection = 0
     @State private var details = false
     @State private var favoritesOnly = false
@@ -61,16 +62,16 @@ struct ControllerLibraryView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
             HStack {
-                Text("Play").font(.largeTitle.bold())
+                Text("PLAY").font(HubTheme.heading(38)).tracking(2)
                 Spacer()
                 Label(input.connected ? "Controller connected" : "Keyboard ready", systemImage: "gamecontroller")
             }
             TextField("Search games", text: $search).textFieldStyle(.roundedBorder).focused($focus, equals: .search)
                 .onSubmit { details = selected != nil; focus = .browsing }
             Text("↑ ↓ Browse · A / Return Details & Play · B / Escape Back · X Favorite · Y Favorites filter")
-                .font(.callout).foregroundStyle(.secondary)
+                .font(.system(size: 16)).foregroundStyle(.secondary)
             if details, let game = selected {
-                Text(game.title).font(.title.bold())
+                Text(game.title).font(HubTheme.heading(36))
                 if let steam = game as? SteamGame, let record = steam.record {
                     let target = displayedTarget(for: steam, record: record)
                     VStack(alignment: .leading, spacing: 10) {
@@ -88,7 +89,7 @@ struct ControllerLibraryView: View {
                             Text("Menu / S · Launch settings").font(.caption).foregroundStyle(.secondary)
                         } else if target?.kind == .moonlight {
                             Text("Streams from your Home PC. Its game settings and saves are used.")
-                                .font(.callout).foregroundStyle(.secondary)
+                                .font(.system(size: 16)).foregroundStyle(.secondary)
                         }
                     }
                     .task(id: target?.profileID) {
@@ -110,11 +111,11 @@ struct ControllerLibraryView: View {
                                 } label: {
                                     HStack {
                                         Image(systemName: game.isFavourited ? "star.fill" : "gamecontroller")
-                                        Text(game.title).font(.title3)
+                                        Text(game.title).font(.system(size: 21, weight: .medium))
                                         Spacer()
                                         Text(game.sourceLabel).foregroundStyle(.secondary)
-                                    }.padding(16).frame(maxWidth: .infinity)
-                                        .background(selection == position ? Color.accentColor.opacity(0.25) : Color.secondary.opacity(0.08), in: .rect(cornerRadius: 12))
+                                    }.padding(20).frame(maxWidth: .infinity)
+                                        .background(selection == position ? Color.accentColor.opacity(0.25) : (theme == "lcars" ? HubTheme.panel : Color.secondary.opacity(0.08)), in: .rect(cornerRadius: 12))
                                         .overlay(RoundedRectangle(cornerRadius: 12).stroke(selection == position ? Color.accentColor : .clear, lineWidth: 2))
                                 }.buttonStyle(.plain).id(position)
                             }
@@ -127,7 +128,9 @@ struct ControllerLibraryView: View {
             if !message.isEmpty { Text(message).foregroundStyle(.orange) }
             Spacer(minLength: 0)
         }
-        .padding(24).navigationTitle("Controller Library")
+        .padding(28)
+        .background(theme == "lcars" ? HubTheme.canvas : Color(nsColor: .windowBackgroundColor))
+        .navigationTitle("Controller Library")
         .focusable()
         .focused($focus, equals: .browsing)
         .onMoveCommand { direction in if focus != .search { action(String(describing: direction)) } }

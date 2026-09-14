@@ -17,13 +17,16 @@ struct GameListView: View {
     @CodableAppStorage("gameListLayout") var layout: GameListViewModel.Layout = .grid
     @AppStorage("gameCardSize") private var gameCardSize: Double = 200.0
     
+    @AppStorage("hubTheme") private var hubTheme = "lcars"
     @State private var isSteamDeckLibraryPresented = false
     @ObservedObject private var deckLibrary = SteamDeckLibraryStore.shared
 
     @State private var isGameImportViewPresented: Bool = false
     
     var body: some View {
-        VStack {
+        VStack(spacing: 0) {
+            HubSectionBanner(title: "Your library", subtitle: "\(viewModel.sortedLibrary.count) games · Pick your next adventure")
+                .padding(.horizontal, 28).padding(.vertical, 16)
             if gameDataStore.displayLibrary.isEmpty {
                 ContentUnavailableView(
                     "Your library starts here",
@@ -53,19 +56,19 @@ struct GameListView: View {
                     // FIXME: a dirtyfix is to directly set to the underlying library
                     switch layout {
                     case .grid:
-                        LazyVGrid(columns: [.init(.adaptive(minimum: gameCardSize))]) {
+                        LazyVGrid(columns: [.init(.adaptive(minimum: max(240, gameCardSize)), spacing: 22)], spacing: 24) {
                             ForEach(viewModel.sortedLibrary) { game in
                                 GameCard(game: .constant(game))
                             }
                         }
-                        .padding()
+                        .padding(28)
                     case .list:
                         LazyVStack {
                             ForEach(viewModel.sortedLibrary) { game in
                                 ListGameCard(game: .constant(game))
                             }
                         }
-                        .padding()
+                        .padding(28)
                     }
                 }
                 .searchable(text: $viewModel.searchString,
@@ -87,6 +90,7 @@ struct GameListView: View {
                 }
             }
         }
+        .background(hubTheme == "lcars" ? HubTheme.canvas : Color(nsColor: .windowBackgroundColor))
         .toolbar {
             ToolbarItem {
                 Button {

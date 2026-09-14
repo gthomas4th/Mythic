@@ -14,6 +14,19 @@ passes `codesign --verify --deep --strict`. This is not a notarized public relea
 The original app and runtime are preserved. Development builds and the test host
 are not the user entry point. Do not remove recovery copies before final live acceptance.
 
+## Interface theme
+
+The LCARS-inspired Silver console theme uses a light blue/gray foundation, dark blue
+structure, green/yellow/red highlights and purple accents. Condensed headings, larger
+body text, separated game-card actions and ROM placeholder artwork improve readability.
+Settings → Views → Interface theme also offers Follow macOS. Native component renders
+were inspected and the full Debug build passed; full-window visual acceptance remains
+open because desktop capture is unavailable.
+
+Switch/Sonic Mania gameplay and the requested A/B mapping are owner-accepted. The full
+Switch library scan exited 137 before its atomic source update; the existing nine sources
+are preserved and Switch indexing remains open. PS3 gameplay awaits the verified NAS pilot.
+
 ## Current emulator snapshot
 
 Owner-accepted gameplay: GameCube/Melee, PS2/Hulk, SNES/Super Mario World,

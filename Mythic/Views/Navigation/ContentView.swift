@@ -30,6 +30,9 @@ struct ContentView: View {
             sidebar: {
                 List {
                     Section {
+                        Text("GAME HUB").font(HubTheme.heading(28)).tracking(2).padding(.vertical, 10)
+                    }
+                    Section {
                         NavigationLink(destination: HomeView()) {
                             Label("Home", systemImage: "house")
                                 .help("Everything in one place")
@@ -41,10 +44,10 @@ struct ContentView: View {
                         }
                         
                         NavigationLink(destination: ControllerLibraryView()) {
-                            Label("Controller Library", systemImage: "gamecontroller.fill")
+                            Label("Controller View", systemImage: "gamecontroller.fill")
                         }
                         NavigationLink(destination: ROMLibraryView()) {
-                            Label("ROM Library", systemImage: "gamecontroller")
+                            Label("Game Sources", systemImage: "gamecontroller")
                         }
                         NavigationLink(destination: ConnectionsView()) {
                             Label("Home PC & Xbox", systemImage: "desktopcomputer")
@@ -125,6 +128,7 @@ struct ContentView: View {
                 HomeView()
             }
         )
+        .modifier(HubThemeModifier())
         .toolbar {
             ToolbarItem(placement: .status) {
                 if !networkMonitor.isConnected {

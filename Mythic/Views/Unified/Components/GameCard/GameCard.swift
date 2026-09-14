@@ -14,69 +14,44 @@ import OSLog
 
 struct GameCard: View {
     @Binding var game: Game
-
-    @State private var isImageEmpty: Bool = true
-    @State private var isImageEmptyPreMacOSTahoe: Bool = true
-
+    @State private var isImageEmpty = true
+    @State private var hovered = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @AppStorage("hubTheme") private var theme = "lcars"
     var body: some View {
-        GameImageCard(game: game, url: game.verticalImageURL, isImageEmpty: $isImageEmpty)
-            .aspectRatio(3/4, contentMode: .fit)
-            .overlay(alignment: .bottom) {
+        VStack(alignment: .leading, spacing: 0) {
+            GameImageCard(game: game, url: game.verticalImageURL, isImageEmpty: $isImageEmpty, withBlur: false)
+                .aspectRatio(4 / 3, contentMode: .fit)
+                .overlay(alignment: .topTrailing) {
+                    if game.isFavourited {
+                        Image(systemName: "star.fill").foregroundStyle(HubTheme.ink)
+                            .padding(10).background(HubTheme.yellow, in: .circle).padding(12)
+                            .accessibilityLabel("Favorite")
+                    }
+                }
+            VStack(alignment: .leading, spacing: 12) {
+                Text(game.title).font(.system(size: 20, weight: .semibold))
+                    .lineLimit(2).frame(height: 50, alignment: .topLeading)
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 HStack {
-                    VStack(alignment: .leading) {
-                        GameCard.TitleAndInformationView(game: $game, font: .title3)
-                    }
-                    .layoutPriority(1)
-                    
-                    GameCard.ButtonsView(game: $game)
-                        .clipShape(.capsule)
-                        .progressViewStyle(.circular)
-                }
-                .padding(.horizontal)
-                // conditionally change view foreground style for macOS <26
-                .onChange(of: isImageEmpty) {
-                    if #unavailable(macOS 26.0) {
-                        isImageEmptyPreMacOSTahoe = $1
-                    }
-                }
-                .conditionalTransform(if: !isImageEmptyPreMacOSTahoe) { view in
-                    view.foregroundStyle(.white)
-                }
-                // use liquid glass on macOS 26+
-                .customTransform { view in
-                    if #available(macOS 26.0, *) {
-                        view
-                            .padding(.vertical)
-                            .glassEffect(in: .rect(cornerRadius: 20.0))
-                            .padding(4)
-                    } else {
-                        view
-                            .padding(.bottom)
-                            .menuStyle(.borderlessButton)
-                            .menuIndicator(.hidden)
-                    }
-                }
-            }
-            .overlay(alignment: .top) {
-                VStack {
+                    Text(game.sourceLabel).font(.system(size: 14, weight: .semibold))
+                        .padding(.horizontal, 12).padding(.vertical, 6)
+                        .background(theme == "lcars" ? HubTheme.canvas : Color.secondary.opacity(0.12), in: .capsule)
+                    Spacer()
                     if game.isUpdateAvailable == true {
-                        VStack {
-                            Label("Update available.", systemImage: "arrow.trianglehead.2.clockwise.rotate.90")
-                                .help("Update through the game options menu.")
-                        }
-                        .font(.footnote)
-                        .padding(4)
-                        .customTransform { view in
-                            if #available(macOS 26.0, *) {
-                                view.glassEffect(in: .capsule)
-                            } else {
-                                view.background(in: .capsule)
-                            }
-                        }
+                        Image(systemName: "arrow.down.circle").help("Update available")
                     }
+                    GameCard.ButtonsView(game: $game).controlSize(.large)
                 }
-                .padding()
-            }
+            }.padding(18)
+        }
+        .background(theme == "lcars" ? HubTheme.panel : Color(nsColor: .controlBackgroundColor))
+        .clipShape(.rect(cornerRadius: 22))
+        .overlay(RoundedRectangle(cornerRadius: 22).stroke(hovered ? HubTheme.blue : Color.primary.opacity(0.08), lineWidth: hovered ? 2 : 1))
+        .shadow(color: .black.opacity(hovered ? 0.12 : 0.05), radius: hovered ? 14 : 6, y: 4)
+        .offset(y: hovered && !reduceMotion ? -3 : 0)
+        .onHover { hovered = $0 }
+        .animation(reduceMotion ? nil : .easeOut(duration: 0.16), value: hovered)
     }
 }
 

@@ -23,6 +23,7 @@ struct HomeView: View {
     @AppStorage("gameCardSize") private var gameCardSize: Double = 200.0
     
     @State private var isImageEmpty = true
+    @AppStorage("hubTheme") private var theme = "lcars"
 
     private var favouriteGames: [Game] {
         gameDataStore.displayLibrary
@@ -33,9 +34,11 @@ struct HomeView: View {
     var body: some View {
         GeometryReader { geometry in
             ScrollView {
+                HubSectionBanner(title: "Game Hub", subtitle: "Your games. Your next adventure.").padding(.horizontal, 28).padding(.top, 20)
+
                 if let recentGame = gameDataStore.recent {
                     ZStack(alignment: .bottomLeading) {
-                        GameImageCard(url: recentGame.horizontalImageURL ?? recentGame.verticalImageURL, isImageEmpty: $isImageEmpty)
+                        GameImageCard(game: recentGame, url: recentGame.horizontalImageURL ?? recentGame.verticalImageURL, isImageEmpty: $isImageEmpty)
                             .aspectRatio(16/9, contentMode: .fill)
                             .frame(width: geometry.size.width, height: min(480, max(320, geometry.size.height * 0.6)))
                             .glur(radius: 18,
@@ -62,7 +65,7 @@ struct HomeView: View {
                             VStack(alignment: .leading) {
                                 Text("CONTINUE PLAYING")
                                     .foregroundStyle(.secondary)
-                                    .font(.caption)
+                                    .font(.system(size: 16, weight: .semibold))
                                 
                                 HStack {
                                     GameCard.TitleAndInformationView(game: .constant(recentGame), withSubscriptedInfo: true)
@@ -82,7 +85,7 @@ struct HomeView: View {
                     .frame(height: min(480, max(320, geometry.size.height * 0.6)))
                 } else {
                     ContentUnavailableView(
-                        "Welcome to Mythic!",
+                        "Welcome to Game Hub",
                         systemImage: "hand.wave",
                         description: .init("""
                         This area is where your most recently played game will appear — try launching one now!
@@ -119,7 +122,7 @@ struct HomeView: View {
 
             }
         }
-        .ignoresSafeArea(edges: .top)
+        .background(theme == "lcars" ? HubTheme.canvas : Color(nsColor: .windowBackgroundColor))
         .customTransform { view in
             if #available(macOS 15.0, *) {
                 view
@@ -150,11 +153,11 @@ struct HomeView: View {
     @ViewBuilder private func gameRow(_ title: String, games: [Game]) -> some View {
         if !games.isEmpty {
             VStack(alignment: .leading, spacing: 12) {
-                Text(title).font(.title2.bold())
+                Text(title.uppercased()).font(HubTheme.heading(30)).tracking(1)
                 ScrollView(.horizontal) {
                     LazyHStack(spacing: 16) {
                         ForEach(Array(games.prefix(20))) { game in
-                            GameCard(game: .constant(game)).frame(width: max(240, gameCardSize), height: 340)
+                            GameCard(game: .constant(game)).frame(width: max(260, gameCardSize))
                         }
                     }
                 }
