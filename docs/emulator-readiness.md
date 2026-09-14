@@ -66,9 +66,8 @@ game performance or controller behavior.
 Both GameCube/Dolphin and PS2/PCSX2 source bookmarks are saved in Game Hub. Their
 real versions were displayed and the settings layout checked visually. The owner now requires NAS-only ROMs. The earlier local Melee test copy was
 removed after its checksum matched a fresh NAS read; emulator saves were preserved.
-No further local ROM staging is authorized. NAS source mounting and launch
-acceptance remain pending; previous local gameplay checks do not validate NAS play. No game is labelled
-playable until a real local copy has been indexed. Dolphin now has a saved Xbox
+No further local ROM staging is authorized. NAS source mounting and direct gameplay subsequently passed, as recorded below. No game is labelled
+playable until a verified accessible image has been indexed. Dolphin now has a saved Xbox
 One S mapping; the owner confirmed gameplay and both reconnect sequences.
 Dolphin's optional telemetry was declined and its FPS, speed and internal-resolution
 overlays enabled for live verification.
@@ -87,9 +86,9 @@ showed 4.54 ms average, 5.25 ms maximum and no packet loss. The Mac used Wi-Fi;
 its listed Ethernet adapters were inactive. NAS Ethernet negotiated 1 Gb/s.
 These samples suggest investigating the network path before storage tuning;
 they do not prove a 100 Mb/s link or exclude intermittent latency.
-No SMB share currently exposes the ROM directory, and no SMB volume is mounted
-on the Mac. NAS-only game launch has not yet been tested. Network/storage
-settings were not changed.
+At the time of these measurements the ROM SMB share had not been created.
+The subsequent read-only share and accepted direct launch are recorded below.
+No network tuning was performed.
 
 ## PS2 controller configuration
 
@@ -125,9 +124,8 @@ A 67.11 MB SMB read discarded in memory measured 12.21 MB/s. A write probe was
 denied as required. Game Hub is configured with the mounted NAS GameCube folder.
 No local ROM copy is made. The existing Xbox mapping and local save remain.
 
-Access to future transferred ROMs is not yet automated: the worker creates private
-temporary files before promotion, so directory inheritance alone is insufficient.
-Current ACL coverage is the Melee trial, not the entire incoming library. The
+The initial trial covered only Melee. The worker now grants read access after
+checksum verification and promotion; private partial files remain inaccessible. The
 private NAS-share folder contains account/share receipts, Keychain-backed mount
 helper and access notes. No new router or firewall rule was added.
 
@@ -138,9 +136,8 @@ code change is defensive and does not prove that stale state was caused by the a
 
 Direct NAS launch passed: Dolphin's running command references the RVZ under the
 mounted SMB volume, and the game reached its main menu with the existing save.
-Metal 3× remained active. The local ROM folder remains empty. Sustained NAS
-match performance is still awaiting owner feedback; a menu-transition FPS sample
-is not a gameplay benchmark. The hub's generic “Local” label currently describes
+Metal 3× remained active. The local ROM folder remains empty. The owner subsequently accepted NAS gameplay; the earlier menu-transition FPS
+sample is not a gameplay benchmark. The hub's generic “Local” label currently describes
 its emulator provider and does not identify the ROM storage location.
 
 ## Owner acceptance and continuing transfer integration
@@ -152,10 +149,59 @@ under the ROM tree; prior ACLs are preserved in the private transfer directory.
 The PS2 NAS folder and PCSX2 bookmark are saved in Game Hub, currently with zero
 games until the disc image is transferred and verified.
 
-A tested worker update is queued for the next verified batch boundary. It applies
+The tested worker update is active after a verified batch-boundary handover. It applies
 reader ACLs after checksum verification and prioritizes the smallest PS2 image
 (Hulk) next. It preserves the prior worker, completed checkpoints and ACLs.
 The isolated tests cover read access, content preservation, rejecting paths
 outside ROMs, rejecting symlinks and avoiding broadened masked ACL entries.
-The update is scheduled, not yet confirmed active; its private status receipt
-is authoritative. Existing transfer and hourly notification services continue.
+The private handover receipt confirms startup of the updated worker, and live
+status confirms that copying continues. Existing transfer and hourly notification services continue.
+
+## Additional native Mac engines
+
+DuckStation 0.1-11894 (c66b2694d) and RetroArch 1.22.2 (69a4f0ea) are installed
+in the owner's Applications folder. Both universal app bundles include arm64
+and pass strict recursive signature verification. DuckStation's official download
+matched its published GitHub SHA-256. RetroArch's download hash is recorded for
+provenance, not described as independently authenticated. Automatic DuckStation
+updates are disabled; no runtime auto-update was run.
+
+DuckStation recognizes two owner BIOS images (USA and Europe), copied from the
+checksum-verified NAS backup. Metal BIOS boot rendered at 60 FPS / 100% speed.
+Its 4× internal-resolution preset, PGXP geometry correction and Xbox SDL mapping
+are saved; game-native aspect ratio remains selected. PGXP is a starting preset
+and may require per-game adjustment. This is a firmware/rendering check, not
+PS1 gameplay or physical-controller acceptance. No PS1 game is indexed yet.
+
+RetroArch uses Vulkan/MoltenVK on the M3 Pro, verified by a successful 120-frame
+menu startup and clean exit. Native controller autodetection remains enabled.
+Its browser starts at the mounted NAS ROM share. Saves and states remain local,
+organized by core, with automatic state loading/saving disabled. Four official
+ARM64 cores were installed and dynamically loaded to query their actual APIs:
+
+| System | Core | Installed version |
+|---|---|---|
+| SNES | bsnes-hd beta | 10.6 |
+| N64 | Mupen64Plus-Next | 2.8-Vulkan 6752836 |
+| Sega Mega Drive / 32X | PicoDrive | 2.05-ab02114 |
+| Dreamcast | Flycast | 9869ea8 |
+
+These are pinned downloads from the official nightly core distribution, not
+claims of stable core releases. Source URLs and computed artifact hashes are
+retained in the private emulator receipts. Owner Dreamcast firmware was copied
+from the verified NAS backup into RetroArch's system/dc directory. Core loading
+does not establish game compatibility, renderer initialization inside each core,
+or controller behavior. No local ROM copies were created.
+
+Remaining integration: much of the SNES/N64/32X/PS1 inventory is ZIP-compressed,
+and some system folders appear misfiled. Inspect archive contents on the NAS
+before assigning systems. Game Hub currently excludes archives and lacks some
+raw Sega formats and Dreamcast GDI track grouping. Do not mark these sources
+ready or silently extract ROMs onto the Mac. The large-game transfer continues;
+additional NAS source bookmarks and per-system live launches follow verified
+content availability and format handling.
+
+Sources: [DuckStation](https://github.com/stenzek/duckstation),
+[RetroArch macOS setup](https://docs.libretro.com/guides/install-macos/),
+[official ARM64 core distribution](https://buildbot.libretro.com/nightly/apple/osx/arm64/latest/),
+[DuckStation SDL bindings](https://github.com/stenzek/duckstation/blob/master/src/util/sdl_input_source.cpp).

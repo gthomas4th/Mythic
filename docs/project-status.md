@@ -126,5 +126,10 @@ Melee test image was removed after matching its hash against a fresh NAS read;
 its save remains intact. Future testing must use a mounted NAS source. An authenticated read-only SMB trial now exposes the verified Melee path
 through a dedicated no-login account. Direct NAS launch reached the main menu
 using the existing save; the owner confirmed NAS gameplay works great. Existing verified ROM read
-access is extended; the tested future-file permission update is queued at the
-next verified batch boundary. PS2 NAS source setup is saved. See `emulator-readiness.md` for measured network observations.
+access is extended; the tested future-file permission update is active after the
+verified batch-boundary handover. PS2 NAS source setup is saved. See `emulator-readiness.md` for measured network observations.
+
+DuckStation and RetroArch are installed as native Apple Silicon engines. PS1 BIOS
+Metal boot and RetroArch Vulkan startup passed; four native cores load successfully.
+NAS archive/format integration and new-system gameplay checks remain open. See
+`emulator-readiness.md` for exact versions, firmware provenance and limitations.
