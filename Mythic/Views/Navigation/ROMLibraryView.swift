@@ -121,6 +121,12 @@ final class ROMGame: Game {
     let source: ROMSource?
     let entry: ROMEntry?
     override var storefront: Storefront? { .local }
+    override var sourceLabel: String {
+        guard let source, let root = try? source.resolve(source.root),
+              let values = try? root.resourceValues(forKeys: [.volumeIsLocalKey]),
+              let isLocal = values.volumeIsLocal else { return "ROM" }
+        return isLocal ? "Local" : "Server"
+    }
     override var supportsFileManagement: Bool { false }
     override var supportsLaunchArguments: Bool { false }
     init(source: ROMSource, entry: ROMEntry, content: URL) {

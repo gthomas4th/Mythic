@@ -37,6 +37,8 @@ import AppKit
         set { _containerURL = newValue }
     }
 
+    var sourceLabel: String { storefront?.description ?? "Unknown" }
+
     var supportsFileManagement: Bool { true }
     var supportsLaunchArguments: Bool { true }
 

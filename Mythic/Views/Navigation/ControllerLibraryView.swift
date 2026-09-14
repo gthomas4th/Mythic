@@ -112,7 +112,7 @@ struct ControllerLibraryView: View {
                                         Image(systemName: game.isFavourited ? "star.fill" : "gamecontroller")
                                         Text(game.title).font(.title3)
                                         Spacer()
-                                        Text(game.storefront?.description ?? "Game").foregroundStyle(.secondary)
+                                        Text(game.sourceLabel).foregroundStyle(.secondary)
                                     }.padding(16).frame(maxWidth: .infinity)
                                         .background(selection == position ? Color.accentColor.opacity(0.25) : Color.secondary.opacity(0.08), in: .rect(cornerRadius: 12))
                                         .overlay(RoundedRectangle(cornerRadius: 12).stroke(selection == position ? Color.accentColor : .clear, lineWidth: 2))

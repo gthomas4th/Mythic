@@ -401,7 +401,7 @@ extension GameCard {
         @Bindable var gameDataStore: GameDataStore = .shared
 
         var body: some View {
-            SubscriptedTextView(game.storefront?.description ?? "Unknown")
+            SubscriptedTextView(game.sourceLabel)
             if let steam = game as? SteamGame, let record = steam.record {
                 SubscriptedTextView(LaunchResolver.resolve(record.launchTargets) == nil ? "Unavailable" :
                     (record.launchTargets.contains(where: { $0.kind == .wineSteam && $0.verified }) ? "Accepted profile" : "On this Mac"))
