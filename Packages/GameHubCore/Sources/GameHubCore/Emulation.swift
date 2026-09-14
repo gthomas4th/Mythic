@@ -89,6 +89,11 @@ public struct ROMEntry: Codable, Identifiable, Sendable {
     public let title: String
     public let relativePath: String
 }
+public struct ROMScanProgress: Sendable {
+    public let title: String
+    public let bytesRead: Int64
+    public let totalBytes: Int64
+}
 public struct ROMIndex: Codable, Sendable {
     public struct Cached: Codable, Sendable {
         public let signatures: [String: String]
@@ -97,7 +102,7 @@ public struct ROMIndex: Codable, Sendable {
     public var cache: [String: Cached] = [:]
     public var entries: [ROMEntry] = []
     public init() {}
-    public mutating func scan(root: URL, system: String) throws {
+    public mutating func scan(root: URL, system: String, progress: (@Sendable (ROMScanProgress) -> Void)? = nil) throws {
         guard CompatibilityProfile.safeID(system) else { throw ROMError.invalid }
         let files = FileManager.default
         let root = root.resolvingSymlinksInPath()
@@ -145,13 +150,28 @@ public struct ROMIndex: Codable, Sendable {
                     let layout = try Self.gdiTracks(handle.read(upToCount: 16384) ?? Data()).map { $0.layout }.joined(separator: "\n")
                     digest.update(data: Data(SHA256.hash(data: Data(layout.utf8))))
                 }
+                let totalBytes = try payloads.reduce(Int64(0)) { total, part in
+                    total + Int64(try part.resourceValues(forKeys: [.fileSizeKey]).fileSize ?? 0)
+                }
+                var bytesRead: Int64 = 0
+                var lastReport = Date.distantPast
+                let title = url.deletingPathExtension().lastPathComponent
+                progress?(ROMScanProgress(title: title, bytesRead: 0, totalBytes: totalBytes))
                 for part in payloads {
                     let handle = try FileHandle(forReadingFrom: part)
                     defer { try? handle.close() }
                     var partDigest = SHA256()
-                    while let data = try handle.read(upToCount: 1048576), !data.isEmpty { partDigest.update(data: data) }
+                    while let data = try handle.read(upToCount: 1048576), !data.isEmpty {
+                        partDigest.update(data: data)
+                        bytesRead += Int64(data.count)
+                        if Date().timeIntervalSince(lastReport) >= 1 {
+                            progress?(ROMScanProgress(title: title, bytesRead: bytesRead, totalBytes: totalBytes))
+                            lastReport = Date()
+                        }
+                    }
                     digest.update(data: Data(partDigest.finalize()))
                 }
+                progress?(ROMScanProgress(title: title, bytesRead: bytesRead, totalBytes: totalBytes))
                 fingerprint = digest.finalize().map { String(format: "%02x", $0) }.joined()
             }
             nextCache[relative] = Cached(signatures: signatures, fingerprint: fingerprint)

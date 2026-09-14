@@ -23,6 +23,7 @@ struct ROMSource: Codable, Identifiable {
     var sources: [ROMSource] = []
     var status = "Choose a ROM folder when your files are ready. Steam Deck references remain available separately."
     var scanning = false
+    private var scanToken: UUID?
     @ObservationIgnored private var gameCache: [String: ROMGame] = [:]
     private let file = GameHubRuntime.support.appendingPathComponent("rom-sources.json")
     init() {
@@ -87,17 +88,26 @@ struct ROMSource: Codable, Identifiable {
         guard !scanning else { return }
         scanning = true
         Task {
-            defer { scanning = false }
+            defer { scanning = false; scanToken = nil }
             var count = 0
             for position in sources.indices {
                 do {
                     let source = sources[position]
+                    let token = UUID(); scanToken = token
+                    status = "Scanning \(source.system)… Unchanged files reuse their saved hashes."
                     let root = try source.resolve(source.root)
                     let access = root.startAccessingSecurityScopedResource()
                     defer { if access { root.stopAccessingSecurityScopedResource() } }
                     let index = try await Task.detached(priority: .utility) {
                         var index = source.index
-                        try index.scan(root: root, system: source.system)
+                        try index.scan(root: root, system: source.system) { progress in
+                            Task { @MainActor in
+                                guard self.scanToken == token, self.scanning else { return }
+                                let read = Double(progress.bytesRead) / 1_000_000_000
+                                let total = Double(progress.totalBytes) / 1_000_000_000
+                                self.status = String(format: "Reading %@ · %.2f / %.2f GB. Games stay in their source folder.", progress.title, read, total)
+                            }
+                        }
                         return index
                     }.value
                     sources[position].index = index; count += index.entries.count
@@ -161,6 +171,8 @@ struct ROMLibraryView: View {
                 ForEach(store.sources) { source in
                     VStack(alignment: .leading, spacing: 4) {
                         LabeledContent(source.system, value: "\(source.index.entries.count) games · \(source.emulator.displayName)")
+                        Text((try? source.resolve(source.root).path) ?? "Source unavailable — reconnect its drive or share.")
+                            .font(.caption).foregroundStyle(.secondary).textSelection(.enabled)
                         Text("Version when added: \(source.applicationVersion ?? "Not checked")")
                             .font(.caption).foregroundStyle(.secondary)
                         if source.emulator == .dolphin {
@@ -174,6 +186,7 @@ struct ROMLibraryView: View {
                     }
                 }
                 Button("Rescan folders") { store.scan() }.disabled(store.scanning || store.sources.isEmpty)
+                if store.scanning { ProgressView("Scanning ROM sources…") }
                 Text(store.status).font(.callout)
             }
             Section("Steam Deck") {

@@ -248,3 +248,21 @@ windowed game output for visual verification. This was an observation limitation
 not a failed launch. The session was shut down normally. The local ROM folder
 remains empty. Installed code revision: `eca3a002`; later documentation commits
 do not require another app build.
+
+## Scan visibility and PS2 controller setup
+
+ROM sources now display their actual folder paths. Scans identify the current
+game and report decimal GB read/total, with throttled updates and an activity
+indicator. Cached files retain the existing fast path. Completion/failure clears
+the progress token so queued messages cannot replace the final result.
+
+Both PCSX2 cards were confirmed entirely blank and backed up privately. During
+the owner's controller session, PCSX2 detected Xbox One S Controller as SDL-0,
+reported rumble support, and wrote slot 1. The card now contains the PS2 filesystem
+signature. These observations verify detection and formatting/card writes, not
+physical gameplay or a successful saved-game reload. The running Hulk session
+is preserved. Desktop automation became unavailable (native pipe startup, then
+missing enabled-surfaces configuration); no system permission changes were made.
+
+The progress change passes the full Debug build and all 75 existing core tests.
+Visual verification of the new progress UI awaits restored desktop automation.
