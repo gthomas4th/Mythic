@@ -161,3 +161,9 @@ The owner subsequently accepted the follow-up Hulk NAS gameplay session as
 “great”; Xbox controls were already accepted. PS2 gameplay acceptance is now
 recorded for this session. Earlier intermittent network stalls remain unexplained;
 no permanent network fix is claimed. PS2 saved-game reload remains unverified.
+
+Owner direction: defer save-state/reload testing and continue emulator coverage.
+SNES/Super Mario World is now running directly from the NAS in native RetroArch
+bsnes-hd beta, with Xbox port 1 detected. Gameplay feedback and the SNES Game Hub
+source bookmark remain pending. The pilot transfer preserves the original ZIP
+and does not alter or stop the main copy worker.

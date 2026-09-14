@@ -334,3 +334,26 @@ Metal 3×; no local ROM staging or network configuration change was introduced.
 The previous intermittent latency fault is not diagnosed or claimed permanently
 fixed. A full saved-game reload remains separate from the confirmed memory-card
 format/write and gameplay checks.
+
+## SNES live test; save-reload testing deferred
+
+The owner explicitly deferred save-state/reload testing and requested the next
+emulator. Do not make reload testing a prerequisite to further emulator work.
+
+A 347.36 KB Super Mario World ZIP was fetched directly from Deck to NAS through
+the existing restricted manifest reader, using a separate pilot stage. The main
+worker and its in-memory checkpoint were not modified or stopped. Source-stream
+and NAS-disk SHA-256 matched; the original archive remains on the NAS. The main
+worker's existing-destination hash check can reconcile its later normal copy.
+The pilot receipt is separate and is not added to the worker's completed totals.
+
+Its single 524.29 KB SFC member was CRC-checked, extracted on the NAS and hashed
+after writing. The approved read-only account was granted access through the
+existing ROM ACL helper. Extracted SHA-256:
+`0838e531fe22c077528febe14cb3ff7c492f1f5fa8de354192bdff7137c27f5b`.
+
+RetroArch launched the SFC directly from the mounted NAS using the installed
+ARM64 bsnes-hd beta core. Logs confirm Vulkan on Apple M3 Pro and Xbox Wireless
+Controller autoconfigured in port 1 via MFI. Owner feedback on gameplay, sound
+and scrolling is pending. No local ROM copies were created. This launch is an
+emulator check; a SNES Game Hub source bookmark has not yet been added.
