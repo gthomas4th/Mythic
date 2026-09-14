@@ -399,3 +399,9 @@ Vulkan check on Apple M3 Pro captured the Super Mario 64 file-select screen.
 This establishes visible rendering, not gameplay performance. The corrected
 game was reopened in a window for owner input/audio/performance checks.
 CPU mode remains Cached Interpreter; global SNES controls remain unchanged.
+
+The owner reports that the Vulkan N64 session feels good. Gameplay performance
+is accepted for this session, with controller ergonomics still being adjusted:
+the owner wants the back buttons assigned to useful actions instead of camera
+controls. The specific physical buttons/actions are being clarified before
+changing mappings. No N64 remap has been applied for this request yet.
