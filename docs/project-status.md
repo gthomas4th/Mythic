@@ -14,6 +14,18 @@ passes `codesign --verify --deep --strict`. This is not a notarized public relea
 The original app and runtime are preserved. Development builds and the test host
 are not the user entry point. Do not remove recovery copies before final live acceptance.
 
+## Library and connections update
+
+Library has an always-visible System picker, normalized console labels, All systems,
+and an empty-result reset. It combines with text and existing filters in grid and list.
+Containers is hidden from both navigation styles; container data and implementation remain.
+The Xbox Cloud section is replaced by PlayStation Remote Play with a Sony/chiaki-ng client
+selector. Sony RemotePlay 9.0.0 is already installed and signature-verified; the owner
+confirms PS5 Remote Play is enabled. Connection acceptance remains pending. chiaki-ng
+1.10.0 ARM is installed for comparison, with upstream SHA-256 and strict signature
+verified. PSN sign-in/local registration and a separate-network test remain pending.
+Away-from-home play is the owner priority; LAN success is not remote acceptance.
+
 ## Interface theme
 
 The display headings now bundle Final Frontier by Allen R. Walden (source and notice

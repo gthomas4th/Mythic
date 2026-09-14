@@ -27,6 +27,25 @@ struct GameListView: View {
         VStack(spacing: 0) {
             HubSectionBanner(title: "Your library", subtitle: "\(viewModel.sortedLibrary.count) games · Pick your next adventure")
                 .padding(.horizontal, 28).padding(.vertical, 16)
+            HStack(spacing: 16) {
+                Picker("System", selection: $viewModel.selectedSystem) {
+                    Text("All systems").tag("")
+                    ForEach(viewModel.availableSystems, id: \.self) { system in
+                        Text(system).tag(system)
+                    }
+                }.pickerStyle(.menu).frame(maxWidth: 340).controlSize(.large)
+                if !viewModel.selectedSystem.isEmpty {
+                    Button("Clear system") { viewModel.selectedSystem = "" }.buttonStyle(.plain)
+                }
+                Spacer(minLength: 0)
+            }.padding(.horizontal, 28).padding(.bottom, 16)
+            if !gameDataStore.displayLibrary.isEmpty && viewModel.sortedLibrary.isEmpty {
+                ContentUnavailableView("No matching games", systemImage: "line.3.horizontal.decrease",
+                    description: Text("Try another system or clear your search and filters."))
+                Button("Clear all filters") {
+                    viewModel.selectedSystem = ""; viewModel.searchString = ""; viewModel.searchTokens = []
+                }.padding(.bottom, 16)
+            }
             if gameDataStore.displayLibrary.isEmpty {
                 ContentUnavailableView(
                     "Your library starts here",

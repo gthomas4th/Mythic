@@ -83,7 +83,7 @@ struct ContentView: View {
 
     private enum HubDestination: String, CaseIterable {
         case home = "Home", library = "Library", controller = "Controller", sources = "Game Sources"
-        case connections = "PC & Xbox", store = "Store", containers = "Containers", accounts = "Accounts", operations = "Operations"
+        case connections = "Connections", store = "Store", containers = "Containers", accounts = "Accounts", operations = "Operations"
         var symbol: String {
             switch self {
             case .home: "house.fill"
@@ -122,7 +122,7 @@ struct ContentView: View {
                 ScrollView {
                   VStack(spacing: 7) {
                     ForEach(HubDestination.allCases, id: \.self) { item in
-                        if item != .operations || !operationManager.queue.isEmpty {
+                        if item != .containers && (item != .operations || !operationManager.queue.isEmpty) {
                             Button { destination = item } label: {
                                 HStack(spacing: 10) {
                                     Image(systemName: item.symbol).frame(width: 24)
@@ -202,7 +202,7 @@ struct ContentView: View {
                             Label("Game Sources", systemImage: "gamecontroller")
                         }
                         NavigationLink(destination: ConnectionsView()) {
-                            Label("Home PC & Xbox", systemImage: "desktopcomputer")
+                            Label("PC & PlayStation", systemImage: "desktopcomputer")
                         }
                         NavigationLink(destination: StoreView()) {
                             Label("Store", systemImage: "bag")
@@ -211,11 +211,6 @@ struct ContentView: View {
                     }
                     
                     Section {
-                        NavigationLink(destination: ContainersView()) {
-                            Label("Containers", systemImage: "cube")
-                                .help("Manage containers for Windows® applications")
-                        }
-                        
                         Button("Support", systemImage: "questionmark.bubble") {
                             SupportWindowController.show()
                         }

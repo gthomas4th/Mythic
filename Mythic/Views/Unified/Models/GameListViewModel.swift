@@ -15,6 +15,33 @@ import OSLog
 @Observable @MainActor final class GameListViewModel {
     static let shared: GameListViewModel = .init()
 
+    var selectedSystem: String = ""
+    var availableSystems: [String] {
+        Set(GameDataStore.shared.displayLibrary.map { Self.systemName(for: $0) }).sorted()
+    }
+    static func systemName(for game: Game) -> String {
+        guard let rom = game as? ROMGame else { return "PC & Mac" }
+        let raw = rom.source?.system.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        switch raw.lowercased() {
+        case "gc", "gamecube", "ngc": return "GameCube"
+        case "psx", "ps1", "playstation": return "PlayStation"
+        case "ps2", "playstation 2": return "PlayStation 2"
+        case "ps3", "playstation 3": return "PlayStation 3"
+        case "snes", "super nintendo": return "Super Nintendo"
+        case "n64", "nintendo 64": return "Nintendo 64"
+        case "genesis", "megadrive", "mega drive": return "Mega Drive / Genesis"
+        case "dreamcast": return "Dreamcast"
+        case "switch", "nintendo switch": return "Nintendo Switch"
+        case "nes": return "NES"
+        case "gba": return "Game Boy Advance"
+        case "gb": return "Game Boy"
+        case "gbc": return "Game Boy Color"
+        case "psp": return "PSP"
+        case "wii": return "Wii"
+        default: return raw.isEmpty ? "Other ROMs" : raw
+        }
+    }
+
     var searchString: String = .init()
     var searchTokens: [SearchToken] = [] {
         didSet {
@@ -58,7 +85,7 @@ import OSLog
                         return game.isFavourited
                     }
                 }
-                return matchesText && matchesTokens
+                return matchesText && matchesTokens && (selectedSystem.isEmpty || Self.systemName(for: game) == selectedSystem)
             }
     }
     

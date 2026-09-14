@@ -122,6 +122,34 @@ struct ConnectionsView: View {
     @State private var message = ""
     @State private var steamID = ""
     @State private var remoteApplication = ""
+    @AppStorage("playStationClient") private var playStationClient = "sony"
+    @State private var remotePlayApp: URL?
+    @State private var playStationStatus = ""
+    private let remotePlayGuide = URL(string: "https://remoteplay.dl.playstation.net/remoteplay/lang/en/1100002.html")!
+    private func findRemotePlay() {
+        if playStationClient == "sony" {
+            remotePlayApp = NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.playstation.RemotePlay")
+        } else {
+            let roots = [URL(fileURLWithPath: "/Applications"), FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Applications")]
+            remotePlayApp = roots.flatMap { root in ["chiaki-ng.app", "Chiaki-ng.app", "Chiaki.app"].map { root.appendingPathComponent($0) } }
+                .first { FileManager.default.fileExists(atPath: $0.path) }
+        }
+    }
+    private func openRemotePlay() {
+        findRemotePlay()
+        guard let app = remotePlayApp else {
+            playStationStatus = "Install the selected client using its setup guide, then check again."
+            return
+        }
+        Task {
+            do {
+                try await NSWorkspace.shared.openApplication(at: app, configuration: NSWorkspace.OpenConfiguration())
+                playStationStatus = "Remote Play client opened. Select your PS5 there to connect."
+            } catch {
+                playStationStatus = "Remote Play client could not open: " + error.localizedDescription
+            }
+        }
+    }
     var body: some View {
         Form {
             Section("Home PC") {
@@ -145,13 +173,33 @@ struct ConnectionsView: View {
                 }
                 Text("Map an application that already exists in Sunshine. The hub does not change the PC configuration.").font(.caption).foregroundStyle(.secondary)
             }
-            Section("Xbox") {
-                Link("Open Xbox Cloud Gaming", destination: URL(string: "https://www.xbox.com/play")!)
-                Text("Uses the official Xbox experience and your existing access. PC Game Pass games run on your Home PC through Moonlight.").font(.callout).foregroundStyle(.secondary)
+            Section("PlayStation 5 · Remote Play") {
+                Picker("Remote Play client", selection: $playStationClient) {
+                    Text("Sony PS Remote Play").tag("sony")
+                    Text("chiaki-ng").tag("chiaki")
+                }.onChange(of: playStationClient) { _, _ in findRemotePlay(); playStationStatus = "" }
+                Text("Stream your PS5 using the selected client. Pairing and streaming settings stay in that app.")
+                Label(remotePlayApp == nil ? "Selected client not installed" : "Selected client installed",
+                      systemImage: remotePlayApp == nil ? "arrow.down.app" : "checkmark.circle")
+                HStack {
+                    Button("Open Remote Play") { openRemotePlay() }.disabled(remotePlayApp == nil)
+                    Button("Check installation") { findRemotePlay() }
+                    if playStationClient == "sony" {
+                        Link("Sony setup guide", destination: remotePlayGuide)
+                    } else {
+                        Link("chiaki-ng setup", destination: URL(string: "https://streetpea.github.io/chiaki-ng/setup/installation/")!)
+                    }
+                }
+                Text(playStationClient == "sony" ? "Sign in with the same PlayStation account as your PS5, then select PS5." : "Register your PS5 in chiaki-ng using its setup guide, then test the stream before adjusting quality.")
+                    .font(.callout).foregroundStyle(.secondary)
+                Text(playStationClient == "sony" ? "Sony supports DualSense and DUALSHOCK 4 controllers. Your Apex 5 has not been tested with this app." : "chiaki-ng offers controller mapping and stream tuning. Stability and Apex 5 controls still need a live check.")
+                    .font(.callout).foregroundStyle(.secondary)
+                if !playStationStatus.isEmpty { Text(playStationStatus).font(.callout) }
             }
             if !message.isEmpty { Text(message) }
         }
-        .formStyle(.grouped).navigationTitle("Home PC & Xbox")
+        .formStyle(.grouped).navigationTitle("PC & PlayStation")
+        .onAppear { findRemotePlay() }
     }
     private func open(stream: Bool) {
         Task {
