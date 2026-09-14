@@ -14,6 +14,15 @@ passes `codesign --verify --deep --strict`. This is not a notarized public relea
 The original app and runtime are preserved. Development builds and the test host
 are not the user entry point. Do not remove recovery copies before final live acceptance.
 
+## Title rows
+
+Home (including Continue Playing) and Library now show plain title rows with location/type
+badges and play controls. Artwork tiles, card backgrounds, borders, shadows and horizontal
+carousels are removed. Controls wrap below the title on narrow windows. System filtering,
+search, favourites, location selection and ROM download actions remain. Obsolete grid,
+card-size and glow controls are removed from Library and Settings. Debug build and
+native 520- and 1000-point row renders passed; full live window capture remains unavailable.
+
 ## Game Boy casing palette
 
 The LCARS theme uses medium warm grey backgrounds and lighter grey card surfaces,

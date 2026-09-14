@@ -14,42 +14,38 @@ import OSLog
 
 struct GameCard: View {
     @Binding var game: Game
-    var artworkURL: URL? = nil
-    @State private var isImageEmpty = true
-    @State private var hovered = false
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @AppStorage("hubTheme") private var theme = "lcars"
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            GameImageCard(game: game, url: artworkURL ?? game.verticalImageURL, isImageEmpty: $isImageEmpty, withBlur: false, contentMode: .fit)
-                .frame(height: 210)
-                .frame(maxWidth: .infinity)
-                .overlay(alignment: .topTrailing) {
-                    if game.isFavourited {
-                        Image(systemName: "star.fill").foregroundStyle(HubTheme.ink)
-                            .padding(10).background(HubTheme.yellow, in: .circle).padding(12)
-                            .accessibilityLabel("Favorite")
-                    }
-                }
-            VStack(alignment: .leading, spacing: 12) {
-                Text(game.title).font(.system(size: 20, weight: .semibold))
-                    .lineLimit(2).frame(height: 50, alignment: .topLeading)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                HubGameBadges(game: game)
-                Divider()
-                GameCard.ButtonsView(game: $game, withLabel: true, cardLayout: true)
-                    .controlSize(.large)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-
-            }.padding(18)
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: 24) {
+                titleAndBadges.frame(minWidth: 240, maxWidth: .infinity, alignment: .leading)
+                controls
+            }
+            VStack(alignment: .leading, spacing: 14) {
+                titleAndBadges
+                controls
+            }
         }
-        .background(theme == "lcars" ? HubTheme.panel : Color(nsColor: .controlBackgroundColor))
-        .clipShape(.rect(cornerRadius: 22))
-        .overlay(RoundedRectangle(cornerRadius: 22).stroke(hovered ? HubTheme.blue : Color.primary.opacity(0.08), lineWidth: hovered ? 2 : 1))
-        .shadow(color: .black.opacity(hovered ? 0.12 : 0.05), radius: hovered ? 14 : 6, y: 4)
-        .offset(y: hovered && !reduceMotion ? -3 : 0)
-        .onHover { hovered = $0 }
-        .animation(reduceMotion ? nil : .easeOut(duration: 0.16), value: hovered)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.vertical, 16)
+        .overlay(alignment: .bottom) { Divider() }
+    }
+    private var titleAndBadges: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Text(game.title).font(.system(size: 20, weight: .semibold))
+                    .fixedSize(horizontal: false, vertical: true)
+                if game.isFavourited {
+                    Image(systemName: "star.fill").foregroundStyle(HubTheme.yellow)
+                        .accessibilityLabel("Favourite")
+                }
+            }
+            HubGameBadges(game: game)
+        }
+    }
+    private var controls: some View {
+        HStack(spacing: 14) {
+            GameCard.ButtonsView(game: $game, withLabel: true)
+        }.controlSize(.large).fixedSize(horizontal: true, vertical: false)
     }
 }
 

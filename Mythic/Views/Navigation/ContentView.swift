@@ -52,21 +52,12 @@ struct ContentView: View {
             try? await GameDataStore.shared.refreshFromStorefronts()
             let games = GameDataStore.shared.displayLibrary
             let examples = [games.first { $0 is ROMGame }, games.first { $0.title.localizedStandardContains("REBIRTH") }].compactMap { $0 }
-            var artwork: [String: URL] = [:]
-            for (index, game) in examples.enumerated() {
-                if let url = game.verticalImageURL, !url.isFileURL,
-                   let (data, _) = try? await URLSession.shared.data(from: url), NSImage(data: data) != nil {
-                    let local = URL(fileURLWithPath: "/private/tmp/gamehub-card-art-\(index).image")
-                    try? data.write(to: local)
-                    artwork[game.title] = local
-                }
-            }
-            for width in [240.0, 300.0] {
+            for width in [520.0, 1000.0] {
                 let preview = VStack(alignment: .leading, spacing: 24) {
                     Text("GAME HUB — RECENTLY PLAYED").font(HubTheme.heading(28))
-                    HStack(alignment: .top, spacing: 24) {
+                    VStack(alignment: .leading, spacing: 0) {
                         ForEach(examples) { game in
-                            GameCard(game: .constant(game), artworkURL: artwork[game.title]).frame(width: width)
+                            GameCard(game: .constant(game)).frame(width: width)
                         }
                     }
                 }.padding(28).background(HubTheme.canvas)
