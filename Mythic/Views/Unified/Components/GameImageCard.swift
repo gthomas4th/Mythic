@@ -123,7 +123,6 @@ struct GameImageCard: View {
                        height: geometry.size.height)
             }
         }
-        .background(.quinary)
         .clipShape(.rect(cornerRadius: 20))
     }
 }

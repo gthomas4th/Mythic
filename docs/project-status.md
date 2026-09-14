@@ -14,14 +14,13 @@ passes `codesign --verify --deep --strict`. This is not a notarized public relea
 The original app and runtime are preserved. Development builds and the test host
 are not the user entry point. Do not remove recovery copies before final live acceptance.
 
-## Title rows
+## Artwork without card containers
 
-Home (including Continue Playing) and Library now show plain title rows with location/type
-badges and play controls. Artwork tiles, card backgrounds, borders, shadows and horizontal
-carousels are removed. Controls wrap below the title on narrow windows. System filtering,
-search, favourites, location selection and ROM download actions remain. Obsolete grid,
-card-size and glow controls are removed from Library and Settings. Debug build and
-native 520- and 1000-point row renders passed; full live window capture remains unavailable.
+Owner clarification supersedes the title-row layout: artwork, titles, badges and buttons
+remain. Home and Library restore the artwork layout and grid/list choices, while removing
+card background panels, borders and shadows. Continue Playing also has no backing panel;
+list mode keeps a cover thumbnail without an image backdrop. Grey console surfaces remain.
+Debug build and native artwork/control render passed; full live window capture is unavailable.
 
 ## Game Boy casing palette
 

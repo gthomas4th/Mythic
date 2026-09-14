@@ -152,6 +152,9 @@ extension SettingsView {
 
     struct ViewSettingsView: View {
         @AppStorage("hubTheme") private var hubTheme = "lcars"
+        @AppStorage("gameCardSize") private var gameCardSize: Double = 200.0
+        @AppStorage("gameImageCardBlur") private var imageCardBlur: Double = 0.0
+        @CodableAppStorage("gameListLayout") var gameListLayout: GameListViewModel.Layout = .grid
 
         var body: some View {
             Picker("Interface theme", selection: $hubTheme) {
@@ -160,7 +163,24 @@ extension SettingsView {
             }
             Text("LCARS uses larger text, condensed headings and a soft console palette.")
                 .font(.system(size: 15)).foregroundStyle(.secondary)
+            Slider(value: $gameCardSize, in: 200...400, step: 25) {
+                Label("Gamecard Size", systemImage: "square.resize")
+                Text("Default is 1 tick.")
+                    .foregroundStyle(.secondary)
+            }
 
+            Slider(value: $imageCardBlur, in: 0...20, step: 5) {
+                Label("Gamecard Glow", systemImage: imageCardBlur <= 10 ? "sun.min" : "sun.max")
+            }
+
+            Picker("Game List Layout", systemImage: "macwindow", selection: $gameListLayout) {
+                Label("List", systemImage: "rectangle.grid.1x3")
+                    .tag(GameListViewModel.Layout.list)
+
+                Label("Grid", systemImage: "square.grid.3x3")
+                    .tag(GameListViewModel.Layout.grid)
+            }
+            .animation(.easeInOut, value: $gameListLayout.wrappedValue)
         }
     }
 

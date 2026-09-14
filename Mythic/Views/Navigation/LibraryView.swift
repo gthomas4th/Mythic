@@ -19,6 +19,7 @@ struct LibraryView: View {
     @State private var isGameImportSheetPresented = false
     @State private var launchSettingsPresented = false
     @Bindable var gameListViewModel: GameListViewModel = .shared
+    @CodableAppStorage("gameListLayout") var gameListLayout: GameListViewModel.Layout = .grid
 
     var body: some View {
         GameListView()
@@ -57,6 +58,17 @@ struct LibraryView: View {
                 
                 // MARK: GameListView filter views
                 if !gameListViewModel.sortedLibrary.isEmpty {
+                    ToolbarItem(placement: .automatic) {
+                        Picker("Layout", systemImage: "macwindow", selection: $gameListLayout) {
+                            Label("List", systemImage: "rectangle.grid.1x3")
+                                .tag(GameListViewModel.Layout.list)
+
+                            Label("Grid", systemImage: "square.grid.3x3")
+                                .tag(GameListViewModel.Layout.grid)
+                        }
+                        .animation(.easeInOut, value: $gameListLayout.wrappedValue)
+                    }
+
                     ToolbarItem(placement: .automatic) {
                         Menu("Filters", systemImage: "line.3.horizontal.decrease") {
                             Section("Platform") {

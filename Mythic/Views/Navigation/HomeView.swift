@@ -20,7 +20,9 @@ struct HomeView: View {
     @EnvironmentObject var networkMonitor: NetworkMonitor
     @Bindable var gameDataStore: GameDataStore = .shared
     
+    @AppStorage("gameCardSize") private var gameCardSize: Double = 200.0
     
+    @State private var isImageEmpty = true
     @AppStorage("hubTheme") private var theme = "lcars"
 
     private var favouriteGames: [Game] {
@@ -35,10 +37,24 @@ struct HomeView: View {
                 HubSectionBanner(title: "Welcome back", subtitle: "Choose a game and make yourself at home.").padding(.horizontal, 28).padding(.top, 20)
 
                 if let recentGame = gameDataStore.recent {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("CONTINUE PLAYING").font(HubTheme.heading(26))
-                        GameCard(game: .constant(recentGame))
-                    }.padding(.horizontal, 28).padding(.top, 20)
+                    HStack(spacing: 0) {
+                        GameImageCard(game: recentGame, url: recentGame.horizontalImageURL ?? recentGame.verticalImageURL,
+                                      isImageEmpty: $isImageEmpty, withBlur: false, contentMode: .fit)
+                            .frame(width: max(260, (geometry.size.width - 56) * 0.53), height: 300)
+                            .clipped()
+                        VStack(alignment: .leading, spacing: 18) {
+                            Text("CONTINUE PLAYING").font(HubTheme.heading(18)).tracking(2)
+                                .foregroundStyle(HubTheme.blue)
+                            Text(recentGame.title).font(HubTheme.heading(36)).lineLimit(3)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                            HubGameBadges(game: recentGame)
+                            Spacer(minLength: 0)
+                            GameCard.ButtonsView(game: .constant(recentGame), withLabel: true, cardLayout: true)
+                                .controlSize(.large)
+                        }.padding(24).frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                    .frame(height: 300)
+                    .padding(.horizontal, 28).padding(.top, 12)
                 } else {
                     ContentUnavailableView(
                         "Welcome to Game Hub",
@@ -116,9 +132,11 @@ struct HomeView: View {
                         .padding(.horizontal, 16).padding(.vertical, 5)
                         .background(HubTheme.purple.opacity(0.25), in: .capsule)
                 }
-                LazyVStack(spacing: 0) {
-                    ForEach(Array(games.prefix(20))) { game in
-                        GameCard(game: .constant(game))
+                ScrollView(.horizontal) {
+                    LazyHStack(spacing: 16) {
+                        ForEach(Array(games.prefix(20))) { game in
+                            GameCard(game: .constant(game)).frame(width: max(300, gameCardSize))
+                        }
                     }
                 }
             }
