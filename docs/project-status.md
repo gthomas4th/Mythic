@@ -156,3 +156,8 @@ Follow-up network testing did not reproduce severe stalls with Xbox connected,
 including a 45-second Hulk-running sample (NAS ping 12.90 ms average, 106.25 ms
 maximum, all 90 replies). Intermittent spikes remain; the cause is unresolved.
 Owner playback feedback is pending, so PS2 performance is not marked accepted.
+
+The owner subsequently accepted the follow-up Hulk NAS gameplay session as
+“great”; Xbox controls were already accepted. PS2 gameplay acceptance is now
+recorded for this session. Earlier intermittent network stalls remain unexplained;
+no permanent network fix is claimed. PS2 saved-game reload remains unverified.

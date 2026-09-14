@@ -324,3 +324,13 @@ with all 90 replies from each destination. Owner gameplay feedback for this
 session remains pending; emulator execution alone is not active-gameplay
 acceptance. The running session is preserved. No network or graphics settings
 were changed, and no local ROM copies were made.
+
+## Owner acceptance of the follow-up PS2 session
+
+The owner reported that the follow-up Hulk session was great. Combined with
+the earlier confirmation that controls are good, this accepts Xbox control and
+NAS gameplay for this observed session. The game was running from the NAS with
+Metal 3×; no local ROM staging or network configuration change was introduced.
+The previous intermittent latency fault is not diagnosed or claimed permanently
+fixed. A full saved-game reload remains separate from the confirmed memory-card
+format/write and gameplay checks.
