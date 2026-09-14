@@ -17,9 +17,8 @@ are not the user entry point. Do not remove recovery copies before final live ac
 ## Current emulator snapshot
 
 Owner-accepted gameplay: GameCube/Melee, PS2/Hulk, SNES/Super Mario World,
-N64/Super Mario 64 and Mega Drive/Sonic 2. PS1/Gundam boots successfully;
-physical gameplay acceptance remains pending. Dreamcast/Power Stone now passes a NAS boot-logo screenshot check and is
-indexed in the hub; its live gameplay check is open. Save-reload tests and Apex 5 rear-paddle customization are deferred.
+N64/Super Mario 64, Mega Drive/Sonic 2 and Dreamcast/Power Stone. PS1/Gundam boots successfully;
+physical gameplay acceptance remains pending. Dreamcast/Power Stone is also indexed in the hub; its hub Play check remains open. Save-reload tests and Apex 5 rear-paddle customization are deferred.
 
 SNES, N64 and Genesis sources are indexed in the hub alongside GameCube, PS2
 and PS1. Their hub Play checks remain pending. Installed revision `a348a9b3`

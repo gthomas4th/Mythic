@@ -473,3 +473,9 @@ source file now contains nine sources. All previous entries were preserved;
 the eight-source predecessor was backed up before the atomic update. Source
 bookmarks resolved without staleness. The hub was reopened, but its Dreamcast
 tile/Play action has not been visually checked. No local ROM copy was created.
+
+
+The owner subsequently reported “all good” for the live Power Stone session.
+Dreamcast gameplay, physical controls and sound are accepted for this NAS-backed
+Flycast configuration. This supersedes the pending live-gameplay status above;
+hub tile/Play acceptance and save-reload checks remain separate (reload deferred).
