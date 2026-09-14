@@ -207,3 +207,10 @@ and the upgrade dialog is pending. PS3 Spider-Man pilot is copying on NAS.
 Ryubing is installed with verified owner firmware; Sonic Mania is on NAS and
 its first launch initializes Vulkan/controller/firmware, but visible gameplay
 and hub integration remain unverified. See emulator-readiness.md for details.
+
+
+Current follow-up: RPCS3 4.93 firmware installation is verified. PS3 game transfer
+continues. Switch's normal GUI launch reaches Sonic Mania's title screen;
+explicit Apex 5 assignment and owner-requested A/B swap are saved. Final Switch
+gameplay acceptance remains pending. Installed revision 972281d4 adds Switch
+format discovery and GUI launch; 76 tests/build/signature checks passed.

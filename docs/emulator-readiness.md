@@ -528,3 +528,36 @@ been installed or accepted in this phase.
 Sources: https://xenios.jp/download/mac ; https://xenios.jp/compatibility ;
 https://www.playstation.com/en-us/support/hardware/ps3/system-software/ ;
 https://github.com/RPCS3/rpcs3-binaries-mac-arm64 ; https://github.com/Ryubing .
+
+
+## Switch GUI startup and explicit controller correction
+
+PS3 firmware now reads release:04.9300 on disk: Sony 4.93 installation is
+verified. Spider-Man NAS copying continues; PS3 gameplay remains untested.
+
+The Ryubing headless launch stalled; a second attempt failed controller discovery
+when the Apex 5 was disconnected and then failed to exit cleanly. Normal GUI
+launch of the same NAS XCI progressed through shader setup and the game's own
+log reported “At the Title Screen.” This is the working launch method now used
+by the hub. Owner saw the game but initially reported no controls.
+
+The new player_input_assignments schema still assigned Player1 to Keyboard.
+A backed-up config edit set both input_config and player_input_assignments to
+the connected Apex 5 controller, using the emulator's own SDL3 IDs and default
+mapping source. The owner then requested swapping A/B; bindings now map physical
+A to Switch A and physical B to Switch B. Relaunch preserved those settings and
+reached the title screen. Final owner gameplay acceptance remains pending.
+Original configs are retained privately; no controller firmware was modified.
+
+Switch integration revision 972281d4 adds .xci/.nsp discovery and Ryujinx GUI
+launch with the absolute ROM path as a single argument. It avoids the stuck
+headless path. 76 core tests pass, including format exclusions, path preservation
+and rejected remote URLs. Full Debug build and strict signatures passed; the
+installed app was replaced with its prior revision preserved for recovery.
+
+The Switch source-setup scanner is still running: the mounted switch folder
+contains seven images (about 57.95 GB), so it is hashing the full collection,
+not only Sonic Mania. The source file is written atomically only after the
+scan completes; do not start another source writer or reopen the hub with an
+assumption that this entry is already saved. Local helper session 54026,
+process SourceSetup. No game data is copied to the Mac by this scan.
