@@ -388,3 +388,14 @@ The N64 Game Hub source bookmark remains pending alongside the SNES bookmark
 because native desktop automation is unavailable. No local ROM copies exist.
 
 Reference: [Mupen64Plus-Next](https://docs.libretro.com/library/mupen64plus/).
+
+## N64 blank-output correction
+
+The owner saw no game output from the initial OpenGL launch. A bounded windowed
+render check captured a black frame, so successful context initialization was
+not sufficient evidence of rendering. After preserving the original core options,
+the N64-only RDP/RSP plugins were set to ParaLLEl with 2× RDP upscaling. A 600-frame
+Vulkan check on Apple M3 Pro captured the Super Mario 64 file-select screen.
+This establishes visible rendering, not gameplay performance. The corrected
+game was reopened in a window for owner input/audio/performance checks.
+CPU mode remains Cached Interpreter; global SNES controls remain unchanged.
