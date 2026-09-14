@@ -1,5 +1,6 @@
 import SwiftUI
 import Network
+import Darwin
 
 @MainActor @Observable final class HubConnections {
     static let shared = HubConnections()
@@ -150,9 +151,16 @@ struct ConnectionsView: View {
             }
         }
     }
+    private func isChiakiProcess(_ application: NSRunningApplication) -> Bool {
+        guard application.bundleIdentifier == "org.streetpea.chiaking",
+              let executable = application.executableURL else { return false }
+        var path = [CChar](repeating: 0, count: 4 * Int(MAXPATHLEN))
+        guard proc_pidpath(application.processIdentifier, &path, UInt32(path.count)) > 0 else { return false }
+        return URL(fileURLWithPath: String(cString: path)).resolvingSymlinksInPath() == executable.resolvingSymlinksInPath()
+    }
     private func closeRemotePlay() {
         guard !closingRemotePlay else { return }
-        let applications = NSRunningApplication.runningApplications(withBundleIdentifier: "org.streetpea.chiaking")
+        let applications = NSRunningApplication.runningApplications(withBundleIdentifier: "org.streetpea.chiaking").filter(isChiakiProcess)
         guard !applications.isEmpty else { playStationStatus = "chiaki-ng is already closed."; return }
         closingRemotePlay = true
         playStationStatus = "Closing chiaki-ng…"
@@ -160,16 +168,18 @@ struct ConnectionsView: View {
             defer { closingRemotePlay = false }
             for application in applications { application.terminate() }
             for _ in 0..<25 {
-                if applications.allSatisfy(\.isTerminated) { break }
+                if !applications.contains(where: isChiakiProcess) { break }
                 try? await Task.sleep(for: .milliseconds(200))
             }
-            let stalled = applications.filter { !$0.isTerminated }
-            for application in stalled { application.forceTerminate() }
+            let stalled = applications.filter(isChiakiProcess)
+            for application in stalled where isChiakiProcess(application) {
+                kill(application.processIdentifier, SIGKILL)
+            }
             for _ in 0..<10 {
-                if applications.allSatisfy(\.isTerminated) { break }
+                if !applications.contains(where: isChiakiProcess) { break }
                 try? await Task.sleep(for: .milliseconds(100))
             }
-            playStationStatus = applications.allSatisfy(\.isTerminated)
+            playStationStatus = !applications.contains(where: isChiakiProcess)
                 ? (stalled.isEmpty ? "chiaki-ng closed." : "chiaki-ng stopped responding and was force-closed.")
                 : "chiaki-ng could not close. Use macOS Force Quit."
         }

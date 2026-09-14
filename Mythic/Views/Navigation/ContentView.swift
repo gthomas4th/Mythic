@@ -83,7 +83,7 @@ struct ContentView: View {
 
     private enum HubDestination: String, CaseIterable {
         case home = "Home", library = "Library", controller = "Controller", sources = "Game Sources"
-        case connections = "Connections", store = "Store", containers = "Containers", accounts = "Accounts", operations = "Operations"
+        case connections = "PC & PS5", store = "Store", containers = "Containers", accounts = "Accounts", operations = "Operations"
         var symbol: String {
             switch self {
             case .home: "house.fill"
@@ -202,7 +202,7 @@ struct ContentView: View {
                             Label("Game Sources", systemImage: "gamecontroller")
                         }
                         NavigationLink(destination: ConnectionsView()) {
-                            Label("PC & PlayStation", systemImage: "desktopcomputer")
+                            Label("PC & PS5", systemImage: "desktopcomputer")
                         }
                         NavigationLink(destination: StoreView()) {
                             Label("Store", systemImage: "bag")

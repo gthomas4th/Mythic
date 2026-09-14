@@ -31,10 +31,12 @@ The owner authorized resuming the Deck-to-NAS transfer after closing this gamepl
 
 chiaki-ng exit behavior: Game Hub launches it with `--exit-app-on-stream-exit`.
 The local disconnect action is `nothing` (disconnect without asking or sleeping the PS5).
-Connections has a Close chiaki-ng action: request normal termination, wait five seconds,
-then force-terminate only chiaki-ng if still running and report the outcome.
-Debug build passed. The test instance exited after its failed connection; an active-stream
-close test was unavailable because the PS5 was not responding to LAN discovery.
+The PC & PS5 sidebar entry is explicit in both themes. Its Close chiaki-ng action
+requests normal termination, waits five seconds, then checks the PID executable path
+and bundle identity before terminating only the remaining chiaki processes.
+An active PS5 stream was launched on the rediscovered Wi-Fi address. Normal macOS
+quit/force-quit calls failed; the process-identity-checked recovery stopped the stuck
+processes successfully. This verifies recovery, not a fix inside chiaki itself.
 
 ## Interface theme
 
