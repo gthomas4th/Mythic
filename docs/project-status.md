@@ -14,6 +14,13 @@ passes `codesign --verify --deep --strict`. This is not a notarized public relea
 The original app and runtime are preserved. Development builds and the test host
 are not the user entry point. Do not remove recovery copies before final live acceptance.
 
+## Game Boy casing palette
+
+The LCARS theme uses medium warm grey backgrounds and lighter grey card surfaces,
+inspired by the original Game Boy casing. Blue controls, colored accents and the
+Trek typeface remain. This supersedes the pale blue/near-white surfaces. Validation:
+Debug build and native card rendering; no behavior changed.
+
 ## Play options
 
 Play cards never offer Install or an engine-install fallback. Unavailable games remain

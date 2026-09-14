@@ -195,10 +195,10 @@ extension GameImageCard {
     .padding()
 }
 
-// Shared presentation tokens. LCARS uses a light console palette and generous type.
+// Shared presentation tokens. Game Boy casing-inspired grey surfaces retain LCARS accents and generous type.
 enum HubTheme {
-    static let canvas = Color(red: 0.86, green: 0.91, blue: 0.95)
-    static let panel = Color(red: 0.94, green: 0.95, blue: 0.96)
+    static let canvas = Color(red: 0.62, green: 0.62, blue: 0.60)
+    static let panel = Color(red: 0.73, green: 0.73, blue: 0.71)
     static let ink = Color(red: 0.12, green: 0.17, blue: 0.24)
     static let blue = Color(red: 0.16, green: 0.31, blue: 0.48)
     static let yellow = Color(red: 0.92, green: 0.77, blue: 0.34)
