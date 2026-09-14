@@ -290,3 +290,18 @@ Its reported 0 dBm signal value is unusable. SMB is 3.1.1, with zero recorded
 reconnections. A controller-off comparison was requested to test wireless
 coexistence as a hypothesis, not an established cause. No router, security,
 Bluetooth or network configuration was changed; the NAS transfer remains active.
+
+## Follow-up baseline with games closed
+
+On the next session, Bluetooth inventory listed the Xbox controller as not
+connected and neither PS1 nor PS2 emulator was running. Mac-to-NAS ping measured
+9.83 ms average / 44.09 ms maximum with all 12 replies. A memory-only workload
+of 96 random 64 KiB reads from Hulk (6.29 MB total) took 1.98 seconds, with median
+14.90 ms, p95 40.40 ms and maximum 110.14 ms per read. Concurrent ping measured
+14.42 ms average / 88.98 ms maximum with all 30 replies. The source ISO remained
+on the NAS; the test wrote no local game data.
+
+This is an improved baseline, not a controlled explanation of yesterday's stalls:
+the game state, controller state and observation time all changed. A repeat with
+controller connected and games still closed was requested. The copy worker had
+174.73 GB verified, remained active, and the hourly notification timer was active.
