@@ -19,6 +19,8 @@ are not the user entry point. Do not remove recovery copies before final live ac
 The LCARS-inspired Silver console theme uses a light blue/gray foundation, dark blue
 structure, green/yellow/red highlights and purple accents. Condensed headings, larger
 body text, separated game-card actions and ROM placeholder artwork improve readability.
+The LCARS layout now has its own persistent navigation rail, connected upper/lower
+frame, large navigation buttons, split artwork/launch hero and collection dividers.
 Settings → Views → Interface theme also offers Follow macOS. Native component renders
 were inspected and the full Debug build passed; full-window visual acceptance remains
 open because desktop capture is unavailable.

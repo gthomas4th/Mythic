@@ -34,55 +34,31 @@ struct HomeView: View {
     var body: some View {
         GeometryReader { geometry in
             ScrollView {
-                HubSectionBanner(title: "Game Hub", subtitle: "Your games. Your next adventure.").padding(.horizontal, 28).padding(.top, 20)
+                HubSectionBanner(title: "Welcome back", subtitle: "Choose a game and make yourself at home.").padding(.horizontal, 28).padding(.top, 20)
 
                 if let recentGame = gameDataStore.recent {
-                    ZStack(alignment: .bottomLeading) {
-                        GameImageCard(game: recentGame, url: recentGame.horizontalImageURL ?? recentGame.verticalImageURL, isImageEmpty: $isImageEmpty)
-                            .aspectRatio(16/9, contentMode: .fill)
-                            .frame(width: geometry.size.width, height: min(480, max(320, geometry.size.height * 0.6)))
-                            .glur(radius: 18,
-                                  offset: 0.6,
-                                  interpolation: 0.6)
-                            .customTransform { view in
-                                if #available(macOS 26.0, *) {
-                                    view.backgroundExtensionEffect()
-                                } else {
-                                    view
-                                }
-                            }
-
-                        LinearGradient(colors: [.clear, .black.opacity(0.85)], startPoint: .center, endPoint: .bottom)
-                            .allowsHitTesting(false)
-                        HStack {
-                            if isImageEmpty, recentGame.isFallbackImageAvailable {
-                                GameImageCard.FallbackGameImageCard(game: .constant(recentGame))
-                                    .frame(width: 65, height: 65)
-                                    .aspectRatio(contentMode: .fit)
-                                    .padding(.trailing)
-                            }
-                            
-                            VStack(alignment: .leading) {
-                                Text("CONTINUE PLAYING")
-                                    .foregroundStyle(.secondary)
-                                    .font(.system(size: 16, weight: .semibold))
-                                
-                                HStack {
-                                    GameCard.TitleAndInformationView(game: .constant(recentGame), withSubscriptedInfo: true)
-                                }
-                                HStack {
-                                    GameCard.ButtonsView(game: .constant(recentGame), withLabel: true)
-                                        .clipShape(.capsule)
-                                }
-                            }
-                            .conditionalTransform(if: !isImageEmpty) { view in
-                                view
-                                    .foregroundStyle(.white)
-                            }
-                        }
-                        .padding([.leading, .bottom])
+                    HStack(spacing: 0) {
+                        GameImageCard(game: recentGame, url: recentGame.horizontalImageURL ?? recentGame.verticalImageURL,
+                                      isImageEmpty: $isImageEmpty, withBlur: false)
+                            .frame(width: max(260, (geometry.size.width - 56) * 0.53), height: 300)
+                            .clipped()
+                        VStack(alignment: .leading, spacing: 18) {
+                            Text("CONTINUE PLAYING").font(HubTheme.heading(18)).tracking(2)
+                                .foregroundStyle(HubTheme.blue)
+                            Text(recentGame.title).font(HubTheme.heading(36)).lineLimit(3)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                            Text(recentGame.sourceLabel.uppercased()).font(.system(size: 15, weight: .semibold))
+                                .padding(.horizontal, 14).padding(.vertical, 7)
+                                .background(HubTheme.canvas, in: .capsule)
+                            Spacer(minLength: 0)
+                            GameCard.ButtonsView(game: .constant(recentGame), withLabel: true)
+                                .controlSize(.large)
+                        }.padding(24).frame(maxWidth: .infinity, alignment: .leading)
                     }
-                    .frame(height: min(480, max(320, geometry.size.height * 0.6)))
+                    .frame(height: 300)
+                    .background(theme == "lcars" ? HubTheme.panel : Color(nsColor: .controlBackgroundColor))
+                    .clipShape(.rect(cornerRadius: 24))
+                    .padding(.horizontal, 28).padding(.top, 12)
                 } else {
                     ContentUnavailableView(
                         "Welcome to Game Hub",
@@ -153,7 +129,13 @@ struct HomeView: View {
     @ViewBuilder private func gameRow(_ title: String, games: [Game]) -> some View {
         if !games.isEmpty {
             VStack(alignment: .leading, spacing: 12) {
-                Text(title.uppercased()).font(HubTheme.heading(30)).tracking(1)
+                HStack(spacing: 14) {
+                    Text(title.uppercased()).font(HubTheme.heading(30)).tracking(1)
+                    RoundedRectangle(cornerRadius: 4).fill(HubTheme.blue.opacity(0.35)).frame(height: 10)
+                    Text(String(games.count)).font(HubTheme.heading(20))
+                        .padding(.horizontal, 16).padding(.vertical, 5)
+                        .background(HubTheme.purple.opacity(0.25), in: .capsule)
+                }
                 ScrollView(.horizontal) {
                     LazyHStack(spacing: 16) {
                         ForEach(Array(games.prefix(20))) { game in
