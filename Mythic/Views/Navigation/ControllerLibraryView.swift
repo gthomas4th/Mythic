@@ -353,46 +353,89 @@ struct HubGameOptionsView: View {
     @State private var input = HubControllerInput.shared
     @State private var imageEmpty = true
     var body: some View {
-        ScrollViewReader { proxy in
-        ScrollView {
-        VStack(alignment: .leading, spacing: 20) {
-            HStack {
-                Button { _ = model.action("back") } label: {
-                    if input.connected { HubButtonHint(button: "B", action: "Back") } else { Label("Back", systemImage: "chevron.left") }
-                }.buttonStyle(.plain)
-                Spacer()
-                Text("GAME DETAILS").font(HubTheme.heading(20)).tracking(3)
-            }
-            if model.editor == nil, let game = model.game {
-                ZStack(alignment: .bottomLeading) {
-                    Rectangle().fill(HubTheme.blue)
-                    GameImageCard(game: game, url: game.horizontalImageURL ?? game.verticalImageURL,
-                        isImageEmpty: $imageEmpty, withBlur: false, contentMode: .fill)
-                        .blur(radius: 18).opacity(0.55).clipped()
-                    GameImageCard(game: game, url: game.horizontalImageURL ?? game.verticalImageURL,
-                        isImageEmpty: $imageEmpty, withBlur: false, contentMode: .fit)
-                    LinearGradient(colors: [.clear, .black.opacity(0.85)], startPoint: .center, endPoint: .bottom)
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text((game.storefront?.description ?? "ROM").uppercased()).font(.system(size: 15, weight: .bold)).tracking(4)
-                        Text(game.title.uppercased()).font(HubTheme.heading(48)).tracking(2).lineLimit(3).minimumScaleFactor(0.65)
-                    }.foregroundStyle(.white).padding(32)
-                }.frame(height: 340).clipped().clipShape(RoundedRectangle(cornerRadius: 16))
-                HStack {
-                    VStack(alignment: .leading, spacing: 10) {
-                        HubGameBadges(game: game)
-                        if let rom = game as? ROMGame, let source = rom.source {
-                            Text("System: " + source.system).font(.system(size: 16))
-                        }
-                        if let played = game.lastLaunched {
-                            Text("Last played " + played.formatted(date: .abbreviated, time: .omitted)).font(.system(size: 15)).foregroundStyle(.secondary)
-                        }
-                    }
-                    Spacer()
-                    GameCard.LegacyMenuView(game: .constant(game)).help("Advanced settings and ROM downloads")
+        GeometryReader { geometry in
+            ZStack {
+                backdrop
+                ScrollViewReader { proxy in
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: 22) {
+                            HStack {
+                                Button { _ = model.action("back") } label: {
+                                    if input.connected { HubButtonHint(button: "B", action: "Back") }
+                                    else { Label("Back", systemImage: "chevron.left") }
+                                }.buttonStyle(.plain)
+                                Spacer()
+                                if let game = model.game {
+                                    GameCard.LegacyMenuView(game: .constant(game)).help("Advanced settings and ROM downloads")
+                                }
+                            }
+                            if let editor = model.editor {
+                                editorPanel(editor).padding(24)
+                                    .background(.black.opacity(0.72), in: .rect(cornerRadius: 16))
+                                    .frame(maxWidth: 740).frame(maxWidth: .infinity)
+                            } else if let game = model.game {
+                                Spacer(minLength: max(24, geometry.size.height * 0.12))
+                                VStack(alignment: .leading, spacing: 12) {
+                                    Text((game is ROMGame ? "ROM LIBRARY" : game.storefront?.description ?? "GAME LIBRARY").uppercased())
+                                        .font(.system(size: 14, weight: .bold)).tracking(4).foregroundStyle(.white.opacity(0.75))
+                                    Text(game.title.uppercased()).font(HubTheme.heading(52)).tracking(2)
+                                        .lineLimit(3).minimumScaleFactor(0.65).shadow(color: .black.opacity(0.6), radius: 12)
+                                        .frame(maxWidth: 850, alignment: .leading)
+                                    HStack(spacing: 16) {
+                                        Text(game.locationLabel ?? "Unavailable")
+                                        if let rom = game as? ROMGame, let source = rom.source { Text(source.system) }
+                                        if let played = game.lastLaunched { Text("Last played " + played.formatted(date: .abbreviated, time: .omitted)) }
+                                    }.font(.system(size: 15)).foregroundStyle(.white.opacity(0.8))
+                                }
+                                VStack(alignment: .leading, spacing: 6) {
+                                    ForEach(model.labels.indices, id: \.self) { index in
+                                        option(index).id(index)
+                                    }
+                                }.padding(10).frame(maxWidth: 390)
+                                    .background(.black.opacity(0.28), in: .rect(cornerRadius: 16))
+                                    .overlay(RoundedRectangle(cornerRadius: 16).stroke(.white.opacity(0.14), lineWidth: 1))
+                                if input.connected {
+                                    HubControllerHints(actions: [("Move", "Choose"), ("A", "Select"), ("B", "Back")])
+                                }
+                            }
+                            if !model.message.isEmpty {
+                                Text(model.message).font(.system(size: 17)).padding(12)
+                                    .background(.black.opacity(0.7), in: .rect(cornerRadius: 8))
+                            }
+                        }.padding(32).frame(maxWidth: .infinity, alignment: .leading)
+                    }.onChange(of: model.row) { _, row in proxy.scrollTo(row, anchor: .bottom) }
                 }
-            }
-            if model.editor != nil { Text(model.game?.title ?? "Game options").font(HubTheme.heading(27)).lineLimit(2) }
-            if let editor = model.editor {
+            }.foregroundStyle(.white)
+        }.environment(\.colorScheme, .dark)
+            .onExitCommand { _ = model.action("back") }
+    }
+    private var backdrop: some View {
+        GeometryReader { geometry in
+            ZStack {
+                HubTheme.blue
+                if let game = model.game, let url = game.horizontalImageURL ?? game.verticalImageURL {
+                    GameImageCard(game: game, url: url, isImageEmpty: $imageEmpty, withBlur: false, contentMode: .fill)
+                }
+                LinearGradient(colors: [.black.opacity(0.7), .black.opacity(0.2), .clear], startPoint: .leading, endPoint: .trailing)
+                LinearGradient(colors: [.black.opacity(0.15), .clear, .black.opacity(0.75)], startPoint: .top, endPoint: .bottom)
+            }.frame(width: geometry.size.width, height: geometry.size.height).clipped()
+        }.allowsHitTesting(false).accessibilityHidden(true)
+    }
+    private func option(_ index: Int) -> some View {
+        Button { model.row = index; model.activate() } label: {
+            HStack(spacing: 12) {
+                if input.connected && index == 0 { HubButtonHint(button: "A", action: "Play") }
+                else { Text(model.labels[index]).font(.system(size: 17, weight: .medium)) }
+                Spacer(minLength: 8)
+                if input.connected && model.row == index && index != 0 { HubButtonHint(button: "A", action: "") }
+            }.frame(minHeight: 28).padding(.horizontal, 14).padding(.vertical, 7)
+                .foregroundStyle(.white)
+                .background(model.row == index ? .white.opacity(0.2) : .clear, in: .rect(cornerRadius: 9))
+                .overlay(RoundedRectangle(cornerRadius: 9).stroke(model.row == index ? HubTheme.yellow.opacity(0.9) : .clear, lineWidth: 1.5))
+        }.buttonStyle(.plain)
+    }
+    private func editorPanel(_ editor: String) -> some View {
+        VStack(alignment: .leading, spacing: 16) {
                 Text("Edit \(editor)").font(.title2)
                 TextField(editor, text: $model.draft).textFieldStyle(.roundedBorder)
                 if input.connected { HubControllerHints(actions: [("Move", "Choose key"), ("A", "Type"), ("X", "Delete"), ("Y", "Save"), ("B", "Cancel")]) }
@@ -400,6 +443,7 @@ struct HubGameOptionsView: View {
                     ForEach(model.keys.indices, id: \.self) { index in
                         Button(model.keys[index] == " " ? "Space" : model.keys[index]) { model.key = index; model.typeKey(model.keys[index]) }
                             .frame(maxWidth: .infinity, minHeight: 34)
+                            .foregroundStyle(.black)
                             .background(model.key == index ? HubTheme.yellow : HubTheme.panel, in: .rect(cornerRadius: 5))
                             .buttonStyle(.plain)
                     }
@@ -413,26 +457,7 @@ struct HubGameOptionsView: View {
                         if input.connected { HubButtonHint(button: "Y", action: "Save") } else { Text("Save") }
                     }
                 }
-            } else {
-                if input.connected { HubControllerHints(actions: [("Move", "Choose option"), ("A", "Open / Apply"), ("B", "Back"), ("Menu", "Sidebar")]) }
-                ForEach(model.labels.indices, id: \.self) { index in
-                    Button { model.row = index; model.activate() } label: {
-                        HStack {
-                            if input.connected && index == 0 { HubButtonHint(button: "A", action: "Play") }
-                            else { Text(model.labels[index]) }
-                            Spacer()
-                            if input.connected && model.row == index && index != 0 { HubButtonHint(button: "A", action: index == 3 || index == 4 ? "Edit" : "Apply") }
-                        }.frame(maxWidth: .infinity, minHeight: 28, alignment: .leading).padding(12)
-                            .background(model.row == index ? HubTheme.yellow : HubTheme.panel, in: .rect(cornerRadius: 8))
-                    }.buttonStyle(.plain).id(index)
-                }
-            }
-            if !model.message.isEmpty { Text(model.message).font(.callout) }
-        }.font(.system(size: 17)).padding(28).frame(maxWidth: 1100)
-            .frame(maxWidth: .infinity)
-        }.onChange(of: model.row) { _, row in proxy.scrollTo(row, anchor: .bottom) }
-        }.background(HubTheme.canvas)
-            .onExitCommand { _ = model.action("back") }
+        }.font(.system(size: 17))
     }
 }
 

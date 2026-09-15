@@ -14,6 +14,15 @@ passes `codesign --verify --deep --strict`. This is not a notarized public relea
 The original app and runtime are preserved. Development builds and the test host
 are not the user entry point. Do not remove recovery copies before final live acceptance.
 
+## Full-screen artwork options
+
+The details screen now uses edge-to-edge still artwork with directional dark
+scrims for readable text. The approved Trek title typeface is retained. Options
+are compact translucent rows in a narrow panel; A remains next to Play and B
+returns to the library. Editing remains controller accessible over the background.
+This uses a still image, not a video or an animation loop. Missing artwork falls
+back to the theme background. Native layout and navigation regression verified.
+
 ## Game details and actual ROM launch recovery
 
 X Options now opens a full-window details page with large artwork, a softened
