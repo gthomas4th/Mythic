@@ -106,7 +106,7 @@ struct ControllerLibraryView: View {
             TextField("Search games", text: $search).textFieldStyle(.roundedBorder).focused($focus, equals: .search)
                 .onSubmit { details = selectedGame != nil; focus = .browsing }
             if input.connected {
-                HubControllerHints(actions: [("Move", "Browse"), ("A", details ? "Play" : "Details"), ("X", "Options"), ("Y", "Favourites"), ("B", "Back"), ("Menu", "Sidebar")])
+                HubControllerHints(actions: [("Move", "Browse"), ("A", "Play"), ("X", "Options"), ("Y", "Favourites"), ("B", "Back"), ("Menu", "Sidebar")])
             } else { Text("↑ ↓ Browse · Return Details & Play · Escape Back").font(.system(size: 16)) }
             if details, let game = selectedGame {
                 Text(game.title).font(HubTheme.heading(36))
@@ -218,7 +218,7 @@ struct ControllerLibraryView: View {
         switch action {
         case "up": if !details { selection = max(0, selection - 1) }
         case "down": if !details { selection = min(max(0, visibleGames.count - 1), selection + 1) }
-        case "select": if details, let game = currentGame { play(game) } else { details = true }
+        case "select": if let game = currentGame { play(game) }
         case "settings": if details, detailProfile != nil { showLaunchSettings = true }
         case "back": details = false
         case "options": if let game = currentGame { HubGameOptions.shared.open(game) }
@@ -382,7 +382,7 @@ struct HubGameOptionsView: View {
                         HStack {
                             Text(model.labels[index])
                             Spacer()
-                            if input.connected && model.row == index { HubButtonHint(button: "A", action: index == 3 || index == 4 ? "Edit" : "Apply") }
+                            if input.connected && model.row == index { HubButtonHint(button: "A", action: index == 0 ? "Play" : (index == 3 || index == 4 ? "Edit" : "Apply")) }
                         }.frame(maxWidth: .infinity, minHeight: 28, alignment: .leading).padding(12)
                             .background(model.row == index ? HubTheme.yellow : HubTheme.panel, in: .rect(cornerRadius: 8))
                     }.buttonStyle(.plain)

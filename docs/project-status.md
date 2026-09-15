@@ -14,6 +14,14 @@ passes `codesign --verify --deep --strict`. This is not a notarized public relea
 The original app and runtime are preserved. Development builds and the test host
 are not the user entry point. Do not remove recovery copies before final live acceptance.
 
+## A button plays directly
+
+A invokes the same game.launch entry point as the Play button in Home, Library,
+and Controller. The Controller list no longer spends the first A press opening
+Details; X continues to open options. The controller regression intercepts launch
+at the entry point only under its explicit Debug test flag and verifies one launch
+request for the selected game, without starting games or changing play history.
+
 ## Contextual controller button prompts
 
 Connected controllers show coloured, labelled button icons in Home, Library,

@@ -130,8 +130,18 @@ import AppKit
         return _checkIfGameIsRunning(location: location, platform: platform)
     }
 
+#if DEBUG
+    @MainActor static var controllerTestLaunches: [String] = []
+#endif
     /// Launch the underlying game.
     @MainActor final func launch() async throws {
+#if DEBUG
+        // Exercise the same entry point as the Play button without launching real games.
+        if ProcessInfo.processInfo.arguments.contains("--test-controller-navigation") {
+            Game.controllerTestLaunches.append(id)
+            return
+        }
+#endif
         guard !isLaunching else { return }
         isLaunching = true
         defer { isLaunching = false }

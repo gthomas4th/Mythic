@@ -97,9 +97,13 @@ struct ContentView: View {
             if destination != .controller || sidebarFocused { failures.append("A did not enter controller library") }
             if controller.contentAction == nil { failures.append("Content handler missing") }
             if !GameDataStore.shared.displayLibrary.isEmpty {
+                let launchCount = Game.controllerTestLaunches.count
                 controllerAction("select")
+                try? await Task.sleep(for: .milliseconds(100))
+                if Game.controllerTestLaunches.count != launchCount + 1 { failures.append("Controller A did not activate Play directly") }
+                controllerAction("options")
                 controllerAction("back")
-                if sidebarFocused { failures.append("First B skipped game list") }
+                if sidebarFocused { failures.append("Options B skipped game list") }
             }
             controllerAction("back")
             if !sidebarFocused { failures.append("B did not return to sidebar") }
@@ -114,6 +118,13 @@ struct ContentView: View {
                 if sidebarFocused { failures.append("Home navigation left content") }
                 controllerAction("options")
                 if gameOptions.game == nil { failures.append("Home X did not open options") }
+                let homeGameID = gameOptions.game?.id
+                controllerAction("back")
+                let homeLaunchCount = Game.controllerTestLaunches.count
+                controllerAction("select")
+                try? await Task.sleep(for: .milliseconds(100))
+                if Game.controllerTestLaunches.count != homeLaunchCount + 1 || Game.controllerTestLaunches.last != homeGameID { failures.append("Home A did not play selected game") }
+                controllerAction("options")
                 let originalTitle = gameOptions.game?.title
                 for _ in 0..<3 { controllerAction("down") }
                 controllerAction("select")
@@ -132,7 +143,12 @@ struct ContentView: View {
                 try? await Task.sleep(for: .milliseconds(300))
                 controllerAction("options")
                 if gameOptions.game == nil { failures.append("Library X did not open options") }
+                let libraryGameID = gameOptions.game?.id
                 controllerAction("back")
+                let libraryLaunchCount = Game.controllerTestLaunches.count
+                controllerAction("select")
+                try? await Task.sleep(for: .milliseconds(100))
+                if Game.controllerTestLaunches.count != libraryLaunchCount + 1 || Game.controllerTestLaunches.last != libraryGameID { failures.append("Library A did not play selected game") }
             }
             controllerAction("back")
             if !sidebarFocused { failures.append("B did not return from content") }
