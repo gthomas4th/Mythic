@@ -105,8 +105,9 @@ struct ControllerLibraryView: View {
             }
             TextField("Search games", text: $search).textFieldStyle(.roundedBorder).focused($focus, equals: .search)
                 .onSubmit { details = selectedGame != nil; focus = .browsing }
-            Text("↑ ↓ Browse · A / Return Details & Play · B / Escape Back · Menu Sidebar · X Options · Y Favorites filter")
-                .font(.system(size: 16)).foregroundStyle(.secondary)
+            if input.connected {
+                HubControllerHints(actions: [("Move", "Browse"), ("A", details ? "Play" : "Details"), ("X", "Options"), ("Y", "Favourites"), ("B", "Back"), ("Menu", "Sidebar")])
+            } else { Text("↑ ↓ Browse · Return Details & Play · Escape Back").font(.system(size: 16)) }
             if details, let game = selectedGame {
                 Text(game.title).font(HubTheme.heading(36))
                 if let steam = game as? SteamGame, let record = steam.record {
@@ -150,6 +151,7 @@ struct ControllerLibraryView: View {
                                         Image(systemName: game.isFavourited ? "star.fill" : "gamecontroller")
                                         Text(game.title).font(.system(size: 21, weight: .medium))
                                         Spacer()
+                                        if input.connected && input.contentFocused && selection == position { HubButtonHint(button: "X", action: "Options") }
                                         HubGameBadges(game: game)
                                     }.padding(20).frame(maxWidth: .infinity)
                                         .background(selection == position ? Color.accentColor.opacity(0.25) : (theme == "lcars" ? HubTheme.panel : Color.secondary.opacity(0.08)), in: .rect(cornerRadius: 12))
@@ -348,13 +350,14 @@ struct ControllerLibraryView: View {
 
 struct HubGameOptionsView: View {
     @Bindable var model = HubGameOptions.shared
+    @State private var input = HubControllerInput.shared
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             Text(model.game?.title ?? "Game options").font(HubTheme.heading(27)).lineLimit(2)
             if let editor = model.editor {
                 Text("Edit \(editor)").font(.title2)
                 TextField(editor, text: $model.draft).textFieldStyle(.roundedBorder)
-                Text("D-pad / stick Choose · A Type · X Delete · Y Save · B Cancel").font(.callout)
+                if input.connected { HubControllerHints(actions: [("Move", "Choose key"), ("A", "Type"), ("X", "Delete"), ("Y", "Save"), ("B", "Cancel")]) }
                 LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 10), spacing: 8) {
                     ForEach(model.keys.indices, id: \.self) { index in
                         Button(model.keys[index] == " " ? "Space" : model.keys[index]) { model.key = index; model.typeKey(model.keys[index]) }
@@ -363,12 +366,24 @@ struct HubGameOptionsView: View {
                             .buttonStyle(.plain)
                     }
                 }
-                HStack { Button("Cancel") { model.editor = nil }; Spacer(); Button("Save") { model.saveEdit() } }
+                HStack {
+                    Button { model.editor = nil } label: {
+                        if input.connected { HubButtonHint(button: "B", action: "Cancel") } else { Text("Cancel") }
+                    }
+                    Spacer()
+                    Button { model.saveEdit() } label: {
+                        if input.connected { HubButtonHint(button: "Y", action: "Save") } else { Text("Save") }
+                    }
+                }
             } else {
-                Text("↑ ↓ Choose · A Apply · B Back · Menu Sidebar").font(.callout)
+                if input.connected { HubControllerHints(actions: [("Move", "Choose option"), ("A", "Open / Apply"), ("B", "Back"), ("Menu", "Sidebar")]) }
                 ForEach(model.labels.indices, id: \.self) { index in
                     Button { model.row = index; model.activate() } label: {
-                        Text(model.labels[index]).frame(maxWidth: .infinity, alignment: .leading).padding(12)
+                        HStack {
+                            Text(model.labels[index])
+                            Spacer()
+                            if input.connected && model.row == index { HubButtonHint(button: "A", action: index == 3 || index == 4 ? "Edit" : "Apply") }
+                        }.frame(maxWidth: .infinity, minHeight: 28, alignment: .leading).padding(12)
                             .background(model.row == index ? HubTheme.yellow : HubTheme.panel, in: .rect(cornerRadius: 8))
                     }.buttonStyle(.plain)
                 }
@@ -376,5 +391,63 @@ struct HubGameOptionsView: View {
             if !model.message.isEmpty { Text(model.message).font(.callout) }
         }.font(.system(size: 17)).padding(24).frame(width: 680).background(HubTheme.canvas)
             .onExitCommand { _ = model.action("back") }
+    }
+}
+
+
+/// Button letters match the controller mappings; colour is supplementary to the label.
+struct HubButtonHint: View {
+    let button: String
+    let action: String
+    private var tint: Color {
+        switch button {
+        case "A": HubTheme.green
+        case "B": Color(red: 0.85, green: 0.25, blue: 0.25)
+        case "X": HubTheme.blue
+        case "Y": HubTheme.yellow
+        default: HubTheme.panel
+        }
+    }
+    var body: some View {
+        HStack(spacing: 7) {
+            Group {
+                if button == "Move" { Image(systemName: "dpad.fill") }
+                else if button == "Menu" { Image(systemName: "line.3.horizontal") }
+                else { Text(button).fontWeight(.bold) }
+            }
+            .font(.system(size: 16)).frame(width: 28, height: 28)
+            .foregroundStyle(button == "X" || button == "B" ? Color.white : Color.black)
+            .background(tint, in: Circle())
+            .overlay(Circle().stroke(Color.black.opacity(0.25), lineWidth: 1))
+            if !action.isEmpty { Text(action).font(.system(size: 16, weight: .medium)).fixedSize() }
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("\(button == "Move" ? "D-pad or left stick" : button) button: \(action)")
+    }
+}
+
+struct HubControllerHints: View {
+    let actions: [(String, String)]
+    var body: some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: 16) { hints }
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), alignment: .leading)], alignment: .leading, spacing: 10) { hints }
+        }
+    }
+    private var hints: some View {
+        ForEach(actions.indices, id: \.self) { index in
+            HubButtonHint(button: actions[index].0, action: actions[index].1)
+        }
+    }
+}
+
+struct HubSelectedGameHint: View {
+    let visible: Bool
+    var body: some View {
+        if visible {
+            HubButtonHint(button: "X", action: "Options")
+                .padding(8).background(HubTheme.canvas, in: Capsule()).padding(8)
+                .allowsHitTesting(false)
+        }
     }
 }

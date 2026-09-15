@@ -62,9 +62,11 @@ struct GameListView: View {
     @ViewBuilder private func libraryCard(_ game: Game, selectedID: String?) -> some View {
         let outline = RoundedRectangle(cornerRadius: 12).stroke(focusColor(game, selectedID: selectedID), lineWidth: 3)
         if layout == .grid {
-            GameCard(game: .constant(game)).padding(4).overlay(outline).id(game.id)
+            GameCard(game: .constant(game)).padding(4).overlay(outline)
+                .overlay(alignment: .topTrailing) { HubSelectedGameHint(visible: input.connected && input.contentFocused && selectedID == game.id) }.id(game.id)
         } else {
-            ListGameCard(game: .constant(game)).padding(4).overlay(outline).id(game.id)
+            ListGameCard(game: .constant(game)).padding(4).overlay(outline)
+                .overlay(alignment: .topTrailing) { HubSelectedGameHint(visible: input.connected && input.contentFocused && selectedID == game.id) }.id(game.id)
         }
     }
     var body: some View {
@@ -74,7 +76,7 @@ struct GameListView: View {
             HubSectionBanner(title: "Your library", subtitle: "\(displayedGames.count) games · Pick your next adventure")
                 .padding(.horizontal, 28).padding(.vertical, 16)
             if input.connected {
-                Text("D-pad / stick Move · A Play · X Options · Y System · B Sidebar").font(.callout).padding(.bottom, 12)
+                HubControllerHints(actions: [("Move", "Move"), ("A", "Play"), ("X", "Options"), ("Y", "System"), ("B", "Sidebar")]).padding(.bottom, 12)
             }
             if !launchMessage.isEmpty { Text(launchMessage).padding(8) }
             HStack(spacing: 16) {

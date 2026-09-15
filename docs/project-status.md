@@ -14,6 +14,15 @@ passes `codesign --verify --deep --strict`. This is not a notarized public relea
 The original app and runtime are preserved. Development builds and the test host
 are not the user entry point. Do not remove recovery copies before final live acceptance.
 
+## Contextual controller button prompts
+
+Connected controllers show coloured, labelled button icons in Home, Library,
+Controller, sidebar and game options. Selected games show X Options directly on
+the item; the selected option shows A, and editor Cancel/Save show B/Y. Hints
+hide when no controller is connected and wrap on narrow layouts. Native options
+and keyboard screenshots were checked; the existing navigation/edit regression
+passes with a controller detected.
+
 ## Home and game options controller follow-up
 
 Home supports row/game movement with the D-pad or left stick, A to play, X for

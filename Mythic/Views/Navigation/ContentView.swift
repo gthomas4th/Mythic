@@ -261,8 +261,15 @@ struct ContentView: View {
                         }
                     }
                     if controller.connected {
-                        Text(sidebarFocused ? "↑ ↓ Choose · A Open" : "B Back · Menu Sidebar")
-                            .font(.system(size: 14, weight: .medium)).padding(.vertical, 8)
+                        VStack(alignment: .leading, spacing: 8) {
+                            if sidebarFocused {
+                                HubButtonHint(button: "Move", action: "Choose")
+                                HubButtonHint(button: "A", action: "Open")
+                            } else {
+                                HubButtonHint(button: "B", action: "Back")
+                                HubButtonHint(button: "Menu", action: "Sidebar")
+                            }
+                        }.padding(.vertical, 8)
                     }
                     Spacer(minLength: 12)
                     Button { SupportWindowController.show() } label: {

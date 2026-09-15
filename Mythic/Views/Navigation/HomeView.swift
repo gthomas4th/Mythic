@@ -74,7 +74,7 @@ struct HomeView: View {
             ScrollView {
                 HubSectionBanner(title: "Welcome back", subtitle: "Choose a game and make yourself at home.").padding(.horizontal, 28).padding(.top, 20)
 
-                if input.connected { Text("↑ ↓ Rows · ← → Games · A Play · X Options · Y Favourite · B Sidebar").font(.system(size: 15)).padding(.horizontal, 28) }
+                if input.connected { HubControllerHints(actions: [("Move", "Rows / Games"), ("A", "Play"), ("X", "Options"), ("Y", "Favourite"), ("B", "Sidebar")]).padding(.horizontal, 28) }
                 if !launchMessage.isEmpty { Text(launchMessage).padding(.horizontal, 28) }
                 if let recentGame = gameDataStore.recent {
                     HStack(spacing: 0) {
@@ -95,6 +95,7 @@ struct HomeView: View {
                     }
                     .frame(height: 300)
                     .overlay(RoundedRectangle(cornerRadius: 12).stroke(input.connected && input.contentFocused && activeShelf == "Continue" ? HubTheme.yellow : .clear, lineWidth: 3))
+                    .overlay(alignment: .topTrailing) { HubSelectedGameHint(visible: input.connected && input.contentFocused && activeShelf == "Continue") }
                     .id("Continue")
                     .padding(.horizontal, 28).padding(.top, 12)
                 } else {
@@ -187,6 +188,7 @@ struct HomeView: View {
                             GameCard(game: .constant(game)).frame(width: max(300, gameCardSize))
                                 .padding(4)
                                 .overlay(RoundedRectangle(cornerRadius: 12).stroke(selected && selectedID == game.id ? HubTheme.yellow : .clear, lineWidth: 3))
+                                .overlay(alignment: .topTrailing) { HubSelectedGameHint(visible: selected && selectedID == game.id) }
                                 .id(game.id)
                         }
                     }
