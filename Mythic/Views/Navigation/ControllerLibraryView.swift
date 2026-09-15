@@ -1,4 +1,5 @@
 import SwiftUI
+import AVKit
 @preconcurrency import GameController
 
 @MainActor @Observable final class HubControllerInput {
@@ -245,6 +246,9 @@ struct ControllerLibraryView: View {
 
 @MainActor @Observable final class HubGameOptions {
     static let shared = HubGameOptions()
+    var motionEnabled = UserDefaults.standard.object(forKey: "hubMotionBackgrounds") as? Bool ?? true {
+        didSet { UserDefaults.standard.set(motionEnabled, forKey: "hubMotionBackgrounds") }
+    }
     var game: Game?
     var row = 0
     var editor: String?
@@ -295,6 +299,7 @@ struct ControllerLibraryView: View {
             return true
         }
         switch action {
+        case "filter": motionEnabled.toggle()
         case "back": self.game = nil
         case "up": row = max(0, row - 1)
         case "down": row = min(labels.count - 1, row + 1)
@@ -352,6 +357,7 @@ struct HubGameOptionsView: View {
     @Bindable var model = HubGameOptions.shared
     @State private var input = HubControllerInput.shared
     @State private var imageEmpty = true
+    @State private var scene = HubGameScene()
     var body: some View {
         GeometryReader { geometry in
             ZStack {
@@ -365,6 +371,12 @@ struct HubGameOptionsView: View {
                                     else { Label("Back", systemImage: "chevron.left") }
                                 }.buttonStyle(.plain)
                                 Spacer()
+                                if scene.hasVideo {
+                                    Button { model.motionEnabled.toggle() } label: {
+                                        if input.connected { HubButtonHint(button: "Y", action: model.motionEnabled ? "Still image" : "Moving scene") }
+                                        else { Label(model.motionEnabled ? "Still image" : "Moving scene", systemImage: "play.rectangle") }
+                                    }.buttonStyle(.plain)
+                                }
                                 if let game = model.game {
                                     GameCard.LegacyMenuView(game: .constant(game)).help("Advanced settings and ROM downloads")
                                 }
@@ -407,14 +419,31 @@ struct HubGameOptionsView: View {
                 }
             }.foregroundStyle(.white)
         }.environment(\.colorScheme, .dark)
+            .task(id: model.game?.id) {
+                await scene.load(model.game)
+                updateScene()
+            }
+            .onChange(of: model.motionEnabled) { _, _ in updateScene() }
+            .onChange(of: model.editor) { _, _ in updateScene() }
+            .onChange(of: model.game?.isLaunching) { _, _ in updateScene() }
+            .onReceive(NotificationCenter.default.publisher(for: NSApplication.didResignActiveNotification)) { _ in scene.setPlaying(false) }
+            .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in updateScene() }
+            .onDisappear { scene.stop() }
             .onExitCommand { _ = model.action("back") }
+    }
+    private func updateScene() {
+        scene.setPlaying(model.motionEnabled && model.editor == nil && model.game?.isLaunching != true && NSApp.isActive)
     }
     private var backdrop: some View {
         GeometryReader { geometry in
             ZStack {
                 HubTheme.blue
-                if let game = model.game, let url = game.horizontalImageURL ?? game.verticalImageURL {
-                    GameImageCard(game: game, url: url, isImageEmpty: $imageEmpty, withBlur: false, contentMode: .fill)
+                if let game = model.game, let url = scene.poster ?? game.horizontalImageURL ?? game.verticalImageURL {
+                    GameImageCard(game: game, url: url, isImageEmpty: $imageEmpty, withBlur: false,
+                        contentMode: scene.poster != nil || game.horizontalImageURL != nil ? .fill : .fit)
+                }
+                if let player = scene.player, model.motionEnabled {
+                    HubScenePlayer(player: player).allowsHitTesting(false)
                 }
                 LinearGradient(colors: [.black.opacity(0.7), .black.opacity(0.2), .clear], startPoint: .leading, endPoint: .trailing)
                 LinearGradient(colors: [.black.opacity(0.15), .clear, .black.opacity(0.75)], startPoint: .top, endPoint: .bottom)
@@ -505,5 +534,95 @@ struct HubControllerHints: View {
         ForEach(actions.indices, id: \.self) { index in
             HubButtonHint(button: actions[index].0, action: actions[index].1)
         }
+    }
+}
+
+
+@MainActor @Observable final class HubGameScene {
+    var poster: URL?
+    var player: AVPlayer?
+    var hasVideo = false
+    private var videoURL: URL?
+    @ObservationIgnored private var endObserver: NSObjectProtocol?
+    @ObservationIgnored private var playing = false
+    @ObservationIgnored private var generation = UUID()
+    private static var cache: [String: (URL?, URL?)] = [:]
+    private static func mediaURL(_ value: String?) -> URL? {
+        guard let value, let url = URL(string: value), url.scheme == "https",
+              let host = url.host, host.hasSuffix(".steamstatic.com") else { return nil }
+        return url
+    }
+    func load(_ game: Game?) async {
+        stop(); poster = nil; hasVideo = false; videoURL = nil
+        let token = UUID(); generation = token
+        guard let steam = game as? SteamGame, let appID = steam.record?.id.externalID,
+              UInt32(appID) != nil else { return }
+        if let cached = Self.cache[appID] {
+            poster = cached.0; videoURL = cached.1; hasVideo = videoURL != nil; return
+        }
+        do {
+            let url = URL(string: "https://store.steampowered.com/api/appdetails?appids=\(appID)&l=english")!
+            var request = URLRequest(url: url); request.timeoutInterval = 15
+            let (data, response) = try await URLSession.shared.data(for: request)
+            guard !Task.isCancelled, generation == token,
+                  (response as? HTTPURLResponse)?.statusCode == 200,
+                  let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+                  let result = json[appID] as? [String: Any], let info = result["data"] as? [String: Any] else { return }
+            let shots = info["screenshots"] as? [[String: Any]]
+            let movies = info["movies"] as? [[String: Any]]
+            poster = Self.mediaURL(shots?.first?["path_full"] as? String)
+            videoURL = movies?.compactMap { Self.mediaURL($0["hls_h264"] as? String) ?? Self.mediaURL(($0["mp4"] as? [String: String])?["480"]) }.first
+            hasVideo = videoURL != nil
+            Self.cache[appID] = (poster, videoURL)
+        } catch { /* Keep the existing artwork when offline. */ }
+    }
+    func setPlaying(_ enabled: Bool) {
+        playing = enabled
+        guard enabled, let videoURL else { player?.pause(); return }
+        if player == nil {
+            let item = AVPlayerItem(url: videoURL)
+            item.preferredMaximumResolution = CGSize(width: 1280, height: 720)
+            item.preferredPeakBitRate = 2_500_000
+            item.preferredForwardBufferDuration = 5
+            let created = AVPlayer(playerItem: item); created.isMuted = true
+            player = created
+            endObserver = NotificationCenter.default.addObserver(forName: .AVPlayerItemDidPlayToEndTime, object: item, queue: .main) { [weak self] _ in
+                Task { @MainActor in
+                    guard let self, self.playing else { return }
+                    await self.player?.seek(to: .zero)
+                    if self.playing { self.player?.play() }
+                }
+            }
+        }
+        player?.play()
+    }
+    func stop() {
+        generation = UUID(); playing = false
+        player?.pause(); player?.replaceCurrentItem(with: nil); player = nil
+        if let endObserver { NotificationCenter.default.removeObserver(endObserver) }
+        endObserver = nil
+    }
+}
+
+struct HubScenePlayer: NSViewRepresentable {
+    let player: AVPlayer
+    final class Coordinator {
+        var readiness: NSKeyValueObservation?
+    }
+    func makeCoordinator() -> Coordinator { Coordinator() }
+    func makeNSView(context: Context) -> AVPlayerView {
+        let view = AVPlayerView()
+        view.controlsStyle = .none
+        view.alphaValue = 0
+        context.coordinator.readiness = view.observe(\.isReadyForDisplay, options: [.initial, .new]) { view, _ in
+            DispatchQueue.main.async { view.alphaValue = view.isReadyForDisplay ? 1 : 0 }
+        }
+        view.videoGravity = .resizeAspectFill
+        view.player = player
+        return view
+    }
+    func updateNSView(_ view: AVPlayerView, context: Context) { view.player = player }
+    static func dismantleNSView(_ view: AVPlayerView, coordinator: Coordinator) {
+        coordinator.readiness?.invalidate(); coordinator.readiness = nil; view.player = nil
     }
 }

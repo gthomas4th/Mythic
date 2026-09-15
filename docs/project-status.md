@@ -14,6 +14,20 @@ passes `codesign --verify --deep --strict`. This is not a notarized public relea
 The original app and runtime are preserved. Development builds and the test host
 are not the user entry point. Do not remove recovery copies before final live acceptance.
 
+## Landscape media and moving scenes
+
+Steam details fetch official landscape screenshots and trailer metadata from the
+Steam store for the selected app ID. Rebirth's HLS trailer and screenshot were
+visually verified. Video is muted, loops, prefers 720p / 2.5 Mb/s, pauses while
+editing or inactive, and releases its player on leaving details. Y toggles video
+and the landscape still; preference persists. Artwork stays visible while video
+loads. The observed app process was about 6.4% CPU during the live scene check;
+this is a spot check, not a sustained performance benchmark.
+
+Other systems retain existing art without enlarging a portrait cover to fill the
+screen. Automatic scene discovery currently applies to Steam titles only. No ROM
+files or full trailer files are downloaded as local library copies.
+
 ## Full-screen artwork options
 
 The details screen now uses edge-to-edge still artwork with directional dark
