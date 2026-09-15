@@ -398,8 +398,8 @@ struct HubGameOptionsView: View {
                                     }.font(.system(size: 15)).foregroundStyle(.white.opacity(0.8))
                                 }
                                 VStack(alignment: .leading, spacing: 6) {
-                                    ForEach(model.labels.indices, id: \.self) { index in
-                                        option(index).id(index)
+                                    ForEach(Array(model.labels.enumerated()), id: \.offset) { item in
+                                        option(item.offset, label: item.element).id(item.offset)
                                     }
                                 }.padding(10).frame(maxWidth: 390)
                                     .background(.black.opacity(0.28), in: .rect(cornerRadius: 16))
@@ -448,11 +448,11 @@ struct HubGameOptionsView: View {
             }.frame(width: geometry.size.width, height: geometry.size.height).clipped()
         }.allowsHitTesting(false).accessibilityHidden(true)
     }
-    private func option(_ index: Int) -> some View {
+    private func option(_ index: Int, label: String) -> some View {
         Button { model.row = index; model.activate() } label: {
             HStack(spacing: 12) {
                 if input.connected && index == 0 { HubButtonHint(button: "A", action: "Play") }
-                else { Text(model.labels[index]).font(.system(size: 17, weight: .medium)) }
+                else { Text(label).font(.system(size: 17, weight: .medium)) }
                 Spacer(minLength: 8)
                 if input.connected && model.row == index && index != 0 { HubButtonHint(button: "A", action: "") }
             }.frame(minHeight: 28).padding(.horizontal, 14).padding(.vertical, 7)

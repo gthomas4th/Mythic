@@ -154,6 +154,17 @@ struct ContentView: View {
             }
             controllerAction("back")
             if !sidebarFocused { failures.append("B did not return from content") }
+            // Allow SwiftUI to render each row before dismissal. Immediate state-only
+            // open/close tests cannot catch a deferred row reading a cleared array.
+            if let game = GameDataStore.shared.displayLibrary.first {
+                for index in 0..<6 {
+                    gameOptions.open(game); gameOptions.row = index
+                    try? await Task.sleep(for: .milliseconds(180))
+                    if index == 5 { gameOptions.activate() } else { controllerAction("back") }
+                    try? await Task.sleep(for: .milliseconds(120))
+                    if gameOptions.game != nil { failures.append("Options dismissal failed at row \(index)") }
+                }
+            }
             let editFile = FileManager.default.temporaryDirectory.appendingPathComponent("gamehub-edit-test-" + UUID().uuidString + ".json")
             let sample = LocalGame(id: "controller-test", title: "Original", installationState: .uninstalled)
             let editTest = HubGameOptions(file: editFile)

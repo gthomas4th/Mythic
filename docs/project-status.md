@@ -14,6 +14,14 @@ passes `codesign --verify --deep --strict`. This is not a notarized public relea
 The original app and runtime are preserved. Development builds and the test host
 are not the user entry point. Do not remove recovery copies before final live acceptance.
 
+## Options dismissal crash fix
+
+Two owner crash reports identify Array.subscript in HubGameOptionsView.option.
+Dismissing details clears the model's labels before SwiftUI finishes rendering old
+rows. Rows now capture their label values from enumerated data instead of indexing
+the live array during teardown. The regression waits for each row to render, then
+exercises Back and Close across all six selected rows.
+
 ## Landscape media and moving scenes
 
 Steam details fetch official landscape screenshots and trailer metadata from the
