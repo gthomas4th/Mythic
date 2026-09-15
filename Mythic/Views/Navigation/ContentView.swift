@@ -28,12 +28,14 @@ struct ContentView: View {
     @AppStorage("hubTheme") private var theme = "lcars"
     @State private var destination = HubDestination.home
     @State private var controller = HubControllerInput.shared
+    @State private var gameOptions = HubGameOptions.shared
     @State private var sidebarFocused = true
     @State private var sidebarSelection = HubDestination.home
     private var destinations: [HubDestination] {
         HubDestination.allCases.filter { $0 != .containers && ($0 != .operations || !operationManager.queue.isEmpty) }
     }
     private func controllerAction(_ action: String) {
+        if gameOptions.action(action) { return }
         if action == "settings" {
             _ = controller.contentAction?("sidebar")
             sidebarFocused = true; sidebarSelection = destination; return
@@ -75,7 +77,9 @@ struct ContentView: View {
             }
         }
         .modifier(HubThemeModifier())
-        .onAppear { controller.onAction = controllerAction; controller.start() }
+        .sheet(item: $gameOptions.game) { _ in HubGameOptionsView() }
+        .onChange(of: sidebarFocused) { _, value in controller.contentFocused = !value }
+        .onAppear { controller.contentFocused = !sidebarFocused; controller.onAction = controllerAction; controller.start() }
         .onDisappear { controller.stop(); controller.onAction = nil }
 #if DEBUG
         .task {
@@ -104,8 +108,44 @@ struct ContentView: View {
             if !sidebarFocused { failures.append("Menu did not re-enter sidebar") }
             sidebarSelection = .home; controllerAction("select")
             try? await Task.sleep(for: .milliseconds(300))
+            if !GameDataStore.shared.displayLibrary.isEmpty {
+                controllerAction("down")
+                controllerAction("right")
+                if sidebarFocused { failures.append("Home navigation left content") }
+                controllerAction("options")
+                if gameOptions.game == nil { failures.append("Home X did not open options") }
+                let originalTitle = gameOptions.game?.title
+                for _ in 0..<3 { controllerAction("down") }
+                controllerAction("select")
+                if gameOptions.editor != "Title" { failures.append("Title editor did not open") }
+                let originalDraft = gameOptions.draft
+                controllerAction("select")
+                if gameOptions.draft != originalDraft + "a" { failures.append("Controller keyboard did not type") }
+                controllerAction("back")
+                if gameOptions.editor != nil || gameOptions.game?.title != originalTitle { failures.append("Editor cancel failed") }
+                controllerAction("back")
+                if gameOptions.game != nil || sidebarFocused { failures.append("Options B did not return Home") }
+                controllerAction("options")
+                controllerAction("settings")
+                if gameOptions.game != nil || !sidebarFocused { failures.append("Options Menu did not return sidebar") }
+                sidebarSelection = .library; controllerAction("select")
+                try? await Task.sleep(for: .milliseconds(300))
+                controllerAction("options")
+                if gameOptions.game == nil { failures.append("Library X did not open options") }
+                controllerAction("back")
+            }
             controllerAction("back")
-            if !sidebarFocused { failures.append("B did not return from Home") }
+            if !sidebarFocused { failures.append("B did not return from content") }
+            let editFile = FileManager.default.temporaryDirectory.appendingPathComponent("gamehub-edit-test-" + UUID().uuidString + ".json")
+            let sample = LocalGame(id: "controller-test", title: "Original", installationState: .uninstalled)
+            let editTest = HubGameOptions(file: editFile)
+            editTest.open(sample); editTest.editor = "Title"; editTest.draft = "Controller title"; editTest.saveEdit()
+            let restored = LocalGame(id: "controller-test", title: "Original", installationState: .uninstalled)
+            HubGameOptions(file: editFile).apply(to: restored)
+            if restored.title != "Controller title" { failures.append("Title edit did not survive reload") }
+            editTest.editor = "Artwork URL"; editTest.draft = "file:///private/test"; editTest.saveEdit()
+            if editTest.editor == nil || sample._verticalImageURL != nil { failures.append("Invalid artwork URL was accepted") }
+            try? FileManager.default.removeItem(at: editFile)
             let started = Date()
             for _ in 0..<100 { _ = GameDataStore.shared.displayLibrary.count }
             let report: [String: Any] = ["passed": failures.isEmpty, "failures": failures,

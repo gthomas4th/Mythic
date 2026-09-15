@@ -14,6 +14,22 @@ passes `codesign --verify --deep --strict`. This is not a notarized public relea
 The original app and runtime are preserved. Development builds and the test host
 are not the user entry point. Do not remove recovery copies before final live acceptance.
 
+## Home and game options controller follow-up
+
+Home supports row/game movement with the D-pad or left stick, A to play, X for
+options, Y for favourite, and B/Menu to reach the sidebar. Library grid/list uses
+controller selection with automatic scrolling; Y cycles system filters. Home,
+Library and Controller share X options for play, favourite, configured location,
+title and artwork URL. Editing includes an on-screen keyboard (A type, X delete,
+Y save, B cancel). Display overrides persist separately from source game files.
+Advanced legacy settings and filesystem pickers still use their native controls.
+
+Screen handlers now have ownership: an outgoing screen cannot erase the incoming
+screen's controller handler. The in-app regression covers page transitions, Home
+movement, options, editing/cancel, and sidebar re-entry; the connected controller
+is detected. Native options/keyboard layout is visually inspected. Physical button
+feel is not inferred from simulated navigation actions.
+
 ## Controller navigation and NAS-related UI stalls
 
 Controller input belongs to the app shell, rather than only the Controller screen.

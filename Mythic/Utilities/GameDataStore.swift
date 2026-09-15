@@ -73,7 +73,7 @@ import OSLog
         do {
             try catalog?.replaceGameDetails(encodedLibrary())
             importLegacyCatalog()
-            for game in library { rememberFirstSeen(for: game) }
+            for game in library { HubGameOptions.shared.apply(to: game); rememberFirstSeen(for: game) }
         } catch { persistenceError = "Library changes could not be saved. The previous catalog snapshot is preserved." }
     }
 
@@ -127,6 +127,7 @@ import OSLog
         } catch { persistenceError = "The existing library could not be imported. Its original data is preserved." }
     }
     func restorePreferences(for game: Game) {
+        HubGameOptions.shared.apply(to: game)
         rememberFirstSeen(for: game)
         if let saved = try? catalog?.preference(for: identity(for: game)) {
             game.isFavourited = saved.favorite; game.lastLaunched = saved.lastPlayed
@@ -181,6 +182,7 @@ import OSLog
                     game.lastLaunched = old.lastLaunched
                 }
                 rememberFirstSeen(for: game)
+                HubGameOptions.shared.apply(to: game)
                 refreshed.insert(game)
             }
             discoveredGames = refreshed

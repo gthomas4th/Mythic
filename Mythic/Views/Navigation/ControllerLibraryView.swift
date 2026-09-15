@@ -4,7 +4,16 @@ import SwiftUI
 @MainActor @Observable final class HubControllerInput {
     static let shared = HubControllerInput()
     var connected = false
+    var contentFocused = false
     var contentAction: ((String) -> Bool)?
+    private(set) var contentOwner = ""
+    func setContent(_ owner: String, action: @escaping (String) -> Bool) {
+        contentOwner = owner; contentAction = action
+    }
+    func clearContent(_ owner: String) {
+        guard contentOwner == owner else { return }
+        contentOwner = ""; contentAction = nil
+    }
     private var stickDirection: String?
     private var stickTask: Task<Void, Never>?
     var onAction: ((String) -> Void)?
@@ -40,7 +49,7 @@ import SwiftUI
                 Task { @MainActor in self?.moveStick(direction) }
             }
             for (button, action) in [(pad.dpad.up, "up"), (pad.dpad.down, "down"), (pad.dpad.left, "left"),
-                (pad.dpad.right, "right"), (pad.buttonA, "select"), (pad.buttonB, "back"), (pad.buttonX, "favorite"), (pad.buttonY, "filter"), (pad.buttonMenu, "settings")] {
+                (pad.dpad.right, "right"), (pad.buttonA, "select"), (pad.buttonB, "back"), (pad.buttonX, "options"), (pad.buttonY, "filter"), (pad.buttonMenu, "settings")] {
                 button.pressedChangedHandler = { [weak self] _, _, pressed in
                     guard pressed else { return }
                     Task { @MainActor in
@@ -96,7 +105,7 @@ struct ControllerLibraryView: View {
             }
             TextField("Search games", text: $search).textFieldStyle(.roundedBorder).focused($focus, equals: .search)
                 .onSubmit { details = selectedGame != nil; focus = .browsing }
-            Text("↑ ↓ Browse · A / Return Details & Play · B / Escape Back · Menu Sidebar · X Favorite · Y Favorites filter")
+            Text("↑ ↓ Browse · A / Return Details & Play · B / Escape Back · Menu Sidebar · X Options · Y Favorites filter")
                 .font(.system(size: 16)).foregroundStyle(.secondary)
             if details, let game = selectedGame {
                 Text(game.title).font(HubTheme.heading(36))
@@ -166,7 +175,7 @@ struct ControllerLibraryView: View {
             if focus == .search { details = selectedGame != nil; focus = .browsing } else { action("select") }
             return .handled
         }
-        .onKeyPress("x") { guard focus != .search else { return .ignored }; action("favorite"); return .handled }
+        .onKeyPress("x") { guard focus != .search else { return .ignored }; action("options"); return .handled }
         .onKeyPress("s") { guard focus != .search, details else { return .ignored }; action("settings"); return .handled }
         .onKeyPress("y") { guard focus != .search else { return .ignored }; action("filter"); return .handled }
         .onExitCommand { input.onAction?("back") }
@@ -175,14 +184,14 @@ struct ControllerLibraryView: View {
             LaunchSettingsView(initialProfileID: detailProfile?.profileID)
         }
         .onAppear {
-            input.contentAction = { command in
+            input.setContent("controller") { command in
                 if command == "sidebar" { showLaunchSettings = false; return true }
                 if command == "back" && !details && !showLaunchSettings { return false }
                 action(command); return true
             }
             focus = .browsing
         }
-        .onDisappear { input.contentAction = nil }
+        .onDisappear { input.clearContent("controller") }
     }
     private func displayedTarget(for game: SteamGame, record: GameRecord) -> LaunchTarget? {
         game.selectedLaunchTarget
@@ -210,6 +219,7 @@ struct ControllerLibraryView: View {
         case "select": if details, let game = currentGame { play(game) } else { details = true }
         case "settings": if details, detailProfile != nil { showLaunchSettings = true }
         case "back": details = false
+        case "options": if let game = currentGame { HubGameOptions.shared.open(game) }
         case "favorite": if let game = currentGame { game.isFavourited.toggle(); GameDataStore.shared.savePreferences(for: game) }
         case "filter": favoritesOnly.toggle(); selection = 0; details = false
         case "left", "right":
@@ -227,5 +237,144 @@ struct ControllerLibraryView: View {
         Task {
             do { try await game.launch(); message = "" } catch { message = error.localizedDescription }
         }
+    }
+}
+
+
+@MainActor @Observable final class HubGameOptions {
+    static let shared = HubGameOptions()
+    var game: Game?
+    var row = 0
+    var editor: String?
+    var draft = ""
+    var key = 0
+    var message = ""
+    private let file: URL
+    private var edits: [String: [String: String]] = [:]
+    let keys = Array("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789:/.-_?=&%+# ").map(String.init) + ["⌫", "Clear"]
+    init(file: URL = GameHubRuntime.support.appendingPathComponent("game-display-edits.json")) {
+        self.file = file
+        if let data = try? Data(contentsOf: file), let saved = try? JSONDecoder().decode([String: [String: String]].self, from: data) { edits = saved }
+    }
+    private func identity(_ game: Game) -> String {
+        let provider: String
+        switch game.storefront {
+        case .steam: provider = "steam"
+        case .epicGames: provider = "epic"
+        default: provider = "local"
+        }
+        return "\(provider):\(game.id)"
+    }
+    func apply(to game: Game) {
+        guard let saved = edits[identity(game)] else { return }
+        if let title = saved["Title"] { game.title = title }
+        if let artwork = saved["Artwork URL"] { game._verticalImageURL = URL(string: artwork) }
+    }
+    func open(_ game: Game) { self.game = game; row = 0; editor = nil; message = "" }
+    var labels: [String] {
+        guard let game else { return [] }
+        return ["Play", game.isFavourited ? "Remove favourite" : "Add favourite", "Play location: \(game.locationLabel ?? "Unavailable")", "Edit title", "Edit artwork URL", "Close"]
+    }
+    func action(_ action: String) -> Bool {
+        guard let game else { return false }
+        if action == "settings" || action == "sidebar" { self.game = nil; return false }
+        if editor != nil {
+            switch action {
+            case "back": editor = nil
+            case "up": key = max(0, key - 10)
+            case "down": key = min(keys.count - 1, key + 10)
+            case "left": key = max(0, key - 1)
+            case "right": key = min(keys.count - 1, key + 1)
+            case "select": typeKey(keys[key])
+            case "options": if !draft.isEmpty { draft.removeLast() }
+            case "filter": saveEdit()
+            default: break
+            }
+            return true
+        }
+        switch action {
+        case "back": self.game = nil
+        case "up": row = max(0, row - 1)
+        case "down": row = min(labels.count - 1, row + 1)
+        case "left", "right": if row == 2 { changeLocation(game) }
+        case "select": activate()
+        default: break
+        }
+        return true
+    }
+    func typeKey(_ character: String) {
+        if character == "Clear" { draft = "" }
+        else if character == "⌫" { if !draft.isEmpty { draft.removeLast() } }
+        else { draft += character }
+    }
+    func activate() {
+        guard let game else { return }
+        switch row {
+        case 0:
+            guard game.canPlayFromLocation else { message = "This game is unavailable at its selected location."; return }
+            Task { do { try await game.launch(); self.game = nil } catch { message = error.localizedDescription } }
+        case 1: game.isFavourited.toggle(); GameDataStore.shared.savePreferences(for: game)
+        case 2: changeLocation(game)
+        case 3: editor = "Title"; draft = game.title; key = 0
+        case 4: editor = "Artwork URL"; draft = game._verticalImageURL?.absoluteString ?? ""; key = 0
+        default: self.game = nil
+        }
+    }
+    private func changeLocation(_ game: Game) {
+        if let steam = game as? SteamGame, let targets = steam.record?.launchTargets, targets.count > 1 {
+            let index = targets.firstIndex { $0.id == steam.selectedLaunchTarget?.id } ?? 0
+            steam.preferredTargetID = targets[(index + 1) % targets.count].id
+            GameDataStore.shared.savePreferences(for: steam)
+        } else if let copy = ROMLibrary.shared.localCopies[game.id] {
+            ROMLibrary.shared.selectLocal(!copy.selected, gameID: game.id)
+        } else { message = "This game has one configured play location." }
+    }
+    func saveEdit() {
+        guard let game, let editor else { return }
+        let value = draft.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !value.isEmpty else { message = "Enter a value before saving."; return }
+        if editor == "Artwork URL" {
+            guard let url = URL(string: value), ["https", "http"].contains(url.scheme ?? ""), url.host != nil, url.user == nil, url.password == nil else { message = "Enter an HTTP or HTTPS image URL."; return }
+        }
+        var saved = edits
+        saved[identity(game), default: [:]][editor] = value
+        do {
+            try FileManager.default.createDirectory(at: file.deletingLastPathComponent(), withIntermediateDirectories: true)
+            try JSONEncoder().encode(saved).write(to: file, options: .atomic)
+            edits = saved; apply(to: game); self.editor = nil; message = "Saved."
+        } catch { message = "Could not save: " + error.localizedDescription }
+    }
+}
+
+struct HubGameOptionsView: View {
+    @Bindable var model = HubGameOptions.shared
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text(model.game?.title ?? "Game options").font(HubTheme.heading(27)).lineLimit(2)
+            if let editor = model.editor {
+                Text("Edit \(editor)").font(.title2)
+                TextField(editor, text: $model.draft).textFieldStyle(.roundedBorder)
+                Text("D-pad / stick Choose · A Type · X Delete · Y Save · B Cancel").font(.callout)
+                LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 10), spacing: 8) {
+                    ForEach(model.keys.indices, id: \.self) { index in
+                        Button(model.keys[index] == " " ? "Space" : model.keys[index]) { model.key = index; model.typeKey(model.keys[index]) }
+                            .frame(maxWidth: .infinity, minHeight: 34)
+                            .background(model.key == index ? HubTheme.yellow : HubTheme.panel, in: .rect(cornerRadius: 5))
+                            .buttonStyle(.plain)
+                    }
+                }
+                HStack { Button("Cancel") { model.editor = nil }; Spacer(); Button("Save") { model.saveEdit() } }
+            } else {
+                Text("↑ ↓ Choose · A Apply · B Back · Menu Sidebar").font(.callout)
+                ForEach(model.labels.indices, id: \.self) { index in
+                    Button { model.row = index; model.activate() } label: {
+                        Text(model.labels[index]).frame(maxWidth: .infinity, alignment: .leading).padding(12)
+                            .background(model.row == index ? HubTheme.yellow : HubTheme.panel, in: .rect(cornerRadius: 8))
+                    }.buttonStyle(.plain)
+                }
+            }
+            if !model.message.isEmpty { Text(model.message).font(.callout) }
+        }.font(.system(size: 17)).padding(24).frame(width: 680).background(HubTheme.canvas)
+            .onExitCommand { _ = model.action("back") }
     }
 }

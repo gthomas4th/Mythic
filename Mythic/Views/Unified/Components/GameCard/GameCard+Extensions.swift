@@ -259,6 +259,7 @@ extension GameCard {
         var body: some View {
             Group { // annoying, but the only way two sheets'll fit in here
                 Menu {
+                    Button("Game options (controller friendly)") { HubGameOptions.shared.open(game) }
                     GameCard.Buttons.SettingsButton(game: $game, withLabel: true, isGameSettingsSheetPresented: $isGameSettingsSheetPresented)
                     GameCard.Buttons.FavouriteButton(game: $game, withLabel: true)
                     if let rom = game as? ROMGame {
