@@ -2,7 +2,11 @@ import SwiftUI
 @preconcurrency import GameController
 
 @MainActor @Observable final class HubControllerInput {
+    static let shared = HubControllerInput()
     var connected = false
+    var contentAction: ((String) -> Bool)?
+    private var stickDirection: String?
+    private var stickTask: Task<Void, Never>?
     var onAction: ((String) -> Void)?
     private var observers: [NSObjectProtocol] = []
     func start() {
@@ -17,17 +21,24 @@ import SwiftUI
     func stop() {
         for observer in observers { NotificationCenter.default.removeObserver(observer) }
         observers = []
+        stickTask?.cancel(); stickTask = nil; stickDirection = nil
         for controller in GCController.controllers() {
             guard let pad = controller.extendedGamepad else { continue }
+            pad.leftThumbstick.valueChangedHandler = nil
             for button in [pad.dpad.up, pad.dpad.down, pad.dpad.left, pad.dpad.right, pad.buttonA, pad.buttonB, pad.buttonX, pad.buttonY, pad.buttonMenu] {
                 button.pressedChangedHandler = nil
             }
         }
     }
     private func bind() {
+        stickTask?.cancel(); stickTask = nil; stickDirection = nil
         connected = !GCController.controllers().isEmpty
         for controller in GCController.controllers() {
             guard let pad = controller.extendedGamepad else { continue }
+            pad.leftThumbstick.valueChangedHandler = { [weak self] _, axisX, axisY in
+                let direction: String? = max(abs(axisX), abs(axisY)) < 0.55 ? nil : (abs(axisY) >= abs(axisX) ? (axisY > 0 ? "up" : "down") : (axisX > 0 ? "right" : "left"))
+                Task { @MainActor in self?.moveStick(direction) }
+            }
             for (button, action) in [(pad.dpad.up, "up"), (pad.dpad.down, "down"), (pad.dpad.left, "left"),
                 (pad.dpad.right, "right"), (pad.buttonA, "select"), (pad.buttonB, "back"), (pad.buttonX, "favorite"), (pad.buttonY, "filter"), (pad.buttonMenu, "settings")] {
                 button.pressedChangedHandler = { [weak self] _, _, pressed in
@@ -40,9 +51,25 @@ import SwiftUI
             }
         }
     }
+    private func moveStick(_ direction: String?) {
+        guard direction != stickDirection else { return }
+        stickDirection = direction; stickTask?.cancel()
+        guard let direction else { return }
+        if NSApp.isActive { onAction?(direction) }
+        stickTask = Task { [weak self] in
+            do {
+                try await Task.sleep(for: .milliseconds(350))
+                while !Task.isCancelled {
+                    if NSApp.isActive { self?.onAction?(direction) }
+                    try await Task.sleep(for: .milliseconds(130))
+                }
+            } catch { }
+        }
+    }
+
 }
 struct ControllerLibraryView: View {
-    @State private var input = HubControllerInput()
+    @State private var input = HubControllerInput.shared
     @AppStorage("hubTheme") private var theme = "lcars"
     @State private var selection = 0
     @State private var details = false
@@ -58,8 +85,9 @@ struct ControllerLibraryView: View {
             (!favoritesOnly || $0.isFavourited) && (search.isEmpty || $0.title.localizedStandardContains(search))
         }.sorted { $0.title < $1.title }
     }
-    private var selected: Game? { games.indices.contains(selection) ? games[selection] : nil }
     var body: some View {
+        let visibleGames = games
+        let selectedGame = visibleGames.indices.contains(selection) ? visibleGames[selection] : nil
         VStack(alignment: .leading, spacing: 20) {
             HStack {
                 Text("PLAY").font(HubTheme.heading(38)).tracking(2)
@@ -67,10 +95,10 @@ struct ControllerLibraryView: View {
                 Label(input.connected ? "Controller connected" : "Keyboard ready", systemImage: "gamecontroller")
             }
             TextField("Search games", text: $search).textFieldStyle(.roundedBorder).focused($focus, equals: .search)
-                .onSubmit { details = selected != nil; focus = .browsing }
-            Text("↑ ↓ Browse · A / Return Details & Play · B / Escape Back · X Favorite · Y Favorites filter")
+                .onSubmit { details = selectedGame != nil; focus = .browsing }
+            Text("↑ ↓ Browse · A / Return Details & Play · B / Escape Back · Menu Sidebar · X Favorite · Y Favorites filter")
                 .font(.system(size: 16)).foregroundStyle(.secondary)
-            if details, let game = selected {
+            if details, let game = selectedGame {
                 Text(game.title).font(HubTheme.heading(36))
                 if let steam = game as? SteamGame, let record = steam.record {
                     let target = displayedTarget(for: steam, record: record)
@@ -86,7 +114,7 @@ struct ControllerLibraryView: View {
                                 if let width, let height { LabeledContent("Launch resolution", value: "\(width) × \(height)") }
                             }
                             Button("Advanced Launch Settings") { showLaunchSettings = true }
-                            Text("Menu / S · Launch settings").font(.caption).foregroundStyle(.secondary)
+                            Text("S · Launch settings").font(.caption).foregroundStyle(.secondary)
                         } else if target?.kind == .moonlight {
                             Text("Streams from your Home PC. Its game settings and saves are used.")
                                 .font(.system(size: 16)).foregroundStyle(.secondary)
@@ -105,7 +133,7 @@ struct ControllerLibraryView: View {
                 ScrollViewReader { proxy in
                     ScrollView {
                         LazyVStack(alignment: .leading, spacing: 10) {
-                            ForEach(Array(games.enumerated()), id: \.element.id) { position, game in
+                            ForEach(Array(visibleGames.enumerated()), id: \.element.id) { position, game in
                                 Button {
                                     selection = position; details = true
                                 } label: {
@@ -124,7 +152,7 @@ struct ControllerLibraryView: View {
                     .onChange(of: selection) { _, value in proxy.scrollTo(value, anchor: .center) }
                 }
             }
-            if games.isEmpty { ContentUnavailableView("No matching games", systemImage: "gamecontroller", description: Text("Change the filter or add games through Library.")) }
+            if visibleGames.isEmpty { ContentUnavailableView("No matching games", systemImage: "gamecontroller", description: Text("Change the filter or add games through Library.")) }
             if !message.isEmpty { Text(message).foregroundStyle(.orange) }
             Spacer(minLength: 0)
         }
@@ -135,19 +163,26 @@ struct ControllerLibraryView: View {
         .focused($focus, equals: .browsing)
         .onMoveCommand { direction in if focus != .search { action(String(describing: direction)) } }
         .onKeyPress(.return) {
-            if focus == .search { details = selected != nil; focus = .browsing } else { action("select") }
+            if focus == .search { details = selectedGame != nil; focus = .browsing } else { action("select") }
             return .handled
         }
         .onKeyPress("x") { guard focus != .search else { return .ignored }; action("favorite"); return .handled }
         .onKeyPress("s") { guard focus != .search, details else { return .ignored }; action("settings"); return .handled }
         .onKeyPress("y") { guard focus != .search else { return .ignored }; action("filter"); return .handled }
-        .onExitCommand { action("back") }
+        .onExitCommand { input.onAction?("back") }
         .onChange(of: search) { _, _ in selection = 0; details = false }
         .sheet(isPresented: $showLaunchSettings) {
             LaunchSettingsView(initialProfileID: detailProfile?.profileID)
         }
-        .onAppear { input.onAction = action; input.start(); focus = .browsing }
-        .onDisappear { input.stop(); input.onAction = nil }
+        .onAppear {
+            input.contentAction = { command in
+                if command == "sidebar" { showLaunchSettings = false; return true }
+                if command == "back" && !details && !showLaunchSettings { return false }
+                action(command); return true
+            }
+            focus = .browsing
+        }
+        .onDisappear { input.contentAction = nil }
     }
     private func displayedTarget(for game: SteamGame, record: GameRecord) -> LaunchTarget? {
         game.selectedLaunchTarget
@@ -167,16 +202,18 @@ struct ControllerLibraryView: View {
             if action == "back" || action == "settings" { showLaunchSettings = false }
             return
         }
+        let visibleGames = games
+        let currentGame = visibleGames.indices.contains(selection) ? visibleGames[selection] : nil
         switch action {
         case "up": if !details { selection = max(0, selection - 1) }
-        case "down": if !details { selection = min(max(0, games.count - 1), selection + 1) }
-        case "select": if details, let game = selected { play(game) } else { details = true }
+        case "down": if !details { selection = min(max(0, visibleGames.count - 1), selection + 1) }
+        case "select": if details, let game = currentGame { play(game) } else { details = true }
         case "settings": if details, detailProfile != nil { showLaunchSettings = true }
         case "back": details = false
-        case "favorite": if let game = selected { game.isFavourited.toggle(); GameDataStore.shared.savePreferences(for: game) }
+        case "favorite": if let game = currentGame { game.isFavourited.toggle(); GameDataStore.shared.savePreferences(for: game) }
         case "filter": favoritesOnly.toggle(); selection = 0; details = false
         case "left", "right":
-            if details, let game = selected as? SteamGame, let record = game.record {
+            if details, let game = currentGame as? SteamGame, let record = game.record {
                 let targets = record.launchTargets.filter(\.available)
                 guard !targets.isEmpty else { return }
                 let old = targets.firstIndex(where: { $0.id == game.preferredTargetID }) ?? 0

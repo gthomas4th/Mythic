@@ -27,6 +27,35 @@ struct ContentView: View {
     
     @AppStorage("hubTheme") private var theme = "lcars"
     @State private var destination = HubDestination.home
+    @State private var controller = HubControllerInput.shared
+    @State private var sidebarFocused = true
+    @State private var sidebarSelection = HubDestination.home
+    private var destinations: [HubDestination] {
+        HubDestination.allCases.filter { $0 != .containers && ($0 != .operations || !operationManager.queue.isEmpty) }
+    }
+    private func controllerAction(_ action: String) {
+        if action == "settings" {
+            _ = controller.contentAction?("sidebar")
+            sidebarFocused = true; sidebarSelection = destination; return
+        }
+        if !sidebarFocused {
+            if controller.contentAction?(action) == true { return }
+            if action == "back" || action == "left" {
+                sidebarFocused = true; sidebarSelection = destination
+            }
+            return
+        }
+        let items = destinations
+        let index = items.firstIndex(of: sidebarSelection) ?? 0
+        switch action {
+        case "up": sidebarSelection = items[max(0, index - 1)]
+        case "down": sidebarSelection = items[min(items.count - 1, index + 1)]
+        case "select", "right":
+            destination = sidebarSelection; sidebarFocused = false
+        case "back": sidebarFocused = false
+        default: break
+        }
+    }
 
     var body: some View {
         Group {
@@ -46,7 +75,45 @@ struct ContentView: View {
             }
         }
         .modifier(HubThemeModifier())
+        .onAppear { controller.onAction = controllerAction; controller.start() }
+        .onDisappear { controller.stop(); controller.onAction = nil }
 #if DEBUG
+        .task {
+            guard ProcessInfo.processInfo.arguments.contains("--test-controller-navigation") else { return }
+            try? await Task.sleep(for: .milliseconds(300))
+            var failures: [String] = []
+            controllerAction("settings")
+            if !sidebarFocused { failures.append("Menu did not focus sidebar") }
+            let old = sidebarSelection
+            controllerAction("down")
+            if sidebarSelection == old { failures.append("Sidebar did not move down") }
+            sidebarSelection = .controller
+            controllerAction("select")
+            try? await Task.sleep(for: .milliseconds(500))
+            if destination != .controller || sidebarFocused { failures.append("A did not enter controller library") }
+            if controller.contentAction == nil { failures.append("Content handler missing") }
+            if !GameDataStore.shared.displayLibrary.isEmpty {
+                controllerAction("select")
+                controllerAction("back")
+                if sidebarFocused { failures.append("First B skipped game list") }
+            }
+            controllerAction("back")
+            if !sidebarFocused { failures.append("B did not return to sidebar") }
+            controllerAction("select")
+            controllerAction("settings")
+            if !sidebarFocused { failures.append("Menu did not re-enter sidebar") }
+            sidebarSelection = .home; controllerAction("select")
+            try? await Task.sleep(for: .milliseconds(300))
+            controllerAction("back")
+            if !sidebarFocused { failures.append("B did not return from Home") }
+            let started = Date()
+            for _ in 0..<100 { _ = GameDataStore.shared.displayLibrary.count }
+            let report: [String: Any] = ["passed": failures.isEmpty, "failures": failures,
+                "controllerConnected": controller.connected, "catalogReads100Milliseconds": Date().timeIntervalSince(started) * 1000]
+            if let data = try? JSONSerialization.data(withJSONObject: report, options: .prettyPrinted) {
+                try? data.write(to: URL(fileURLWithPath: "/private/tmp/gamehub-controller-navigation-test.json"))
+            }
+        }
         .task {
             guard ProcessInfo.processInfo.arguments.contains("--render-game-cards") else { return }
             try? await GameDataStore.shared.refreshFromStorefronts()
@@ -132,11 +199,12 @@ struct ContentView: View {
                 }
             }
             HStack(alignment: .top, spacing: 8) {
+                ScrollViewReader { sidebarProxy in
                 ScrollView {
                   VStack(spacing: 7) {
                     ForEach(HubDestination.allCases, id: \.self) { item in
                         if item != .containers && (item != .operations || !operationManager.queue.isEmpty) {
-                            Button { destination = item } label: {
+                            Button { destination = item; sidebarSelection = item; sidebarFocused = false } label: {
                                 HStack(spacing: 10) {
                                     Image(systemName: item.symbol).frame(width: 24)
                                     Text(item.rawValue.uppercased()).font(HubTheme.heading(18)).lineLimit(1).minimumScaleFactor(0.8)
@@ -147,8 +215,14 @@ struct ContentView: View {
                                 .background(destination == item ? HubTheme.blue : HubTheme.canvas,
                                             in: UnevenRoundedRectangle(topLeadingRadius: 25, bottomLeadingRadius: 25, bottomTrailingRadius: 5, topTrailingRadius: 5))
                             }.buttonStyle(.plain)
+                                .overlay(RoundedRectangle(cornerRadius: 8).stroke(controller.connected && sidebarFocused && sidebarSelection == item ? HubTheme.yellow : .clear, lineWidth: 3))
                                 .accessibilityAddTraits(destination == item ? .isSelected : [])
+                                .id(item)
                         }
+                    }
+                    if controller.connected {
+                        Text(sidebarFocused ? "↑ ↓ Choose · A Open" : "B Back · Menu Sidebar")
+                            .font(.system(size: 14, weight: .medium)).padding(.vertical, 8)
                     }
                     Spacer(minLength: 12)
                     Button { SupportWindowController.show() } label: {
@@ -156,7 +230,9 @@ struct ContentView: View {
                     }.buttonStyle(.plain).padding(12)
                     RoundedRectangle(cornerRadius: 5).fill(HubTheme.purple).frame(height: 22).accessibilityHidden(true)
                   }.frame(minHeight: 510)
-                }.scrollIndicators(.hidden).frame(width: 220)
+                }.scrollIndicators(.hidden)
+                    .onChange(of: sidebarSelection) { _, value in sidebarProxy.scrollTo(value, anchor: .center) }
+                }.frame(width: 220)
                 NavigationStack {
                     consoleDestination
                 }
@@ -198,60 +274,20 @@ struct ContentView: View {
                         Text("GAME HUB").font(HubTheme.heading(28)).tracking(2).padding(.vertical, 10)
                     }
                     Section {
-                        NavigationLink(destination: HomeView()) {
-                            Label("Home", systemImage: "house")
-                                .help("Everything in one place")
+                        ForEach(destinations, id: \.self) { item in
+                            Button {
+                                destination = item; sidebarSelection = item; sidebarFocused = false
+                            } label: {
+                                Label(item.rawValue, systemImage: item.symbol)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .padding(6)
+                                    .background(controller.connected && sidebarFocused && sidebarSelection == item ? HubTheme.yellow.opacity(0.5) : .clear)
+                            }.buttonStyle(.plain)
                         }
-                        
-                        NavigationLink(destination: LibraryView()) {
-                            Label("Library", systemImage: "books.vertical")
-                                .help("View your games")
-                        }
-                        
-                        NavigationLink(destination: ControllerLibraryView()) {
-                            Label("Controller View", systemImage: "gamecontroller.fill")
-                        }
-                        NavigationLink(destination: ROMLibraryView()) {
-                            Label("Game Sources", systemImage: "gamecontroller")
-                        }
-                        NavigationLink(destination: ConnectionsView()) {
-                            Label("PC & PS5", systemImage: "desktopcomputer")
-                        }
-                        NavigationLink(destination: StoreView()) {
-                            Label("Store", systemImage: "bag")
-                                .help("Purchase new games from Epic")
-                        }
-                    }
-                    
-                    Section {
-                        Button("Support", systemImage: "questionmark.bubble") {
-                            SupportWindowController.show()
-                        }
-                        .help("Get support")
-                        .buttonStyle(.plain)
-                        
-                        NavigationLink(destination: AccountsView()) {
-                            Label("Accounts", systemImage: "person.2")
-                                .help("View all currently signed in accounts")
-                        }
-                    } header: {
-                        Text("Management")
+                        Button("Support") { SupportWindowController.show() }
                     }
                 }
 
-                // separate downloads view from main list because alignment doesn't work within the main list
-                if !operationManager.queue.isEmpty {
-                    List { // must wrap in a list to have the same styling as the other links
-                        NavigationLink(destination: OperationsView()) {
-                            Label("Operations", systemImage: "progress.indicator")
-                                .help("View all active game operations")
-                        }
-                    }
-                    .frame(maxHeight: 40)
-                    .scrollDisabled(true)
-                    .scrollIndicators(.hidden)
-                }
-                
 #if DEBUG
                 VStack {
                     if let shortVersion = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String,
@@ -285,7 +321,7 @@ struct ContentView: View {
                     EmptyView()
                 }
             }, detail: {
-                HomeView()
+                NavigationStack { consoleDestination }
             }
         )
         .modifier(HubThemeModifier())

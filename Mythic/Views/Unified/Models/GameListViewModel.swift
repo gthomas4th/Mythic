@@ -62,10 +62,8 @@ import OSLog
     }
     
     var sortedLibrary: [Game] {
-        GameDataStore.shared.displayLibrary
-            .sorted(by: { $0.title < $1.title })                            // primary sort — title
-            .sorted(by: { $0.installationState > $1.installationState })    // secondary sort — installation state
-            .sorted(by: { $0.isOperating && !$1.isOperating })              // tertiary sort — operating games
+        let operating = Set(Game.operationManager.queue.filter(\.isExecuting).map { $0.game.id })
+        return GameDataStore.shared.displayLibrary
             .filter { game in
                 let matchesText: Bool = searchString.isEmpty || game.title.localizedStandardContains(searchString)
                 let matchesTokens: Bool = searchTokens.isEmpty || searchTokens.allSatisfy { token in
@@ -86,6 +84,14 @@ import OSLog
                     }
                 }
                 return matchesText && matchesTokens && (selectedSystem.isEmpty || Self.systemName(for: game) == selectedSystem)
+            }
+            .sorted { left, right in
+                let leftOperating = operating.contains(left.id), rightOperating = operating.contains(right.id)
+                if leftOperating != rightOperating { return leftOperating }
+                if left.installationState > right.installationState { return true }
+                if right.installationState > left.installationState { return false }
+                if left.title != right.title { return left.title < right.title }
+                return left.id < right.id
             }
     }
     

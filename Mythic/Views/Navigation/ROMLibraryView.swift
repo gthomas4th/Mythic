@@ -9,6 +9,7 @@ struct ROMSource: Codable, Identifiable {
     var application: Data
     var core: Data?
     var applicationVersion: String?
+    var locationHint: String?
     var dolphinPreset: DolphinGraphicsPreset?
     var index = ROMIndex()
     func resolve(_ data: Data) throws -> URL {
@@ -24,7 +25,12 @@ struct ROMLocalCopy: Codable {
 }
 @MainActor @Observable final class ROMLibrary {
     static let shared = ROMLibrary()
-    var sources: [ROMSource] = []
+    var sources: [ROMSource] = [] { didSet { cachedGames = nil } }
+    @ObservationIgnored private var cachedGames: Set<Game>?
+    var sourcePaths: [UUID: String] = [:]
+    @ObservationIgnored private var resolvedRoots: [UUID: URL] = [:]
+    @ObservationIgnored private var requestedBookmarks: [UUID: Data] = [:]
+    @ObservationIgnored private var resolvingSources: Set<UUID> = []
     var status = "Choose a ROM folder when your files are ready. Steam Deck references remain available separately."
     var scanning = false
     var localCopies: [String: ROMLocalCopy] = [:]
@@ -40,17 +46,54 @@ struct ROMLocalCopy: Codable {
         if let data = try? Data(contentsOf: file), let saved = try? JSONDecoder().decode([ROMSource].self, from: data) { sources = saved }
     }
     var games: Set<Game> {
-        Set(sources.flatMap { source in
-            source.index.entries.map { entry in
-                if let existing = gameCache[entry.id], existing.source?.id == source.id, existing.entry?.relativePath == entry.relativePath { return existing as Game }
-                let root = (try? source.resolve(source.root)) ?? URL(fileURLWithPath: "/unavailable")
+        let currentSources = sources // Keep source changes observable even when the catalog is cached.
+        if let cachedGames { return cachedGames }
+        let result = Set(currentSources.flatMap { source in
+            // Rendering never resolves a bookmark or contacts a network volume.
+            let root = resolvedRoots[source.id] ?? URL(fileURLWithPath: "/unavailable")
+            return source.index.entries.map { entry in
+                if let existing = gameCache[entry.id], existing.source?.id == source.id, existing.source?.root == source.root, existing.source?.application == source.application, existing.entry?.relativePath == entry.relativePath { return existing as Game }
                 let game = ROMGame(source: source, entry: entry, content: root.appendingPathComponent(entry.relativePath))
+                game.sourceLocationLabel = source.locationHint
                 game.localCopySelected = localCopies[entry.id]?.selected == true
                 GameDataStore.shared.restorePreferences(for: game)
                 gameCache[entry.id] = game
                 return game as Game
             }
         })
+        cachedGames = result
+        refreshSourceLocations()
+        return result
+    }
+    func refreshSourceLocations(force: Bool = false) {
+        if force { requestedBookmarks = [:] }
+        for source in sources where requestedBookmarks[source.id] != source.root && !resolvingSources.contains(source.id) {
+            requestedBookmarks[source.id] = source.root
+            resolvingSources.insert(source.id)
+            Task {
+                defer { resolvingSources.remove(source.id) }
+                let result = await Task.detached(priority: .utility) { () -> (URL?, String?) in
+                    guard let root = try? source.resolve(source.root) else { return (nil, nil) }
+                    let access = root.startAccessingSecurityScopedResource()
+                    defer { if access { root.stopAccessingSecurityScopedResource() } }
+                    let local = (try? root.resourceValues(forKeys: [.volumeIsLocalKey]))?.volumeIsLocal
+                    return (root, local.map { $0 ? "Local" : "Server" })
+                }.value
+                guard let index = sources.firstIndex(where: { $0.id == source.id && $0.root == source.root }) else { return }
+                sourcePaths[source.id] = result.0?.path ?? "Source unavailable — reconnect its drive or share."
+                if let root = result.0 { resolvedRoots[source.id] = root }
+                for game in gameCache.values where game.source?.id == source.id {
+                    game.sourceLocationLabel = result.1 ?? source.locationHint
+                    if let root = result.0, let entry = game.entry {
+                        game.installationState = .installed(location: root.appendingPathComponent(entry.relativePath), platform: .macOS)
+                    }
+                }
+                if let label = result.1, sources[index].locationHint != label {
+                    sources[index].locationHint = label
+                    try? save()
+                }
+            }
+        }
     }
     func selectLocal(_ selected: Bool, gameID: String) {
         let previous = localCopies
@@ -183,6 +226,7 @@ struct ROMLocalCopy: Codable {
 }
 @Observable final class ROMGame: Game {
     var localCopySelected = false
+    var sourceLocationLabel: String?
     let source: ROMSource?
     let entry: ROMEntry?
     override var storefront: Storefront? { .local }
@@ -190,10 +234,7 @@ struct ROMLocalCopy: Codable {
     override var typeLabel: String? { "ROM" }
     override var locationLabel: String? {
         if localCopySelected { return "Local" }
-        guard let source, let root = try? source.resolve(source.root),
-              let values = try? root.resourceValues(forKeys: [.volumeIsLocalKey]),
-              let isLocal = values.volumeIsLocal else { return super.locationLabel }
-        return isLocal ? "Local" : "Server"
+        return sourceLocationLabel
     }
     override var supportsFileManagement: Bool { false }
     override var supportsLaunchArguments: Bool { false }
@@ -251,7 +292,7 @@ struct ROMLibraryView: View {
                 ForEach(store.sources) { source in
                     VStack(alignment: .leading, spacing: 4) {
                         LabeledContent(source.system, value: "\(source.index.entries.count) games · \(source.emulator.displayName)")
-                        Text((try? source.resolve(source.root).path) ?? "Source unavailable — reconnect its drive or share.")
+                        Text(store.sourcePaths[source.id] ?? "Checking source…")
                             .font(.caption).foregroundStyle(.secondary).textSelection(.enabled)
                         Text("Version when added: \(source.applicationVersion ?? "Not checked")")
                             .font(.caption).foregroundStyle(.secondary)
@@ -275,6 +316,7 @@ struct ROMLibraryView: View {
             }
         }
         .formStyle(.grouped).navigationTitle("ROM Library")
+        .task { store.refreshSourceLocations(force: true) }
         .sheet(isPresented: $deckPresented) { SteamDeckLibraryView() }
     }
 }

@@ -14,6 +14,28 @@ passes `codesign --verify --deep --strict`. This is not a notarized public relea
 The original app and runtime are preserved. Development builds and the test host
 are not the user entry point. Do not remove recovery copies before final live acceptance.
 
+## Controller navigation and NAS-related UI stalls
+
+Controller input belongs to the app shell, rather than only the Controller screen.
+Menu focuses the sidebar from any main page; D-pad or left stick chooses an entry and
+A opens it. Within Controller, B returns from details to the games, then to the sidebar.
+The sidebar has a yellow focus outline and scrolls to its selected entry. Standard and
+LCARS navigation share destination state. Controller disconnect cancels held-stick repeat.
+
+Live interaction sampling identified repeated ROM bookmark resolution in location badge
+rendering on the main thread. ROM badge and source-path lookups now run off-thread,
+once per source, with cached results; reopening Sources refreshes metadata in the
+background. Stored location hints preserve known labels during outages. Catalog sets are
+cached with source-change invalidation, and list filtering/sorting is performed once per
+render with a single ordering pass. ROM game files are not copied or cached locally.
+
+Validation: Debug build and in-app navigation regression passed (Menu, D-pad selection,
+A entry, B details/list/sidebar, Menu re-entry, B from Home). Controller detected; physical
+button feel remains an owner check. 100 repeated catalog reads took about 0.31 ms. Live post-install Library click/scroll
+sampling found zero ROM location-getter/bookmark-resolution stacks (the prior interaction
+sample contained thousands of samples in those calls). Live UI verified details → list →
+sidebar with the shared Back route and the visible yellow sidebar focus outline.
+
 ## UI performance follow-up
 
 Removed indefinitely repeating artwork-placeholder shimmer. Idle sampling showed repeated

@@ -24,8 +24,9 @@ struct GameListView: View {
     @State private var isGameImportViewPresented: Bool = false
     
     var body: some View {
+        let displayedGames = viewModel.sortedLibrary
         VStack(spacing: 0) {
-            HubSectionBanner(title: "Your library", subtitle: "\(viewModel.sortedLibrary.count) games · Pick your next adventure")
+            HubSectionBanner(title: "Your library", subtitle: "\(displayedGames.count) games · Pick your next adventure")
                 .padding(.horizontal, 28).padding(.vertical, 16)
             HStack(spacing: 16) {
                 Picker("System", selection: $viewModel.selectedSystem) {
@@ -39,7 +40,7 @@ struct GameListView: View {
                 }
                 Spacer(minLength: 0)
             }.padding(.horizontal, 28).padding(.bottom, 16)
-            if !gameDataStore.displayLibrary.isEmpty && viewModel.sortedLibrary.isEmpty {
+            if !gameDataStore.displayLibrary.isEmpty && displayedGames.isEmpty {
                 ContentUnavailableView("No matching games", systemImage: "line.3.horizontal.decrease",
                     description: Text("Try another system or clear your search and filters."))
                 Button("Clear all filters") {
@@ -76,14 +77,14 @@ struct GameListView: View {
                     switch layout {
                     case .grid:
                         LazyVGrid(columns: [.init(.adaptive(minimum: max(240, gameCardSize)), spacing: 22)], spacing: 24) {
-                            ForEach(viewModel.sortedLibrary) { game in
+                            ForEach(displayedGames) { game in
                                 GameCard(game: .constant(game))
                             }
                         }
                         .padding(28)
                     case .list:
                         LazyVStack {
-                            ForEach(viewModel.sortedLibrary) { game in
+                            ForEach(displayedGames) { game in
                                 ListGameCard(game: .constant(game))
                             }
                         }
@@ -123,7 +124,7 @@ struct GameListView: View {
         }
         .sheet(isPresented: $isSteamDeckLibraryPresented) { SteamDeckLibraryView() }
         .animation(.easeInOut, value: layout)
-        .animation(.default, value: viewModel.sortedLibrary)
+        .animation(.default, value: displayedGames)
     }
 }
     
