@@ -107,7 +107,7 @@ struct ControllerLibraryView: View {
             TextField("Search games", text: $search).textFieldStyle(.roundedBorder).focused($focus, equals: .search)
                 .onSubmit { details = selectedGame != nil; focus = .browsing }
             if input.connected {
-                HubControllerHints(actions: [("Move", "Browse"), ("A", "Play"), ("X", "Options"), ("Y", "Favourites"), ("B", "Back"), ("Menu", "Sidebar")])
+                HubControllerHints(actions: [("Move", "Browse"), ("A", "Play"), ("X", "Options"), ("Y", "Favorites"), ("B", "Back"), ("Menu", "Sidebar")])
             } else { Text("↑ ↓ Browse · Return Details & Play · Escape Back").font(.system(size: 16)) }
             if details, let game = selectedGame {
                 Text(game.title).font(HubTheme.heading(36))
@@ -279,7 +279,7 @@ struct ControllerLibraryView: View {
     func open(_ game: Game) { self.game = game; row = 0; editor = nil; message = "" }
     var labels: [String] {
         guard let game else { return [] }
-        return ["Play", game.isFavourited ? "Remove favourite" : "Add favourite", "Play location: \(game.locationLabel ?? "Unavailable")", "Edit title", "Edit artwork URL", "Close"]
+        return ["Play", game.isFavourited ? "Remove favorite" : "Add favorite", "Play location: \(game.locationLabel ?? "Unavailable")", "Edit title", "Edit artwork URL", "Close"]
     }
     func action(_ action: String) -> Bool {
         guard let game else { return false }
@@ -388,8 +388,6 @@ struct HubGameOptionsView: View {
                             } else if let game = model.game {
                                 Spacer(minLength: max(24, geometry.size.height * 0.12))
                                 VStack(alignment: .leading, spacing: 12) {
-                                    Text((game is ROMGame ? "ROM LIBRARY" : game.storefront?.description ?? "GAME LIBRARY").uppercased())
-                                        .font(.system(size: 14, weight: .bold)).tracking(4).foregroundStyle(.white.opacity(0.75))
                                     Text(game.title.uppercased()).font(HubTheme.heading(52)).tracking(2)
                                         .lineLimit(3).minimumScaleFactor(0.65).shadow(color: .black.opacity(0.6), radius: 12)
                                         .frame(maxWidth: 850, alignment: .leading)

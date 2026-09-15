@@ -30,7 +30,7 @@ struct HomeView: View {
     private var shelves: [(String, [Game])] {
         var rows: [(String, [Game])] = []
         if let recent = gameDataStore.recent { rows.append(("Continue", [recent])) }
-        rows += [("Favourites", favouriteGames),
+        rows += [("Favorites", favouriteGames),
             ("Recently Played", gameDataStore.displayLibrary.filter { $0.lastLaunched != nil && $0 != gameDataStore.recent }.sorted { ($0.lastLaunched ?? .distantPast) > ($1.lastLaunched ?? .distantPast) }),
             ("Recently Added", gameDataStore.recentlyAdded),
             ("Final Fantasy", sortedGames.filter { $0.title.localizedStandardContains("Final Fantasy") }),
@@ -74,7 +74,7 @@ struct HomeView: View {
             ScrollView {
                 HubSectionBanner(title: "Welcome back", subtitle: "Choose a game and make yourself at home.").padding(.horizontal, 28).padding(.top, 20)
 
-                if input.connected { HubControllerHints(actions: [("Move", "Rows / Games"), ("A", "Play"), ("X", "Options"), ("Y", "Favourite"), ("B", "Sidebar")]).padding(.horizontal, 28) }
+                if input.connected { HubControllerHints(actions: [("Move", "Rows / Games"), ("A", "Play"), ("X", "Options"), ("Y", "Favorite"), ("B", "Sidebar")]).padding(.horizontal, 28) }
                 if !launchMessage.isEmpty { Text(launchMessage).padding(.horizontal, 28) }
                 if let recentGame = gameDataStore.recent {
                     HStack(spacing: 0) {
@@ -115,12 +115,12 @@ struct HomeView: View {
                 VStack(alignment: .leading, spacing: 28) {
                     if favouriteGames.isEmpty {
                         VStack(alignment: .leading, spacing: 6) {
-                            Text("FAVOURITES").font(HubTheme.heading(26))
-                            Text("Favourite a game from its options menu to keep it here.")
+                            Text("FAVORITES").font(HubTheme.heading(26))
+                            Text("Favorite a game from its options menu to keep it here.")
                                 .foregroundStyle(.secondary)
                         }
                     } else {
-                        gameRow("Favourites", games: favouriteGames)
+                        gameRow("Favorites", games: favouriteGames)
                     }
                     gameRow("Recently Played", games: gameDataStore.displayLibrary
                         .filter { $0.lastLaunched != nil && $0 != gameDataStore.recent }

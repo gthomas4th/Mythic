@@ -93,7 +93,7 @@ struct LibraryView: View {
                             }
                             
                             Section {
-                                Toggle("Favourited", isOn: searchTokenBinding(for: .favourited))
+                                Toggle("Favorited", isOn: searchTokenBinding(for: .favourited))
                             }
                         }
                         .menuIndicator(.hidden)

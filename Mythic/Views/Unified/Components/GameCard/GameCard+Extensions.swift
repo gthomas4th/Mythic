@@ -195,7 +195,7 @@ extension GameCard {
                     withAnimation { animateFavouriteIcon = game.isFavourited }
                 } label: {
                     if withLabel {
-                        Label(game.isFavourited ? "Unfavourite" : "Favourite", systemImage: "star")
+                        Label(game.isFavourited ? "Unfavorite" : "Favorite", systemImage: "star")
                             .symbolVariant(animateFavouriteIcon ? (hoveringOverFavouriteButton ? .slash.fill : .fill) : .none)
                             .contentTransition(.symbolEffect(.replace))
                     } else {
@@ -206,7 +206,7 @@ extension GameCard {
                     }
                 }
                 .onHover { hoveringOverFavouriteButton = $0 }
-                .help("Favourite \"\(game.title)\"")
+                .help("Favorite \"\(game.title)\"")
                 .task { animateFavouriteIcon = game.isFavourited }
                 .shadow(color: .secondary, radius: animateFavouriteIcon ? 20 : 0)
             }
