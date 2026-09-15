@@ -49,11 +49,6 @@ struct GameImageCard: View {
                                 withAnimation { isImageEmpty = true }
                             }
                             .foregroundStyle(.quinary)
-                            .shimmering(
-                                animation: .easeInOut(duration: 1)
-                                    .repeatForever(autoreverses: false),
-                                bandSize: 1
-                            )
                     case .success(let image):
                         ZStack {
                             // blurred image as background
@@ -166,11 +161,6 @@ extension GameImageCard {
             } else {
                 RoundedRectangle(cornerRadius: 20)
                     .fill(.windowBackground)
-                    .shimmering(
-                        animation: .easeInOut(duration: 1)
-                            .repeatForever(autoreverses: false),
-                        bandSize: 1
-                    )
             }
         }
     }

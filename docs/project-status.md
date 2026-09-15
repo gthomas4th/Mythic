@@ -14,6 +14,18 @@ passes `codesign --verify --deep --strict`. This is not a notarized public relea
 The original app and runtime are preserved. Development builds and the test host
 are not the user entry point. Do not remove recovery copies before final live acceptance.
 
+## UI performance follow-up
+
+Removed indefinitely repeating artwork-placeholder shimmer. Idle sampling showed repeated
+SwiftUI animation/layout work; placeholders now stay static while cover loading remains
+asynchronous. A separate whole-Mac load check found an idle Windows Steam web helper and
+Wine server consuming roughly 140% combined CPU after nearly two days; a graceful Steam
+shutdown was ignored; a scoped wineserver shutdown removed the idle Steam processes after
+confirming no game was running. Game Hub does not start Windows Steam during library
+discovery. Afterward Game Hub measured about 2–6% CPU, and sampling found no repeating
+animation frames. Debug build and installed signature passed. No game settings or NAS
+transfer configuration changed. Interactive smoothness still needs owner confirmation.
+
 ## Artwork without card containers
 
 Owner clarification supersedes the title-row layout: artwork, titles, badges and buttons
