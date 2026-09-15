@@ -55,7 +55,7 @@ struct HomeView: View {
         case "right": column = min(rows[min(shelfIndex, rows.count - 1)].1.count - 1, column + 1)
         case "options": if let game = activeGame { HubGameOptions.shared.open(game) }
         case "filter": if let game = activeGame { game.isFavourited.toggle(); gameDataStore.savePreferences(for: game) }
-        case "select": if let game = activeGame { Task { do { try await game.launch() } catch { launchMessage = error.localizedDescription } } }
+        case "select": if let game = activeGame { Task { do { try await game.launch(); launchMessage = "" } catch { launchMessage = error.localizedDescription } } }
         default: return false
         }
         return true
@@ -95,7 +95,6 @@ struct HomeView: View {
                     }
                     .frame(height: 300)
                     .overlay(RoundedRectangle(cornerRadius: 12).stroke(input.connected && input.contentFocused && activeShelf == "Continue" ? HubTheme.yellow : .clear, lineWidth: 3))
-                    .overlay(alignment: .topTrailing) { HubSelectedGameHint(visible: input.connected && input.contentFocused && activeShelf == "Continue") }
                     .id("Continue")
                     .padding(.horizontal, 28).padding(.top, 12)
                 } else {
@@ -188,7 +187,6 @@ struct HomeView: View {
                             GameCard(game: .constant(game)).frame(width: max(300, gameCardSize))
                                 .padding(4)
                                 .overlay(RoundedRectangle(cornerRadius: 12).stroke(selected && selectedID == game.id ? HubTheme.yellow : .clear, lineWidth: 3))
-                                .overlay(alignment: .topTrailing) { HubSelectedGameHint(visible: selected && selectedID == game.id) }
                                 .id(game.id)
                         }
                     }

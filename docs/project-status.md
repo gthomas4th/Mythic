@@ -14,6 +14,21 @@ passes `codesign --verify --deep --strict`. This is not a notarized public relea
 The original app and runtime are preserved. Development builds and the test host
 are not the user entry point. Do not remove recovery copies before final live acceptance.
 
+## Game details and actual ROM launch recovery
+
+X Options now opens a full-window details page with large artwork, a softened
+artwork background, cinematic title, location/type and available system/last-played
+details. A is drawn directly in the Play button; X is directly in Options. The
+page keeps favourites, play location, editing and the legacy advanced menu. B
+returns to the library, and controller selection scrolls actions into view.
+
+The owner's visible failure was Authentication error, not missing button routing.
+The approved read-only game-roms SMB share was disconnected. The existing saved-
+credential mount helper reconnected it; a real Melee launch reached Dolphin and
+rendered at approximately 60 fps. No ROM was copied locally. Failed bookmark
+resolution now explains that the server/drive needs reconnecting, and successful
+retries clear old launch errors. Automatic share recovery is not implemented.
+
 ## A button plays directly
 
 A invokes the same game.launch entry point as the Play button in Home, Library,

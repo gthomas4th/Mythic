@@ -51,7 +51,7 @@ struct GameListView: View {
         case "options": HubGameOptions.shared.open(games[selection])
         case "select":
             let game = games[selection]
-            Task { do { try await game.launch() } catch { launchMessage = error.localizedDescription } }
+            Task { do { try await game.launch(); launchMessage = "" } catch { launchMessage = error.localizedDescription } }
         default: return false
         }
         return true
@@ -62,11 +62,9 @@ struct GameListView: View {
     @ViewBuilder private func libraryCard(_ game: Game, selectedID: String?) -> some View {
         let outline = RoundedRectangle(cornerRadius: 12).stroke(focusColor(game, selectedID: selectedID), lineWidth: 3)
         if layout == .grid {
-            GameCard(game: .constant(game)).padding(4).overlay(outline)
-                .overlay(alignment: .topTrailing) { HubSelectedGameHint(visible: input.connected && input.contentFocused && selectedID == game.id) }.id(game.id)
+            GameCard(game: .constant(game)).padding(4).overlay(outline).id(game.id)
         } else {
-            ListGameCard(game: .constant(game)).padding(4).overlay(outline)
-                .overlay(alignment: .topTrailing) { HubSelectedGameHint(visible: input.connected && input.contentFocused && selectedID == game.id) }.id(game.id)
+            ListGameCard(game: .constant(game)).padding(4).overlay(outline).id(game.id)
         }
     }
     var body: some View {

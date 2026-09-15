@@ -36,7 +36,9 @@ extension GameCard {
                         }
                     } label: {
                         Group {
-                            if withLabel {
+                            if HubControllerInput.shared.connected {
+                                HubButtonHint(button: "A", action: "Play")
+                            } else if withLabel {
                                 Label("Play", systemImage: "play")
                             } else {
                                 Image(systemName: "play")
@@ -253,13 +255,21 @@ extension GameCard {
 
     struct MenuView: View {
         @Binding var game: Game
+        var body: some View {
+            Button { HubGameOptions.shared.open(game) } label: {
+                if HubControllerInput.shared.connected { HubButtonHint(button: "X", action: "Options") }
+                else { Label("Options", systemImage: "ellipsis") }
+            }.buttonStyle(.plain).help("Open game details and options")
+        }
+    }
+    struct LegacyMenuView: View {
+        @Binding var game: Game
         @State private var isGameSettingsSheetPresented: Bool = false
         @State private var isUninstallSheetPresented: Bool = false
 
         var body: some View {
             Group { // annoying, but the only way two sheets'll fit in here
                 Menu {
-                    Button("Game options (controller friendly)") { HubGameOptions.shared.open(game) }
                     GameCard.Buttons.SettingsButton(game: $game, withLabel: true, isGameSettingsSheetPresented: $isGameSettingsSheetPresented)
                     GameCard.Buttons.FavouriteButton(game: $game, withLabel: true)
                     if let rom = game as? ROMGame {

@@ -250,7 +250,13 @@ struct ROMLocalCopy: Codable {
             var stale = false
             root = try URL(resolvingBookmarkData: copy.root, options: [.withSecurityScope, .withoutUI], bookmarkDataIsStale: &stale)
             guard !stale else { throw ROMError.missingPart }
-        } else { root = try source.resolve(source.root) }
+        } else {
+            do { root = try source.resolve(source.root) }
+            catch {
+                throw NSError(domain: "GameHub.ROMSource", code: 1, userInfo: [NSLocalizedDescriptionKey:
+                    "Cannot access the ROM folder. Reconnect its server share or drive, then press Play again. (\(error.localizedDescription))"])
+            }
+        }
         let app = try source.resolve(source.application)
         let core = try source.core.map { try source.resolve($0) }
         let urls = [root, app] + [core].compactMap { $0 }

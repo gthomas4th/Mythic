@@ -77,7 +77,9 @@ struct ContentView: View {
             }
         }
         .modifier(HubThemeModifier())
-        .sheet(item: $gameOptions.game) { _ in HubGameOptionsView() }
+        .accessibilityHidden(gameOptions.game != nil)
+        .allowsHitTesting(gameOptions.game == nil)
+        .overlay { if gameOptions.game != nil { HubGameOptionsView().frame(maxWidth: .infinity, maxHeight: .infinity).background(HubTheme.canvas) } }
         .onChange(of: sidebarFocused) { _, value in controller.contentFocused = !value }
         .onAppear { controller.contentFocused = !sidebarFocused; controller.onAction = controllerAction; controller.start() }
         .onDisappear { controller.stop(); controller.onAction = nil }
