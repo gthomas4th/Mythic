@@ -117,7 +117,7 @@ public struct ROMIndex: Codable, Sendable {
             let values = try url.resourceValues(forKeys: [.isRegularFileKey, .isSymbolicLinkKey])
             if values.isSymbolicLink == true { iterator.skipDescendants(); continue }
             guard values.isRegularFile == true else { continue }
-            if ["xci", "nsp", "nes", "sfc", "smc", "gb", "gbc", "gba", "n64", "z64", "v64", "pbp", "gen", "md", "smd", "32x", "iso", "chd", "cue", "gdi", "m3u", "gcm", "rvz", "wia", "wbfs", "ciso"].contains(url.pathExtension.lowercased()) || url.lastPathComponent.uppercased() == "EBOOT.BIN" { candidates.append(url.resolvingSymlinksInPath()) }
+            if ["xci", "nsp", "zip", "nes", "sfc", "smc", "gb", "gbc", "gba", "n64", "z64", "v64", "pbp", "gen", "md", "smd", "32x", "iso", "chd", "cue", "gdi", "m3u", "gcm", "rvz", "wia", "wbfs", "ciso"].contains(url.pathExtension.lowercased()) || url.lastPathComponent.uppercased() == "EBOOT.BIN" { candidates.append(url.resolvingSymlinksInPath()) }
         }
         var suppressed: Set<String> = []
         for descriptor in candidates where ["cue", "gdi", "m3u"].contains(descriptor.pathExtension.lowercased()) {
