@@ -15,8 +15,10 @@ are not the user entry point. Do not remove recovery copies before final live ac
 ## Game Hub product identity
 
 The installed product, executable, macOS menu and Dock label are **Game Hub**. A new
-original controller-and-navigation-portal icon carries the dark LCARS palette at every
-macOS icon size; its 1024-pixel source is retained in `docs/assets/GameHub-AppIcon-1024.png`.
+original controller-and-navigation-portal icon carries the dark LCARS palette. Its
+1024-pixel source is retained in `docs/assets/GameHub-AppIcon-1024.png` and is compiled
+through the native `Mythic.icon` Icon Composer bundle so modern macOS renders it at full
+size without wrapping it inside a legacy gray tile.
 The bundle identifier remains `xyz.blackxfiied.Mythic`, the Swift module remains `Mythic`,
 and application support and game storage continue using their established `Mythic` paths.
 This preserves the existing library, settings, containers and saves while removing Mythic
