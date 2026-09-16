@@ -66,7 +66,7 @@ struct HarmonyRatingView: View {
                 .alert(isPresented: $isConfirmationPresented) {
                     Alert(
                         title: .init("Are you sure you want to proceed without rating?"),
-                        message: .init("Harmony ratings help every Mythic user understand how well a game runs."),
+                        message: .init("Harmony ratings help every Game Hub user understand how well a game runs."),
                         primaryButton: .cancel(),
                         secondaryButton: .default(.init("OK")) {
                             isPresented = false

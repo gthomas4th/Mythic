@@ -16,6 +16,8 @@ import OSLog
  including references to a dedicated application support folder for Mythic.
  */
 extension Bundle {
+    /// Keep the established storage location when the user-facing app name changes.
+    private static let legacyStorageName = "Mythic"
     
     /**
      Dedicated 'Mythic' Application Support Folder.
@@ -23,8 +25,7 @@ extension Bundle {
      */
     static var appHome: URL? {
         if let userApplicationSupport = FileLocations.userApplicationSupport {
-            let homeURL = userApplicationSupport.appending(
-                path: Bundle.main.infoDictionary?["CFBundleDisplayName"] as? String ?? "")
+            let homeURL = userApplicationSupport.appending(path: legacyStorageName)
             
             if !FileManager.default.fileExists(atPath: homeURL.path) {
                 do {

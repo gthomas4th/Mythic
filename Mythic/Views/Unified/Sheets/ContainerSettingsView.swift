@@ -178,7 +178,7 @@ struct ContainerSettingsView: View {
                     Button("Cancel", role: .cancel, action: {})
                 } message: {
                     Text("""
-                        To toggle DXVK, Mythic must quit all games currently running in this container.
+                        To toggle DXVK, Game Hub must quit all games currently running in this container.
                         Additionally, D3DMetal will be disabled.
                         
                         Toggling DXVK may impact compatibility positively or negatively.

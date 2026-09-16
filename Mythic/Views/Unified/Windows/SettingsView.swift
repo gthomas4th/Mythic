@@ -100,11 +100,11 @@ extension SettingsView {
         @State private var isResetSettingsAlertPresented = false
 
         var body: some View {
-            Button("Reset Mythic", systemImage: "power.dotted") {
+            Button("Reset Game Hub", systemImage: "power.dotted") {
                 isResetAlertPresented = true
             }
             .alert(
-                "Reset Mythic?",
+                "Reset Game Hub?",
                 isPresented: $isResetAlertPresented,
                 actions: {
                     Button("OK", role: .destructive) {
@@ -132,7 +132,7 @@ extension SettingsView {
                 isResetSettingsAlertPresented = true
             }
             .alert(
-                "Reset Mythic Settings?",
+                "Reset Game Hub Settings?",
                 isPresented: $isResetSettingsAlertPresented,
                 actions: {
                     Button("OK", role: .destructive) {
@@ -190,7 +190,7 @@ extension SettingsView {
 
         var body: some View {
             Toggle("Minimise to dock on game launch", systemImage: "dock.arrow.down.rectangle", isOn: $minimiseOnLaunch)
-            Toggle("Force quit all games when Mythic closes", systemImage: "xmark.app", isOn: $quitOnClose)
+            Toggle("Force quit all games when Game Hub closes", systemImage: "xmark.app", isOn: $quitOnClose)
         }
     }
 
@@ -326,7 +326,7 @@ extension SettingsView {
 
         var body: some View {
             Section("Discord", isExpanded: $isServicesDiscordSectionExpanded) {
-                Toggle("Display Mythic activity status on Discord", isOn: $discordRPCEnabled)
+                Toggle("Display Game Hub activity status on Discord", isOn: $discordRPCEnabled)
                     .onChange(of: discordRPCEnabled) { _, newValue in
                         if newValue {
                             _ = discordRPC.connect()

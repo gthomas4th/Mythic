@@ -22,7 +22,7 @@ struct MythicApp: App {
     @Environment(\.openWindow) private var openWindow
 
     var body: some Scene {
-        Window("Mythic", id: "main") {
+        Window("Game Hub", id: "main") {
             Group {
                 if isOnboardingPresented {
                     OnboardingView()
@@ -64,13 +64,13 @@ struct MythicApp: App {
                 Button {
                     openWindow(id: "about")
                 } label: {
-                    Text("About Mythic")
+                    Text("About Game Hub")
                 }
             }
 
             CommandGroup(after: .appInfo) {
                 if SparkleUpdateController.upstreamUpdatesEnabled {
-                    Button("Check for Mythic Updates...", action: { SparkleUpdateController.shared.checkForUpdates(userInitiated: true) })
+                    Button("Check for Game Hub Updates...", action: { SparkleUpdateController.shared.checkForUpdates(userInitiated: true) })
                 } else {
                     Link("Game Hub Updates (Manual)", destination: URL(string: "https://github.com/gthomas4th/Mythic/tree/feat/steam-native")!)
                 }
@@ -107,7 +107,7 @@ struct MythicApp: App {
             }
         }
 
-        Window("About Mythic", id: "about") {
+        Window("About Game Hub", id: "about") {
             AboutView()
                 .frame(width: 285, height: 400)
                 .onAppear {

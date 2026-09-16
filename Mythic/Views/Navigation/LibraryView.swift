@@ -35,7 +35,7 @@ struct LibraryView: View {
                     if gameListViewModel.isUpdatingLibrary {
                         ProgressView()
                             .controlSize(.small)
-                            .help("Mythic is updating your library.")
+                            .help("Game Hub is updating your library.")
                             .padding(10)
                     }
                 }

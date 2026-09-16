@@ -121,7 +121,7 @@ struct GameImageCard: View {
                     "Image Unavailable",
                     systemImage: "photo.badge.exclamationmark",
                     description: .init("""
-                    This game doesn't have an image that Mythic can display in this style.
+                    This game doesn't have an image that Game Hub can display in this style.
                     """)
                 )
                 .frame(width: geometry.size.width,

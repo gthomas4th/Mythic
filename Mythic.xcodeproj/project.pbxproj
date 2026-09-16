@@ -273,7 +273,7 @@
 		6AA445782EABB12D0064A14F /* Engine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Engine.swift; sourceTree = "<group>"; };
 		6AA4457A2EABBB350064A14F /* SemanticVersion+Codable(PropertyList).swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SemanticVersion+Codable(PropertyList).swift"; sourceTree = "<group>"; };
 		6AACEF742C18846700258A7E /* exeIcon.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; path = exeIcon.icns; sourceTree = "<group>"; };
-		6AB474952AACBBE900AB9C63 /* Mythic.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Mythic.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		6AB474952AACBBE900AB9C63 /* Game Hub.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Game Hub.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		6ABE9B8F2EC0F059002DBE82 /* SparkleUpdateController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SparkleUpdateController.swift; sourceTree = "<group>"; };
 		6ABEA90F2ECB5895006F5182 /* GameOperationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameOperationManager.swift; sourceTree = "<group>"; };
 		6ABEA9112ECB5CF3006F5182 /* GameOperation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameOperation.swift; sourceTree = "<group>"; };
@@ -643,7 +643,7 @@
 		6AB474962AACBBE900AB9C63 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				6AB474952AACBBE900AB9C63 /* Mythic.app */,
+				6AB474952AACBBE900AB9C63 /* Game Hub.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -742,8 +742,8 @@
 				1217C8C12EADC680003EC8C9 /* MarkdownUI */,
 				6A8592CE2ED8047C00B339D8 /* DockProgress */,
 			);
-			productName = Mythic;
-			productReference = 6AB474952AACBBE900AB9C63 /* Mythic.app */;
+			productName = "Game Hub";
+			productReference = 6AB474952AACBBE900AB9C63 /* Game Hub.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -1126,7 +1126,7 @@
 		6AB474A52AACBBEA00AB9C63 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = Mythic;
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				CODE_SIGN_ENTITLEMENTS = Mythic/Mythic.entitlements;
@@ -1149,7 +1149,8 @@
 				);
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Mythic/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = Mythic;
+				INFOPLIST_KEY_CFBundleDisplayName = "Game Hub";
+				INFOPLIST_KEY_CFBundleName = "Game Hub";
 				INFOPLIST_KEY_GCSupportsControllerUserInteraction = YES;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2023-2025 vapidinfinity";
@@ -1161,7 +1162,8 @@
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				MARKETING_VERSION = "0.6.0-dirty";
 				PRODUCT_BUNDLE_IDENTIFIER = xyz.blackxfiied.Mythic;
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_MODULE_NAME = Mythic;
+				PRODUCT_NAME = "Game Hub";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_STRICT_CONCURRENCY = minimal;
@@ -1174,7 +1176,7 @@
 		6AB474A62AACBBEA00AB9C63 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = Mythic;
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				CODE_SIGN_ENTITLEMENTS = Mythic/Mythic.entitlements;
@@ -1197,7 +1199,8 @@
 				);
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Mythic/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = Mythic;
+				INFOPLIST_KEY_CFBundleDisplayName = "Game Hub";
+				INFOPLIST_KEY_CFBundleName = "Game Hub";
 				INFOPLIST_KEY_GCSupportsControllerUserInteraction = YES;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2023-2025 vapidinfinity";
@@ -1209,7 +1212,8 @@
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				MARKETING_VERSION = 0.6.0;
 				PRODUCT_BUNDLE_IDENTIFIER = xyz.blackxfiied.Mythic;
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_MODULE_NAME = Mythic;
+				PRODUCT_NAME = "Game Hub";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_STRICT_CONCURRENCY = minimal;

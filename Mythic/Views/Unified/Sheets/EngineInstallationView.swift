@@ -59,7 +59,7 @@ extension EngineInstallationView {
         var body: some View {
             Text(
                 """
-                In order to run Windows® games, Mythic must download
+                In order to run Windows® games, Game Hub must download
                 a specialized translation layer.
                 
                 The download time should take ~10 minutes,

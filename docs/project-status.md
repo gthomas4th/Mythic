@@ -12,6 +12,17 @@ passes `codesign --verify --deep --strict`. This is not a notarized public relea
 The original app and runtime are preserved. Development builds and the test host
 are not the user entry point. Do not remove recovery copies before final live acceptance.
 
+## Game Hub product identity
+
+The installed product, executable, macOS menu and Dock label are **Game Hub**. A new
+original controller-and-navigation-portal icon carries the dark LCARS palette at every
+macOS icon size; its 1024-pixel source is retained in `docs/assets/GameHub-AppIcon-1024.png`.
+The bundle identifier remains `xyz.blackxfiied.Mythic`, the Swift module remains `Mythic`,
+and application support and game storage continue using their established `Mythic` paths.
+This preserves the existing library, settings, containers and saves while removing Mythic
+as the user-facing product name. The populated library, Dock entry, Debug build, strict
+signature and installed controller/navigation regression were verified after the rename.
+
 ## Final UX quality pass
 
 Game Hub now opens at the full usable size of the active display. Library search clears

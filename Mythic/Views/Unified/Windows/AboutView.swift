@@ -37,7 +37,7 @@ struct AboutView: View {
                         
                         if !animateTextView {
                             Group {
-                                Text("Mythic")
+                                Text("Game Hub")
                                     .font(.largeTitle)
                                 Text("© by vapidinfinity ✦")
                                 
