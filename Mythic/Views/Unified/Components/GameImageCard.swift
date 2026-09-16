@@ -32,8 +32,8 @@ struct GameImageCard: View {
     
     var body: some View {
         GeometryReader { geometry in
-            if url == nil, let game, game is ROMGame {
-                HubPlaceholderArtwork(title: game.title, system: (game as? ROMGame)?.source?.system ?? "Games")
+            if url == nil, let game = game as? ROMGame {
+                ROMCoverArtwork(title: game.title, system: game.source?.system ?? "Games", contentMode: contentMode)
             } else if let url, url.isFileURL, let image = NSImage(contentsOf: url) {
                 Image(nsImage: image)
                     .resizable()
@@ -275,5 +275,98 @@ struct HubLaunchButtonStyle: ButtonStyle {
             .foregroundStyle(isEnabled ? Color.white : HubTheme.ink.opacity(0.6))
             .padding(.horizontal, 18).frame(minHeight: 36)
             .background(isEnabled ? HubTheme.blue.opacity(configuration.isPressed ? 0.75 : 1) : HubTheme.canvas, in: .capsule)
+    }
+}
+
+private struct ROMCoverArtwork: View {
+    let title: String
+    let system: String
+    let contentMode: ContentMode
+    @State private var artworkURL: URL?
+
+    var body: some View {
+        Group {
+            if let artworkURL {
+                AsyncImage(url: artworkURL) { phase in
+                    switch phase {
+                    case .success(let image):
+                        image.resizable().aspectRatio(contentMode: contentMode)
+                    default:
+                        HubPlaceholderArtwork(title: title, system: system)
+                    }
+                }
+            } else {
+                HubPlaceholderArtwork(title: title, system: system)
+            }
+        }
+        .task(id: "\\(system)|\\(title)") {
+            artworkURL = await ROMArtworkResolver.shared.artworkURL(system: system, title: title)
+        }
+    }
+}
+
+private actor ROMArtworkResolver {
+    static let shared = ROMArtworkResolver()
+
+    private let repositories = [
+        "gc": "Nintendo_-_GameCube",
+        "n64": "Nintendo_-_Nintendo_64",
+        "ps1": "Sony_-_PlayStation",
+        "ps2": "Sony_-_PlayStation_2"
+    ]
+    private var indexes: [String: [String: URL]] = [:]
+
+    func artworkURL(system: String, title: String) async -> URL? {
+        guard let repository = repositories[system] else { return nil }
+        let normalizedTitle = normalize(title)
+        guard !normalizedTitle.isEmpty else { return nil }
+        let index: [String: URL]
+        if let cached = indexes[repository] {
+            index = cached
+        } else {
+            guard let fetched = await fetchIndex(repository: repository) else { return nil }
+            indexes[repository] = fetched
+            index = fetched
+        }
+        if let exact = index[normalizedTitle] { return exact }
+        return index.first(where: { key, _ in key.hasPrefix(normalizedTitle) || normalizedTitle.hasPrefix(key) })?.value
+    }
+
+    private func fetchIndex(repository: String) async -> [String: URL]? {
+        guard let endpoint = URL(string: "https://api.github.com/repos/libretro-thumbnails/\\(repository)/git/trees/master?recursive=1") else { return nil }
+        do {
+            let (data, response) = try await URLSession.shared.data(from: endpoint)
+            guard (response as? HTTPURLResponse)?.statusCode == 200,
+                  let tree = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+                  let entries = tree["tree"] as? [[String: Any]] else { return nil }
+            var result: [String: URL] = [:]
+            for entry in entries {
+                guard let path = entry["path"] as? String,
+                      path.hasPrefix("Named_Boxarts/"),
+                      ["png", "jpg", "jpeg", "webp"].contains(URL(fileURLWithPath: path).pathExtension.lowercased()) else { continue }
+                let filename = URL(fileURLWithPath: path).lastPathComponent
+                let key = normalize(URL(fileURLWithPath: filename).deletingPathExtension().lastPathComponent)
+                guard !key.isEmpty,
+                      let encoded = path.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed),
+                      let imageURL = URL(string: "https://thumbnails.libretro.com/\\(repository)/\\(encoded)") else { continue }
+                // Prefer the first repository match; the index order favors the canonical regional art.
+                if result[key] == nil { result[key] = imageURL }
+            }
+            return result
+        } catch {
+            return nil
+        }
+    }
+
+    private func normalize(_ value: String) -> String {
+        var result = ""
+        var depth = 0
+        for scalar in value.unicodeScalars {
+            if scalar == "(" { depth += 1; continue }
+            if scalar == ")" { depth = max(0, depth - 1); continue }
+            guard depth == 0 else { continue }
+            if CharacterSet.alphanumerics.contains(scalar) { result.unicodeScalars.append(scalar) }
+        }
+        return result.lowercased()
     }
 }
