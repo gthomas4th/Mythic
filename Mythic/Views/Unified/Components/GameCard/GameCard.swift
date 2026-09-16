@@ -84,6 +84,34 @@ struct HubGameBadges: View {
         HStack(spacing: 8) {
             if let location = game.locationLabel { HubTagBadge(title: location, category: "Location") }
             if let type = game.typeLabel { HubTagBadge(title: type, category: "Type") }
+            if let rom = game as? ROMGame, let system = rom.source?.system {
+                HubSystemBadge(system: system)
+            }
         }.fixedSize(horizontal: true, vertical: false)
+    }
+}
+
+struct HubSystemBadge: View {
+    let system: String
+
+    private var icon: String {
+        switch system.lowercased() {
+        case "gc", "wii": return "gamecontroller.fill"
+        case "ps1", "ps2", "ps3": return "circle.grid.3x3.fill"
+        case "n64": return "rectangle.3.group.fill"
+        case "switch": return "rectangle.split.2x1.fill"
+        default: return "gamecontroller.fill"
+        }
+    }
+
+    var body: some View {
+        Label(system.uppercased(), systemImage: icon)
+            .font(.system(size: 14, weight: .semibold))
+            .lineLimit(1).fixedSize(horizontal: true, vertical: false)
+            .padding(.horizontal, 10).padding(.vertical, 6)
+            .foregroundStyle(HubTheme.ink)
+            .background(HubTheme.blue.opacity(0.20), in: .capsule)
+            .help("System: \(system.uppercased())")
+            .accessibilityLabel("System: \(system.uppercased())")
     }
 }

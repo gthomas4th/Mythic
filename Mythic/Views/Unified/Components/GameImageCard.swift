@@ -333,7 +333,7 @@ private actor ROMArtworkResolver {
     }
 
     private func fetchIndex(repository: String) async -> [String: URL]? {
-        guard let endpoint = URL(string: "https://api.github.com/repos/libretro-thumbnails/\\(repository)/git/trees/master?recursive=1") else { return nil }
+        guard let endpoint = URL(string: "https://api.github.com/repos/libretro-thumbnails/\(repository)/git/trees/master?recursive=1") else { return nil }
         do {
             let (data, response) = try await URLSession.shared.data(from: endpoint)
             guard (response as? HTTPURLResponse)?.statusCode == 200,
@@ -348,7 +348,7 @@ private actor ROMArtworkResolver {
                 let key = normalize(URL(fileURLWithPath: filename).deletingPathExtension().lastPathComponent)
                 guard !key.isEmpty,
                       let encoded = path.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed),
-                      let imageURL = URL(string: "https://thumbnails.libretro.com/\\(repository)/\\(encoded)") else { continue }
+                      let imageURL = URL(string: "https://raw.githubusercontent.com/libretro-thumbnails/\(repository)/master/\(encoded)") else { continue }
                 // Prefer the first repository match; the index order favors the canonical regional art.
                 if result[key] == nil { result[key] = imageURL }
             }

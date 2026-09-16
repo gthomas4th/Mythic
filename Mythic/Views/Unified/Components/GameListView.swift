@@ -77,17 +77,22 @@ struct GameListView: View {
                 HubControllerHints(actions: [("Move", "Move"), ("A", "Play"), ("X", "Options"), ("Y", "System"), ("B", "Sidebar")]).padding(.bottom, 12)
             }
             if !launchMessage.isEmpty { Text(launchMessage).padding(8) }
-            HStack(spacing: 16) {
-                Picker("System", selection: $viewModel.selectedSystem) {
-                    Text("All systems").tag("")
-                    ForEach(viewModel.availableSystems, id: \.self) { system in
-                        Text(system).tag(system)
+            VStack(alignment: .leading, spacing: 8) {
+                Label("SYSTEM", systemImage: "gamecontroller.fill")
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundStyle(HubTheme.ink)
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        HubSystemFilterButton(title: "All", icon: "square.grid.2x2.fill", selected: viewModel.selectedSystem.isEmpty) {
+                            viewModel.selectedSystem = ""
+                        }
+                        ForEach(viewModel.availableSystems, id: \.self) { system in
+                            HubSystemFilterButton(title: system, icon: HubSystemFilterButton.icon(for: system), selected: viewModel.selectedSystem == system) {
+                                viewModel.selectedSystem = system
+                            }
+                        }
                     }
-                }.pickerStyle(.menu).frame(maxWidth: 340).controlSize(.large)
-                if !viewModel.selectedSystem.isEmpty {
-                    Button("Clear system") { viewModel.selectedSystem = "" }.buttonStyle(.plain)
                 }
-                Spacer(minLength: 0)
             }.padding(.horizontal, 28).padding(.bottom, 16)
             if !gameDataStore.displayLibrary.isEmpty && displayedGames.isEmpty {
                 ContentUnavailableView("No matching games", systemImage: "line.3.horizontal.decrease",
@@ -190,4 +195,35 @@ struct GameListView: View {
 #Preview {
     GameListView()
         .environmentObject(NetworkMonitor.shared)
+}
+
+private struct HubSystemFilterButton: View {
+    let title: String
+    let icon: String
+    let selected: Bool
+    let action: () -> Void
+
+    static func icon(for system: String) -> String {
+        switch system {
+        case "GameCube", "Wii": return "gamecontroller.fill"
+        case "Nintendo 64": return "rectangle.3.group.fill"
+        case "PlayStation", "PlayStation 2", "PlayStation 3", "PSP": return "circle.grid.3x3.fill"
+        case "Nintendo Switch": return "rectangle.split.2x1.fill"
+        case "PC & Mac": return "desktopcomputer"
+        default: return "gamecontroller.fill"
+        }
+    }
+
+    var body: some View {
+        Button(action: action) {
+            Label(title, systemImage: icon)
+                .font(.system(size: 15, weight: .bold))
+                .lineLimit(1)
+                .padding(.horizontal, 14).padding(.vertical, 9)
+                .foregroundStyle(HubTheme.ink)
+                .background(selected ? HubTheme.yellow : HubTheme.blue.opacity(0.18), in: .capsule)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Show \(title) games")
+    }
 }
