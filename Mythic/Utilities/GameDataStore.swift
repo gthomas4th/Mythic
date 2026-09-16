@@ -19,9 +19,26 @@ import OSLog
     private(set) var persistenceError: String?
     private var persistenceReady = false
     private var firstSeenDates: [String: Date] = [:]
+    private var preferenceCache: [String: CatalogStore.Preference] = [:]
     
     var library: Set<Game> = [] {
-        didSet { if persistenceReady { persistLibrary() } }
+        didSet {
+            libraryGeneration &+= 1
+            displayLibraryCache = nil
+            if persistenceReady { persistLibrary() }
+        }
+    }
+    @ObservationIgnored private var libraryGeneration = 0
+    @ObservationIgnored private var discoveredGeneration = 0
+    @ObservationIgnored private var connectionGeneration = 0
+    @ObservationIgnored private var displayLibraryCache: Set<Game>?
+    @ObservationIgnored private var displayLibraryVersion: DisplayLibraryVersion?
+
+    private struct DisplayLibraryVersion: Equatable {
+        let library: Int
+        let discovered: Int
+        let connections: Int
+        let roms: Int
     }
 
     @MainActor private init() {
@@ -40,7 +57,8 @@ import OSLog
             }
             persistenceReady = true
             importLegacyCatalog()
-            for game in library { restorePreferences(for: game) }
+            preferenceCache = (try? catalog?.preferences()) ?? [:]
+            restorePreferences(for: Array(library))
         } catch {
             persistenceError = "The catalog could not be opened. Original data and backups have been preserved; changes will not be saved."
             if library.isEmpty, let data = UserDefaults.standard.data(forKey: "games"), let legacy = try? PropertyListDecoder().decode([AnyGame].self, from: data) {
@@ -51,16 +69,12 @@ import OSLog
             discoveredGames = Set(cached.filter { $0.id.provider == .steam }.compactMap { record in
                 guard let target = record.launchTargets.first else { return nil }
                 let game = SteamGame(record: record, target: target)
-                if let saved = try? catalog?.preference(for: game.id) {
-                    game.isFavourited = saved.favorite; game.lastLaunched = saved.lastPlayed
-                    game.preferredTargetID = saved.preferredTargetID
-                }
-                rememberFirstSeen(for: game)
                 return game
             })
+            restorePreferences(for: Array(discoveredGames))
         }
         connectionGames = ConnectionGame.libraryGames()
-        for game in connectionGames { restorePreferences(for: game) }
+        restorePreferences(for: Array(connectionGames))
     }
 
     private func encodedLibrary() throws -> [String: Data] {
@@ -75,18 +89,31 @@ import OSLog
         do {
             try catalog?.replaceGameDetails(encodedLibrary())
             importLegacyCatalog()
-            for game in library { HubGameOptions.shared.apply(to: game); rememberFirstSeen(for: game) }
+            for game in library { HubGameOptions.shared.apply(to: game) }
         } catch { persistenceError = "Library changes could not be saved. The previous catalog snapshot is preserved." }
     }
 
-    private(set) var discoveredGames: Set<Game> = []
-    private(set) var connectionGames: Set<Game> = []
+    private(set) var discoveredGames: Set<Game> = [] {
+        didSet {
+            discoveredGeneration &+= 1
+            displayLibraryCache = nil
+        }
+    }
+    private(set) var connectionGames: Set<Game> = [] {
+        didSet {
+            connectionGeneration &+= 1
+            displayLibraryCache = nil
+        }
+    }
     private(set) var discoveryDiagnostics: [String] = []
     private var completeLibrary: Set<Game> { library.union(discoveredGames).union(ROMLibrary.shared.games).union(connectionGames) }
     var hacksAndHomebrewLibrary: Set<Game> {
         Set(completeLibrary.filter(ROMCatalogPolicy.isHacksOrHomebrew))
     }
     var displayLibrary: Set<Game> {
+        let version = DisplayLibraryVersion(library: libraryGeneration, discovered: discoveredGeneration,
+            connections: connectionGeneration, roms: ROMLibrary.shared.catalogGeneration)
+        if version == displayLibraryVersion, let displayLibraryCache { return displayLibraryCache }
         let visible = completeLibrary.filter {
             !ROMCatalogPolicy.isHacksOrHomebrew($0)
                 && !ROMCatalogPolicy.isHiddenWithoutArtwork($0)
@@ -103,7 +130,14 @@ import OSLog
             }
         }
         result.formUnion(uniqueROMs.values.map { $0 as Game })
+        displayLibraryVersion = version
+        displayLibraryCache = result
         return result
+    }
+
+    func invalidateDisplayLibrary() {
+        displayLibraryCache = nil
+        displayLibraryVersion = nil
     }
 
     private static func isEpicAddOn(_ game: Game) -> Bool {
@@ -132,8 +166,17 @@ import OSLog
     }
     private func rememberFirstSeen(for game: Game) {
         guard persistenceReady, let catalog else { return }
+        let id = identity(for: game)
+        if let date = preferenceCache[id]?.firstSeen {
+            firstSeenDates[id] = date
+            return
+        }
         do {
-            firstSeenDates[identity(for: game)] = try catalog.recordFirstSeen(for: identity(for: game))
+            let date = try catalog.recordFirstSeen(for: id)
+            firstSeenDates[id] = date
+            var preference = preferenceCache[id] ?? .init()
+            preference.firstSeen = date
+            preferenceCache[id] = preference
         } catch { persistenceError = "The date this game was added could not be saved." }
     }
     private func identity(for game: Game) -> String {
@@ -148,28 +191,57 @@ import OSLog
                 try data.write(to: backup, options: .atomic)
             }
             let existing = Set(try catalog?.records().map { $0.id.description } ?? [])
-            for game in library {
-                let record = GameRecord(id: .init(provider: game.storefront == .epicGames ? .epic : .local, externalID: game.id),
+            let records = library.map { game in
+                GameRecord(id: .init(provider: game.storefront == .epicGames ? .epic : .local, externalID: game.id),
                     title: game.title, launchTargets: [], artwork: game.verticalImageURL)
-                try catalog?.upsert([record])
-                if !existing.contains(identity(for: game)) {
-                    try catalog?.setPreference(.init(favorite: game.isFavourited, lastPlayed: game.lastLaunched), for: identity(for: game))
-                }
             }
+            try catalog?.upsert(records)
+            let saved = try catalog?.preferences() ?? [:]
+            let imported = Dictionary(uniqueKeysWithValues: library.compactMap { game -> (String, CatalogStore.Preference)? in
+                let id = identity(for: game)
+                guard !existing.contains(id) else { return nil }
+                return (id, .init(favorite: game.isFavourited, lastPlayed: game.lastLaunched,
+                    preferredTargetID: nil, firstSeen: saved[id]?.firstSeen))
+            })
+            try catalog?.setPreferences(imported)
         } catch { persistenceError = "The existing library could not be imported. Its original data is preserved." }
     }
     func restorePreferences(for game: Game) {
-        HubGameOptions.shared.apply(to: game)
-        rememberFirstSeen(for: game)
-        if let saved = try? catalog?.preference(for: identity(for: game)) {
-            game.isFavourited = saved.favorite; game.lastLaunched = saved.lastPlayed
+        restorePreferences(for: [game])
+    }
+    func restorePreferences(for games: [Game]) {
+        guard !games.isEmpty else { return }
+        let observedAt = Date()
+        var additions: [String: CatalogStore.Preference] = [:]
+        for game in games {
+            HubGameOptions.shared.apply(to: game)
+            let id = identity(for: game)
+            let saved: CatalogStore.Preference
+            if let cached = preferenceCache[id] {
+                saved = cached
+            } else {
+                saved = .init(firstSeen: observedAt)
+                preferenceCache[id] = saved
+                additions[id] = saved
+            }
+            firstSeenDates[id] = saved.firstSeen ?? observedAt
+            game.isFavourited = saved.favorite
+            game.lastLaunched = saved.lastPlayed
+            if let steam = game as? SteamGame { steam.preferredTargetID = saved.preferredTargetID }
+        }
+        if !additions.isEmpty {
+            do { try catalog?.insertPreferencesIfAbsent(additions) }
+            catch { persistenceError = "New catalog entries could not be recorded. Existing preferences were preserved." }
         }
     }
     func savePreferences(for game: Game) {
         guard persistenceReady else { return }
         do {
-            try catalog?.setPreference(.init(favorite: game.isFavourited, lastPlayed: game.lastLaunched,
-                preferredTargetID: (game as? SteamGame)?.preferredTargetID), for: identity(for: game))
+            let id = identity(for: game)
+            let preference = CatalogStore.Preference(favorite: game.isFavourited, lastPlayed: game.lastLaunched,
+                preferredTargetID: (game as? SteamGame)?.preferredTargetID, firstSeen: firstSeenDates[id])
+            try catalog?.setPreference(preference, for: id)
+            preferenceCache[id] = preference
             if library.contains(game) { persistLibrary() }
         } catch { persistenceError = "Game preferences could not be saved." }
     }
@@ -204,20 +276,10 @@ import OSLog
             for record in records {
                 guard let target = LaunchResolver.resolve(record.launchTargets) ?? record.launchTargets.first else { continue }
                 let game = SteamGame(record: record, target: target)
-                if let saved = try? catalog?.preference(for: game.id) {
-                    game.isFavourited = saved.favorite
-                    game.lastLaunched = saved.lastPlayed
-                    game.preferredTargetID = saved.preferredTargetID
-                }
-                if let old = discoveredGames.first(where: { $0.id == game.id }) {
-                    game.isFavourited = old.isFavourited
-                    game.lastLaunched = old.lastLaunched
-                }
-                rememberFirstSeen(for: game)
-                HubGameOptions.shared.apply(to: game)
                 refreshed.insert(game)
             }
             discoveredGames = refreshed
+            restorePreferences(for: Array(refreshed))
             for diagnostic in discoveryDiagnostics { log.notice("Steam discovery: \(diagnostic, privacy: .public)") }
         }
 
@@ -226,21 +288,24 @@ import OSLog
             do {
                 let installables = try Legendary.getInstallableGames()
                 let installed = try Legendary.getInstalledGames()
+                var refreshed = library
                 
                 // add installables that aren't installed
                 for game in installables where !installed.contains(where: { $0 == game }) {
-                    library.update(with: game)
+                    refreshed.update(with: game)
                 }
                 
                 // installed: merge instead of overwrite
                 for fetchedGame in installed {
-                    if let existing = library.first(where: { $0 == fetchedGame }) {
+                    if let existing = refreshed.first(where: { $0 == fetchedGame }) {
                         try existing.merge(with: fetchedGame, requiring: .identicalIgnoredKeys)
-                        library.update(with: existing)
+                        refreshed.update(with: existing)
                     } else {
-                        library.update(with: fetchedGame)
+                        refreshed.update(with: fetchedGame)
                     }
                 }
+                library = refreshed
+                restorePreferences(for: Array(refreshed))
             } catch {
                 log.error("Unable to refresh game data from Epic Games: \(error.localizedDescription)")
                 throw error

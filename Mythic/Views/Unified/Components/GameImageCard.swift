@@ -47,12 +47,9 @@ struct GameImageCard: View {
             } else if url == nil, let game = game as? ROMGame {
                 ROMArtwork(title: game.title, system: game.source?.system ?? "Games",
                            kind: romArtworkKind, contentMode: contentMode)
-            } else if let url, url.isFileURL, let image = NSImage(contentsOf: url) {
-                Image(nsImage: image)
-                    .resizable()
-                    .aspectRatio(contentMode: contentMode)
+            } else if let url, url.isFileURL {
+                HubLocalArtworkImage(url: url, contentMode: contentMode, isImageEmpty: $isImageEmpty)
                     .frame(width: geometry.size.width, height: geometry.size.height)
-                    .onAppear { isImageEmpty = false }
             } else if let url = url {
                 AsyncImage(url: url) { phase in
                     switch phase {
@@ -135,6 +132,27 @@ struct GameImageCard: View {
     }
 }
 
+private struct HubLocalArtworkImage: View {
+    let url: URL
+    let contentMode: ContentMode
+    @Binding var isImageEmpty: Bool
+    @State private var image: NSImage?
+
+    var body: some View {
+        Group {
+            if let image {
+                Image(nsImage: image).resizable().aspectRatio(contentMode: contentMode)
+            } else {
+                Rectangle().foregroundStyle(.quinary)
+            }
+        }
+        .task(id: url) {
+            image = await ROMArtworkImageLoader.shared.image(at: url)
+            isImageEmpty = image == nil
+        }
+    }
+}
+
 extension GameImageCard {
     // TODO: implement for windows .exes by implementing PEFile
     struct FallbackGameImageCard: View {
@@ -199,9 +217,10 @@ extension GameImageCard {
 
 // Shared presentation tokens. Game Boy casing-inspired grey surfaces retain LCARS accents and generous type.
 enum HubTheme {
-    static let canvas = Color(red: 0.62, green: 0.62, blue: 0.60)
-    static let panel = Color(red: 0.73, green: 0.73, blue: 0.71)
-    static let ink = Color(red: 0.12, green: 0.17, blue: 0.24)
+    // VS Code-inspired neutral surfaces keep artwork dominant while the LCARS colors carry navigation and actions.
+    static let canvas = Color(red: 0.12, green: 0.12, blue: 0.12)
+    static let panel = Color(red: 0.15, green: 0.15, blue: 0.16)
+    static let ink = Color(red: 0.91, green: 0.92, blue: 0.94)
     static let blue = Color(red: 0.16, green: 0.31, blue: 0.48)
     static let yellow = Color(red: 0.92, green: 0.77, blue: 0.34)
     static let green = Color(red: 0.43, green: 0.64, blue: 0.51)
@@ -222,7 +241,7 @@ struct HubThemeModifier: ViewModifier {
         content
             .font(theme == "lcars" ? .system(size: 17) : .body)
             .tint(theme == "lcars" ? HubTheme.blue : .accentColor)
-            .preferredColorScheme(theme == "lcars" ? .light : nil)
+            .preferredColorScheme(theme == "lcars" ? .dark : nil)
     }
 }
 struct HubSectionBanner: View {
@@ -316,12 +335,13 @@ private struct ROMArtwork: View {
     let kind: ROMArtworkKind
     let contentMode: ContentMode
     @State private var artworkURL: URL?
+    @State private var localImage: NSImage?
     @State private var resolvedKind: ROMArtworkKind?
 
     var body: some View {
         Group {
             if let artworkURL {
-                if artworkURL.isFileURL, let image = NSImage(contentsOf: artworkURL) {
+                if artworkURL.isFileURL, let image = localImage {
                     let ratio = image.size.height > 0 ? image.size.width / image.size.height : 2
                     resolvedImage(Image(nsImage: image), preserveWholeImage: kind == .scene && ratio < 1.25)
                 } else {
@@ -339,6 +359,9 @@ private struct ROMArtwork: View {
             }
         }
         .task(id: "\(system)|\(title)|\(kind.rawValue)") {
+            artworkURL = nil
+            localImage = nil
+            resolvedKind = nil
             if let primary = await ROMArtworkResolver.shared.artworkURL(system: system, title: title, kind: kind) {
                 artworkURL = primary
                 resolvedKind = kind
@@ -346,6 +369,9 @@ private struct ROMArtwork: View {
                 let fallback: ROMArtworkKind = kind == .boxart ? .scene : .boxart
                 artworkURL = await ROMArtworkResolver.shared.artworkURL(system: system, title: title, kind: fallback)
                 resolvedKind = artworkURL == nil ? nil : fallback
+            }
+            if let artworkURL, artworkURL.isFileURL {
+                localImage = await ROMArtworkImageLoader.shared.image(at: artworkURL)
             }
         }
     }
@@ -369,6 +395,33 @@ private struct ROMArtwork: View {
     }
 }
 
+private actor ROMArtworkImageLoader {
+    static let shared = ROMArtworkImageLoader()
+    private let cache = NSCache<NSURL, NSImage>()
+
+    init() {
+        cache.countLimit = 160
+        cache.totalCostLimit = 192 * 1_000_000
+    }
+
+    func image(at url: URL) -> NSImage? {
+        if let cached = cache.object(forKey: url as NSURL) { return cached }
+        guard let image = NSImage(contentsOf: url) else { return nil }
+        let cost = max(1, Int(image.size.width * image.size.height * 4))
+        cache.setObject(image, forKey: url as NSURL, cost: cost)
+        return image
+    }
+}
+
+private struct SwitchArtworkRecord: Codable, Sendable {
+    let boxart: URL?
+    let scene: URL?
+
+    func url(for kind: ROMArtworkKind) -> URL? {
+        kind == .boxart ? boxart : scene
+    }
+}
+
 private actor ROMArtworkResolver {
     static let shared = ROMArtworkResolver()
 
@@ -382,7 +435,31 @@ private actor ROMArtworkResolver {
         "sega32x": "Sega_-_32X"
     ]
     private var indexes: [String: [String: URL]] = [:]
-    private var switchIndexes: [ROMArtworkKind: [String: URL]] = [:]
+    private var switchIndex: [String: SwitchArtworkRecord]?
+    private var switchIndexTask: Task<[String: SwitchArtworkRecord]?, Never>?
+    private let curatedSwitchArtwork: [String: SwitchArtworkRecord] = [
+        "thelegendofzeldabreathofthewild": .init(
+            boxart: URL(string: "https://img-eshop.cdn.nintendo.net/i/d3c210e61e8487200fc4c344987243a60257838187a69a6a81c42d7447d5d192.jpg"),
+            scene: URL(string: "https://img-eshop.cdn.nintendo.net/i/37559b8fa80cf0708c8dcef23ef4fea9af26d997a7c6f981565bc50eeaa3cc0f.jpg")),
+        "newsupermariobrosudeluxe": .init(
+            boxart: URL(string: "https://img-eshop.cdn.nintendo.net/i/658a846bafd5446bbdfc163c46937152887c6c39eb5f1e6b2337ddec3352b524.jpg"),
+            scene: URL(string: "https://img-eshop.cdn.nintendo.net/i/5e1ca57f22a388d696dd0883ea3b5453c7c9e59ff0fea05dd912a2fcb88d1985.jpg")),
+        "sonicmania": .init(
+            boxart: URL(string: "https://img-eshop.cdn.nintendo.net/i/687ff984dcffc714fdef6b8684028c3039a3ea8e1630bb8898aa9583d8161771.jpg"),
+            scene: URL(string: "https://img-eshop.cdn.nintendo.net/i/061ad13a1e1d42bec3270dce388bc73ef1d8b3fdf095790cbcdf0a186a945034.jpg")),
+        "sonicxshadowgenerations": .init(
+            boxart: URL(string: "https://img-eshop.cdn.nintendo.net/i/88d19ed59cac8faa44abcc45d54a5c10fec4fae57a2932aa0a6034d0e4f3a5e5.jpg"),
+            scene: URL(string: "https://img-eshop.cdn.nintendo.net/i/a238b93d4e1ec89433dbcff71b9ea3da41ed478eeb96576f752f4ffb0bcbd74a.jpg")),
+        "supermariobroswonder": .init(
+            boxart: URL(string: "https://img-eshop.cdn.nintendo.net/i/bf2fca7eed5ad7ec96d03025907ea52c3efe168e02c8be96e868d8430a247a57.jpg"),
+            scene: URL(string: "https://img-eshop.cdn.nintendo.net/i/e3024df668cdead60e62865924652c811323b0e7c46f51567fe80907f2637cc4.jpg")),
+        "supermarioodyssey": .init(
+            boxart: URL(string: "https://img-eshop.cdn.nintendo.net/i/ad4d31f664a1ce704f0219da2805f8459595bc3c01c3f04df2e32ba34a05b8c6.jpg"),
+            scene: URL(string: "https://img-eshop.cdn.nintendo.net/i/1839d571921e3fb19ef48da64c145cb8ce573b07d7390c6350f15291b3905048.jpg")),
+        "supersmashbrosultimate": .init(
+            boxart: URL(string: "https://img-eshop.cdn.nintendo.net/i/08af58551a19df2a73ccb36f720388434a1965776b34675c6f69af3f93280330.jpg"),
+            scene: URL(string: "https://img-eshop.cdn.nintendo.net/i/245420c78ce40337bdca7ce9c2dd819bd4ae33b022da9b922c0710b8420b59dd.jpg"))
+    ]
 
     func artworkURL(system: String, title: String, kind: ROMArtworkKind) async -> URL? {
         let cacheURL = cachedArtworkURL(system: system, title: title, kind: kind)
@@ -443,38 +520,65 @@ private actor ROMArtworkResolver {
     }
 
     private func switchArtworkURL(title: String, kind: ROMArtworkKind) async -> URL? {
-        if switchIndexes[kind] == nil { switchIndexes[kind] = await fetchSwitchIndex(kind: kind) }
-        guard let index = switchIndexes[kind] else { return nil }
+        let normalizedTitle = normalize(title)
+        if let exact = curatedSwitchArtwork[normalizedTitle]?.url(for: kind) { return exact }
+        if switchIndex == nil { switchIndex = loadSwitchIndex() }
+        if switchIndex == nil {
+            let task: Task<[String: SwitchArtworkRecord]?, Never>
+            if let current = switchIndexTask {
+                task = current
+            } else {
+                let created = Task { await fetchSwitchIndex() }
+                switchIndexTask = created
+                task = created
+            }
+            switchIndex = await task.value
+            switchIndexTask = nil
+            if let switchIndex { persistSwitchIndex(switchIndex) }
+        }
+        guard let index = switchIndex else { return nil }
         let titleID = title.range(of: #"[0-9A-Fa-f]{16}"#, options: .regularExpression).map {
             String(title[$0]).uppercased()
         }
-        if let titleID, let exact = index[titleID] { return exact }
-        return index[normalize(title)]
+        if let titleID, let exact = index[titleID]?.url(for: kind) { return exact }
+        return index[normalizedTitle]?.url(for: kind)
     }
 
-    private func fetchSwitchIndex(kind: ROMArtworkKind) async -> [String: URL]? {
+    private func fetchSwitchIndex() async -> [String: SwitchArtworkRecord]? {
         guard let endpoint = URL(string: "https://raw.githubusercontent.com/blawar/titledb/master/US.en.json") else { return nil }
         do {
             let (data, response) = try await URLSession.shared.data(from: endpoint)
             guard (response as? HTTPURLResponse)?.statusCode == 200,
                   let records = try JSONSerialization.jsonObject(with: data) as? [String: [String: Any]] else { return nil }
-            var result: [String: URL] = [:]
+            var result: [String: SwitchArtworkRecord] = [:]
             for record in records.values {
                 let id = record["id"] as? String ?? ""
-                let value: String?
-                switch kind {
-                case .boxart:
-                    value = record["frontBoxArt"] as? String ?? record["iconUrl"] as? String
-                case .scene:
-                    let screenshots = record["screenshots"] as? [String] ?? []
-                    value = screenshots.dropFirst().first ?? screenshots.first ?? record["bannerUrl"] as? String
-                }
-                guard let value, let url = URL(string: value) else { continue }
-                if !id.isEmpty { result[id.uppercased()] = url }
-                if let name = record["name"] as? String { result[normalize(name)] = url }
+                let screenshots = record["screenshots"] as? [String] ?? []
+                let boxart = (record["frontBoxArt"] as? String ?? record["iconUrl"] as? String).flatMap(URL.init(string:))
+                let scene = (screenshots.dropFirst().first ?? screenshots.first ?? record["bannerUrl"] as? String).flatMap(URL.init(string:))
+                guard boxart != nil || scene != nil else { continue }
+                let artwork = SwitchArtworkRecord(boxart: boxart, scene: scene)
+                if !id.isEmpty { result[id.uppercased()] = artwork }
+                if let name = record["name"] as? String { result[normalize(name)] = artwork }
             }
             return result
         } catch { return nil }
+    }
+
+    private var switchIndexFile: URL {
+        FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
+            .appendingPathComponent("GameHub/Artwork/switch-index-v2.json")
+    }
+
+    private func loadSwitchIndex() -> [String: SwitchArtworkRecord]? {
+        guard let data = try? Data(contentsOf: switchIndexFile) else { return nil }
+        return try? JSONDecoder().decode([String: SwitchArtworkRecord].self, from: data)
+    }
+
+    private func persistSwitchIndex(_ index: [String: SwitchArtworkRecord]) {
+        let file = switchIndexFile
+        try? FileManager.default.createDirectory(at: file.deletingLastPathComponent(), withIntermediateDirectories: true)
+        if let data = try? JSONEncoder().encode(index) { try? data.write(to: file, options: .atomic) }
     }
 
     private func fetchIndex(repository: String, kind: ROMArtworkKind) async -> [String: URL]? {

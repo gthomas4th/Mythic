@@ -83,6 +83,29 @@ final class CatalogProfileTests: XCTestCase {
         XCTAssertEqual(try store.preference(for: "local:legacy").preferredTargetID, "local")
         XCTAssertEqual(try store.preference(for: "local:legacy").firstSeen, observed)
     }
+    func testBulkPreferenceLoadAndInsertPreserveExistingChoices() throws {
+        let store = try CatalogStore(url: folder().appendingPathComponent("catalog.sqlite"))
+        let firstSeen = Date(timeIntervalSince1970: 400)
+        try store.setPreference(.init(favorite: true, preferredTargetID: "remote", firstSeen: firstSeen), for: "steam:42")
+        try store.insertPreferencesIfAbsent([
+            "steam:42": .init(favorite: false, firstSeen: Date(timeIntervalSince1970: 500)),
+            "rom:7": .init(favorite: false, firstSeen: Date(timeIntervalSince1970: 600))
+        ])
+        let preferences = try store.preferences()
+        XCTAssertEqual(preferences.count, 2)
+        XCTAssertTrue(preferences["steam:42"]?.favorite == true)
+        XCTAssertEqual(preferences["steam:42"]?.preferredTargetID, "remote")
+        XCTAssertEqual(preferences["steam:42"]?.firstSeen, firstSeen)
+        XCTAssertEqual(preferences["rom:7"]?.firstSeen, Date(timeIntervalSince1970: 600))
+        try store.setPreferences([
+            "rom:7": .init(favorite: true, lastPlayed: Date(timeIntervalSince1970: 700),
+                firstSeen: preferences["rom:7"]?.firstSeen)
+        ])
+        let updated = try store.preference(for: "rom:7")
+        XCTAssertTrue(updated.favorite)
+        XCTAssertEqual(updated.lastPlayed, Date(timeIntervalSince1970: 700))
+        XCTAssertEqual(updated.firstSeen, Date(timeIntervalSince1970: 600))
+    }
     func sql(_ file: URL, _ command: String) throws {
         var database: OpaquePointer?
         XCTAssertEqual(sqlite3_open(file.path, &database), SQLITE_OK)

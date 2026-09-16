@@ -21,8 +21,8 @@ xcrun swift test --package-path Packages/GameHubCore
 python3 scripts/verify-debug-build.py --package-cache <existing-SourcePackages-directory>
 ```
 
-72 core tests pass. The full Debug build passes; lint has no errors and nine
-inherited warnings. Generated apps, private runtime bindings, logs, account data and
+83 core tests pass. The full Debug build passes; lint has zero serious violations and
+31 warnings. Generated apps, private runtime bindings, logs, account data and
 save backups are excluded from Git. Runtime bindings and profiles are stored under
 Application Support/GameHub on this Mac. Debug telemetry remains disabled.
 

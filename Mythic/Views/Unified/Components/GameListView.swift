@@ -290,7 +290,7 @@ private struct HubSystemFilterButton: View {
                 .font(.system(size: 15, weight: .bold))
                 .lineLimit(1)
                 .padding(.horizontal, 14).padding(.vertical, 9)
-                .foregroundStyle(HubTheme.ink)
+                .foregroundStyle(selected ? Color.black.opacity(0.86) : HubTheme.ink)
                 .background(selected ? HubTheme.yellow : HubTheme.blue.opacity(0.18), in: .capsule)
         }
         .buttonStyle(.plain)
@@ -334,7 +334,7 @@ private struct HubAlphabetFilterButton: View {
             Text(title).font(.system(size: 14, weight: .bold))
                 .frame(minWidth: title == "All" ? 34 : 24, minHeight: 28)
                 .padding(.horizontal, 4)
-                .foregroundStyle(HubTheme.ink)
+                .foregroundStyle(selected ? Color.black.opacity(0.86) : HubTheme.ink)
                 .background(selected ? HubTheme.yellow : HubTheme.blue.opacity(0.14), in: .capsule)
         }
         .buttonStyle(.plain)

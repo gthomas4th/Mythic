@@ -454,7 +454,7 @@ struct ControllerLibraryView: View {
         do {
             try FileManager.default.createDirectory(at: file.deletingLastPathComponent(), withIntermediateDirectories: true)
             try JSONEncoder().encode(saved).write(to: file, options: .atomic)
-            edits = saved; apply(to: game); self.editor = nil; message = "Saved."
+            edits = saved; apply(to: game); GameDataStore.shared.invalidateDisplayLibrary(); self.editor = nil; message = "Saved."
         } catch { message = "Could not save: " + error.localizedDescription }
     }
 }

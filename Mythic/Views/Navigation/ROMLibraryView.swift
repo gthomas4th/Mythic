@@ -2,7 +2,7 @@ import SwiftUI
 import UniformTypeIdentifiers
 import Carbon.HIToolbox
 
-struct ROMSource: Codable, Identifiable {
+struct ROMSource: Codable, Identifiable, Sendable {
     var id = UUID()
     var system: String
     var emulator: EmulatorKind
@@ -69,7 +69,13 @@ struct ROMLocalCopy: Codable {
 }
 @MainActor @Observable final class ROMLibrary {
     static let shared = ROMLibrary()
-    var sources: [ROMSource] = [] { didSet { cachedGames = nil } }
+    var sources: [ROMSource] = [] {
+        didSet {
+            cachedGames = nil
+            catalogGeneration &+= 1
+        }
+    }
+    @ObservationIgnored private(set) var catalogGeneration = 0
     @ObservationIgnored private var cachedGames: Set<Game>?
     var sourcePaths: [UUID: String] = [:]
     @ObservationIgnored private var resolvedRoots: [UUID: URL] = [:]
@@ -100,11 +106,11 @@ struct ROMLocalCopy: Codable {
                 let game = ROMGame(source: source, entry: entry, content: root.appendingPathComponent(entry.relativePath))
                 game.sourceLocationLabel = source.locationHint
                 game.localCopySelected = localCopies[entry.id]?.selected == true
-                GameDataStore.shared.restorePreferences(for: game)
                 gameCache[entry.id] = game
                 return game as Game
             }
         })
+        GameDataStore.shared.restorePreferences(for: Array(result))
         cachedGames = result
         refreshSourceLocations()
         return result
@@ -126,10 +132,11 @@ struct ROMLocalCopy: Codable {
                 guard let index = sources.firstIndex(where: { $0.id == source.id && $0.root == source.root }) else { return }
                 sourcePaths[source.id] = result.0?.path ?? "Source unavailable — reconnect its drive or share."
                 if let root = result.0 { resolvedRoots[source.id] = root }
-                for game in gameCache.values where game.source?.id == source.id {
-                    game.sourceLocationLabel = result.1 ?? source.locationHint
-                    if let root = result.0, let entry = game.entry {
-                        game.installationState = .installed(location: root.appendingPathComponent(entry.relativePath), platform: .macOS)
+                if let label = result.1 {
+                    for game in gameCache.values where game.source?.id == source.id && game.sourceLocationLabel != label {
+                        // Launches resolve the current source root at action time. Updating every
+                        // catalog item's path here caused a network filesystem lookup per ROM.
+                        game.sourceLocationLabel = label
                     }
                 }
                 if let label = result.1, sources[index].locationHint != label {
@@ -140,15 +147,23 @@ struct ROMLocalCopy: Codable {
         }
     }
     func refreshApplicationVersions() {
-        var changed = false
-        for index in sources.indices {
-            guard let application = try? sources[index].applicationURL(),
-                  let info = try? EmulatorApplicationInfo.inspect(application: application),
-                  sources[index].applicationVersion != info.version else { continue }
-            sources[index].applicationVersion = info.version
-            changed = true
+        let snapshot = sources
+        Task {
+            let versions: [UUID: String] = await Task.detached(priority: .utility) {
+                Dictionary(uniqueKeysWithValues: snapshot.compactMap { source -> (UUID, String)? in
+                    guard let application = try? source.applicationURL(),
+                          let info = try? EmulatorApplicationInfo.inspect(application: application) else { return nil }
+                    return (source.id, info.version)
+                })
+            }.value
+            var changed = false
+            for index in sources.indices {
+                guard let version = versions[sources[index].id], sources[index].applicationVersion != version else { continue }
+                sources[index].applicationVersion = version
+                changed = true
+            }
+            if changed { try? save() }
         }
-        if changed { try? save() }
     }
     func selectLocal(_ selected: Bool, gameID: String) {
         let previous = localCopies
@@ -653,7 +668,7 @@ struct ROMLibraryView: View {
         .background(HubTheme.canvas)
         .navigationTitle("ROM Library")
         .task {
-            store.refreshSourceLocations(force: true)
+            store.refreshSourceLocations()
             store.refreshApplicationVersions()
         }
         .sheet(isPresented: $deckPresented) { SteamDeckLibraryView() }

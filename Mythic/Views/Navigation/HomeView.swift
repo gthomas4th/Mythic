@@ -28,14 +28,18 @@ struct HomeView: View {
     @State private var column = 0
     @State private var launchMessage = ""
     private var shelves: [(String, [Game])] {
+        let library = gameDataStore.displayLibrary
+        let sorted = library.sorted { $0.title.localizedStandardCompare($1.title) == .orderedAscending }
+        let favorites = library.filter(\.isFavourited)
+            .sorted { $0.title.localizedStandardCompare($1.title) == .orderedAscending }
         var rows: [(String, [Game])] = []
         if let recent = gameDataStore.recent { rows.append(("Continue", [recent])) }
-        rows += [("Favorites", favouriteGames),
-            ("Recently Played", gameDataStore.displayLibrary.filter { $0.lastLaunched != nil && $0 != gameDataStore.recent }.sorted { ($0.lastLaunched ?? .distantPast) > ($1.lastLaunched ?? .distantPast) }),
+        rows += [("Favorites", favorites),
+            ("Recently Played", library.filter { $0.lastLaunched != nil && $0 != gameDataStore.recent }.sorted { ($0.lastLaunched ?? .distantPast) > ($1.lastLaunched ?? .distantPast) }),
             ("Recently Added", gameDataStore.recentlyAdded),
-            ("Final Fantasy", sortedGames.filter { $0.title.localizedStandardContains("Final Fantasy") }),
-            ("Retro", sortedGames.filter { $0 is ROMGame }),
-            ("Ready on Home PC", sortedGames.filter { ($0 as? SteamGame)?.record?.launchTargets.contains { $0.kind == .moonlight && $0.available } == true })]
+            ("Final Fantasy", sorted.filter { $0.title.localizedStandardContains("Final Fantasy") }),
+            ("Retro", sorted.filter { $0 is ROMGame }),
+            ("Ready on Home PC", sorted.filter { ($0 as? SteamGame)?.record?.launchTargets.contains { $0.kind == .moonlight && $0.available } == true })]
         return rows.filter { !$0.1.isEmpty }.map { ($0.0, Array($0.1.prefix(20))) }
     }
     private var activeShelf: String { shelves.indices.contains(shelfIndex) ? shelves[shelfIndex].0 : "" }
@@ -66,19 +70,19 @@ struct HomeView: View {
     }
     @AppStorage("hubTheme") private var theme = "lcars"
 
-    private var favouriteGames: [Game] {
-        gameDataStore.displayLibrary
-            .filter(\.self.isFavourited)
-            .sorted { $0.title.localizedStandardCompare($1.title) == .orderedAscending }
-    }
-
     var body: some View {
+        let library = gameDataStore.displayLibrary
+        let recentGame = gameDataStore.recent
+        let alphabetical = library.sorted { $0.title.localizedStandardCompare($1.title) == .orderedAscending }
+        let favorites = alphabetical.filter(\.isFavourited)
+        let recentlyPlayed = library.filter { $0.lastLaunched != nil && $0 != recentGame }
+            .sorted { ($0.lastLaunched ?? .distantPast) > ($1.lastLaunched ?? .distantPast) }
         GeometryReader { geometry in
             ScrollViewReader { verticalProxy in
             ScrollView {
                 if input.connected { HubControllerHints(actions: [("Move", "Rows / Games"), ("A", "Play"), ("X", "Options"), ("Y", "Favorite"), ("B", "Sidebar")]).padding(.horizontal, 28) }
                 if !launchMessage.isEmpty { Text(launchMessage).padding(.horizontal, 28) }
-                if let recentGame = gameDataStore.recent {
+                if let recentGame {
                     HStack(spacing: 0) {
                         GameImageCard(game: recentGame, url: recentGame.horizontalImageURL ?? recentGame.verticalImageURL,
                                       isImageEmpty: $isImageEmpty, withBlur: false, contentMode: .fit)
@@ -116,16 +120,14 @@ struct HomeView: View {
                 }
                 
                 VStack(alignment: .leading, spacing: 28) {
-                    if !favouriteGames.isEmpty {
-                        gameRow("Favorites", games: favouriteGames)
+                    if !favorites.isEmpty {
+                        gameRow("Favorites", games: favorites)
                     }
-                    gameRow("Recently Played", games: gameDataStore.displayLibrary
-                        .filter { $0.lastLaunched != nil && $0 != gameDataStore.recent }
-                        .sorted { ($0.lastLaunched ?? .distantPast) > ($1.lastLaunched ?? .distantPast) })
+                    gameRow("Recently Played", games: recentlyPlayed)
                     gameRow("Recently Added", games: gameDataStore.recentlyAdded)
-                    gameRow("Final Fantasy", games: sortedGames.filter { $0.title.localizedStandardContains("Final Fantasy") })
-                    gameRow("Retro", games: sortedGames.filter { $0 is ROMGame })
-                    gameRow("Ready on Home PC", games: sortedGames.filter {
+                    gameRow("Final Fantasy", games: alphabetical.filter { $0.title.localizedStandardContains("Final Fantasy") })
+                    gameRow("Retro", games: alphabetical.filter { $0 is ROMGame })
+                    gameRow("Ready on Home PC", games: alphabetical.filter {
                         ($0 as? SteamGame)?.record?.launchTargets.contains { $0.kind == .moonlight && $0.available } == true
                     })
                 }
@@ -161,9 +163,6 @@ struct HomeView: View {
                 return presence
             }())
         }
-    }
-    private var sortedGames: [Game] {
-        gameDataStore.displayLibrary.sorted { $0.title.localizedStandardCompare($1.title) == .orderedAscending }
     }
     @ViewBuilder private func gameRow(_ title: String, games: [Game]) -> some View {
         if !games.isEmpty {

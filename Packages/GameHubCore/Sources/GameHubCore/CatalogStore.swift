@@ -68,6 +68,20 @@ public final class CatalogStore {
             result.append(String(cString: value))
         }
     }
+    private func queryPairs(_ sql: String) throws -> [(String, String)] {
+        var statement: OpaquePointer?
+        guard sqlite3_prepare_v2(database, sql, -1, &statement, nil) == SQLITE_OK else { throw StoreError.database }
+        defer { sqlite3_finalize(statement) }
+        var result: [(String, String)] = []
+        while true {
+            let status = sqlite3_step(statement)
+            if status == SQLITE_DONE { return result }
+            guard status == SQLITE_ROW,
+                  let key = sqlite3_column_text(statement, 0),
+                  let value = sqlite3_column_text(statement, 1) else { throw StoreError.database }
+            result.append((String(cString: key), String(cString: value)))
+        }
+    }
     public func upsert(_ records: [GameRecord], observedAt: Date = .now) throws {
         try execute("BEGIN IMMEDIATE")
         do {
@@ -116,6 +130,36 @@ public final class CatalogStore {
     public func preference(for id: String) throws -> Preference {
         guard let json = try query("SELECT payload FROM preferences WHERE id=?", [id]).first else { return .init() }
         return try JSONDecoder().decode(Preference.self, from: Data(json.utf8))
+    }
+    public func preferences() throws -> [String: Preference] {
+        var result: [String: Preference] = [:]
+        for (id, json) in try queryPairs("SELECT id, payload FROM preferences") {
+            guard result[id] == nil else { throw StoreError.invalidData }
+            result[id] = try JSONDecoder().decode(Preference.self, from: Data(json.utf8))
+        }
+        return result
+    }
+    public func insertPreferencesIfAbsent(_ preferences: [String: Preference]) throws {
+        guard preferences.count <= 100000 else { throw StoreError.invalidData }
+        try execute("BEGIN IMMEDIATE")
+        do {
+            for (id, preference) in preferences {
+                guard let json = String(data: try JSONEncoder().encode(preference), encoding: .utf8) else { throw StoreError.invalidData }
+                try execute("INSERT OR IGNORE INTO preferences VALUES (?, ?)", [id, json])
+            }
+            try execute("COMMIT")
+        } catch { try? execute("ROLLBACK"); throw error }
+    }
+    public func setPreferences(_ preferences: [String: Preference]) throws {
+        guard preferences.count <= 100000 else { throw StoreError.invalidData }
+        try execute("BEGIN IMMEDIATE")
+        do {
+            for (id, preference) in preferences {
+                guard let json = String(data: try JSONEncoder().encode(preference), encoding: .utf8) else { throw StoreError.invalidData }
+                try execute("INSERT OR REPLACE INTO preferences VALUES (?, ?)", [id, json])
+            }
+            try execute("COMMIT")
+        } catch { try? execute("ROLLBACK"); throw error }
     }
     /// First discovery is immutable across rescans, preference edits and restarts.
     @discardableResult public func recordFirstSeen(for id: String, at date: Date = .now) throws -> Date {

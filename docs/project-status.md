@@ -26,7 +26,7 @@ returns to Game Hub without leaving a process behind. The owner physically confi
 RetroArch Escape flow. ROM details preserve backdrop proportions by combining a blurred
 fill with an intact foreground image.
 
-Validation: Debug build passed, the GameHubCore suite passed 82/82 tests, the in-app
+Validation: Debug build passed, the GameHubCore suite passed 83/83 tests, the in-app
 controller regression passed without failures, and the installed app passed strict deep
 code-signature verification.
 
@@ -43,7 +43,7 @@ instead of promotional title cards.
 The beta pass covered search/filter state, editing cancel, Return to open details,
 Escape/Back, Home PC reachability, launch routing and the installed controller-navigation
 regression. The final regression reported no failures. The Debug build, strict deep code
-signature and all 82 GameHubCore tests passed. No release blockers remain.
+signature and all 83 GameHubCore tests passed. No release blockers remain.
 
 ## Library connections and title navigation
 
@@ -171,37 +171,45 @@ render with a single ordering pass. ROM game files are not copied or cached loca
 
 Validation: Debug build and in-app navigation regression passed (Menu, D-pad selection,
 A entry, B details/list/sidebar, Menu re-entry, B from Home). Controller detected; physical
-button feel remains an owner check. 100 repeated catalog reads took about 0.31 ms. Live post-install Library click/scroll
+button feel remains an owner check. The final installed regression completed 100 catalog
+reads in 6.37 ms, down from 556.67 ms before the cache and batch changes. Live post-install Library click/scroll
 sampling found zero ROM location-getter/bookmark-resolution stacks (the prior interaction
 sample contained thousands of samples in those calls). Live UI verified details → list →
 sidebar with the shared Back route and the visible yellow sidebar focus outline.
 
-## UI performance follow-up
+## Full optimization check
 
-Removed indefinitely repeating artwork-placeholder shimmer. Idle sampling showed repeated
-SwiftUI animation/layout work; placeholders now stay static while cover loading remains
-asynchronous. A separate whole-Mac load check found an idle Windows Steam web helper and
-Wine server consuming roughly 140% combined CPU after nearly two days; a graceful Steam
-shutdown was ignored; a scoped wineserver shutdown removed the idle Steam processes after
-confirming no game was running. Game Hub does not start Windows Steam during library
-discovery. Afterward Game Hub measured about 2–6% CPU, and sampling found no repeating
-animation frames. Debug build and installed signature passed. No game settings or NAS
-transfer configuration changed. Interactive smoothness still needs owner confirmation.
+Startup no longer performs one NAS filesystem lookup per ROM. Source refresh now keeps
+stable catalog paths and resolves the current source root only when a game launches. In a
+controlled cold-cover test, the first Switch cover appeared in 1.87 seconds instead of
+9.74 seconds, an 80.8% reduction. The seven installed Switch titles use verified direct
+artwork URLs; unknown future titles share one coalesced fallback lookup and a compact local
+index instead of downloading an 86 MB index for each artwork kind.
+
+Local image decoding is asynchronous and uses a bounded 160-image/192 MB cache. Catalog
+preferences load and insert in batches, the merged display library is generation-cached,
+Home collections derive from one library snapshot, and Game Sources inspects emulator
+versions on a utility task. Artwork placeholders remain static. Post-install idle sampling
+measured 0.0% CPU, about 248 MB resident memory and no open network sockets. Home, Library,
+search, Switch/system filtering, details/back, Game Sources, Controller, PC & PS5 and
+Accounts passed the live smoke cycle. The Debug build, 83 tests, navigation regression and
+strict deep code-signature verification passed.
 
 ## Artwork without card containers
 
 Owner clarification supersedes the title-row layout: artwork, titles, badges and buttons
 remain. Home and Library restore the artwork layout and grid/list choices, while removing
 card background panels, borders and shadows. Continue Playing also has no backing panel;
-list mode keeps a cover thumbnail without an image backdrop. Grey console surfaces remain.
+list mode keeps a cover thumbnail without an image backdrop. Dark console surfaces remain.
 Debug build and native artwork/control render passed; full live window capture is unavailable.
 
-## Game Boy casing palette
+## Dark console palette
 
-The LCARS theme uses medium warm grey backgrounds and lighter grey card surfaces,
-inspired by the original Game Boy casing. Blue controls, colored accents and the
-Trek typeface remain. This supersedes the pale blue/near-white surfaces. Validation:
-Debug build and native card rendering; no behavior changed.
+The LCARS theme uses a Visual Studio-style charcoal canvas (`#1e1e1e`), slightly lighter
+panels and soft white text. Dark blue structure, green/yellow/red highlights, purple
+accents and the Trek typeface remain. Selected yellow system and alphabet filters use dark
+text for clear contrast. The installed Home and populated Switch Library were visually
+checked at full window size.
 
 ## Play options
 
@@ -266,14 +274,14 @@ and native NSHostingView snapshots; the latter verifies menu labels and spacing.
 The debug-only `--render-game-cards` argument reproduces these snapshots in /private/tmp.
 
 
-The LCARS-inspired Silver console theme uses a light blue/gray foundation, dark blue
+The LCARS-inspired console theme uses a charcoal foundation, dark blue
 structure, green/yellow/red highlights and purple accents. Condensed headings, larger
 body text, separated game-card actions and ROM placeholder artwork improve readability.
 The LCARS layout now has its own persistent navigation rail, connected upper/lower
 frame, large navigation buttons, split artwork/launch hero and collection dividers.
-Settings → Views → Interface theme also offers Follow macOS. Native component renders
-were inspected and the full Debug build passed; full-window visual acceptance remains
-open because desktop capture is unavailable.
+Settings → Views → Interface theme also offers Follow macOS. Native component renders and
+the installed full-window Home, Library and details screens were inspected; the full Debug
+build passed.
 
 Switch/Sonic Mania gameplay and the requested A/B mapping are owner-accepted. The full
 Switch library scan exited 137 before its atomic source update; the existing nine sources
@@ -323,7 +331,7 @@ actual NAS/local volume classification checks passed.
 | Xbox | Official Xbox Cloud library link; no purchase or Wine-based Microsoft Store promise |
 | Controller | Keyboard search, Return/details, Escape/back, favorite/filter, and immediate target switching verified; local Rebirth input and mouse-click/reconnect sequence owner-confirmed with current configuration; first connection after launch and physical hub navigation still open |
 | Diagnostics | Correlation IDs and private durable journal capped at 200 events; bounded reads, atomic writes, and unreadable-snapshot preservation; non-Steam identifiers are hashed; export excludes raw runtime logs, bookmarks, credentials, filesystem paths and network addresses |
-| Build | Full Debug build; 75 synthetic tests pass; SwiftLint zero errors, nine inherited warnings |
+| Build | Full Debug build; 83 tests pass; SwiftLint zero serious violations (31 warnings) |
 
 Home now includes Continue Playing, Favourites, Recently Played, Recently Added, Final Fantasy,
 Retro, and Ready on Home PC collections (empty collections are omitted). Containers
