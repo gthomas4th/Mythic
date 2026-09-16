@@ -22,6 +22,8 @@ and application support and game storage continue using their established `Mythi
 This preserves the existing library, settings, containers and saves while removing Mythic
 as the user-facing product name. The populated library, Dock entry, Debug build, strict
 signature and installed controller/navigation regression were verified after the rename.
+Yoda now uses a circular portrait crop, and PS5 Remote Play uses a tightly cropped,
+transparent PlayStation mark; neither connection entry carries a square artwork tile.
 
 ## Final UX quality pass
 

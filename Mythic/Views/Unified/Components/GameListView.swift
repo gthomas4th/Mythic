@@ -305,9 +305,8 @@ private struct HubConnectionQuickButton: View {
     var body: some View {
         Button(action: action) {
             HStack(spacing: 10) {
-                Image(game.artworkAssetName)
-                    .resizable().scaledToFill()
-                    .frame(width: 38, height: 38).clipShape(.rect(cornerRadius: 8))
+                HubConnectionArtwork(game: game)
+                    .frame(width: game.destination == .playStation5 ? 64 : 38, height: 38)
                 VStack(alignment: .leading, spacing: 1) {
                     Text(game.title).font(.system(size: 16, weight: .bold))
                     Text(game.locationLabel ?? "Remote").font(.system(size: 12, weight: .semibold))

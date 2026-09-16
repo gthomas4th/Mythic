@@ -36,12 +36,8 @@ struct GameImageCard: View {
     var body: some View {
         GeometryReader { geometry in
             if url == nil, let game = game as? ConnectionGame {
-                ZStack {
-                    HubTheme.blue.opacity(0.14)
-                    Image(game.artworkAssetName)
-                        .resizable()
-                        .aspectRatio(contentMode: contentMode)
-                }
+                HubConnectionArtwork(game: game)
+                    .padding(game.destination == .playStation5 ? 16 : 0)
                 .frame(width: geometry.size.width, height: geometry.size.height)
                 .onAppear { isImageEmpty = false }
             } else if url == nil, let game = game as? ROMGame {
@@ -129,6 +125,18 @@ struct GameImageCard: View {
             }
         }
         .clipShape(.rect(cornerRadius: 20))
+    }
+}
+
+struct HubConnectionArtwork: View {
+    let game: ConnectionGame
+
+    var body: some View {
+        Image(game.artworkAssetName)
+            .resizable()
+            .aspectRatio(contentMode: game.destination == .yoda ? .fill : .fit)
+            .clipShape(game.destination == .yoda ? AnyShape(Circle()) : AnyShape(Rectangle()))
+            .accessibilityHidden(true)
     }
 }
 
