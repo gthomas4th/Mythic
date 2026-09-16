@@ -466,6 +466,7 @@ struct HubGameOptionsView: View {
     @State private var scene = HubGameScene()
     @State private var toolbarWasVisible: Bool?
     @State private var escapeMonitor: Any?
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     var body: some View {
         GeometryReader { geometry in
             ZStack {
@@ -479,7 +480,7 @@ struct HubGameOptionsView: View {
                                     else { Label("Back", systemImage: "chevron.left") }
                                 }.buttonStyle(.plain)
                                 Spacer()
-                                if scene.hasVideo {
+                                if supportsMotion {
                                     Button { model.motionEnabled.toggle() } label: {
                                         if input.connected { HubButtonHint(button: "Y", action: model.motionEnabled ? "Still image" : "Moving scene") }
                                         else { Label(model.motionEnabled ? "Still image" : "Moving scene", systemImage: "play.rectangle") }
@@ -569,34 +570,35 @@ struct HubGameOptionsView: View {
     private var backdrop: some View {
         GeometryReader { geometry in
             ZStack {
-                HubTheme.blue
                 if let game = model.game {
-                    let url = scene.poster ?? game.horizontalImageURL ?? game.verticalImageURL
-                    if url != nil, game is ROMGame || (!(game is ROMGame) && scene.poster == nil && game.horizontalImageURL == nil) {
-                        // Portrait storefront art becomes a full-bleed composition: a
-                        // blurred fill behind the intact cover, never a stretched image.
-                        ZStack {
-                            GameImageCard(game: game, url: url, isImageEmpty: $imageEmpty,
-                                withBlur: false, contentMode: .fill)
-                                .scaleEffect(1.06).blur(radius: 28)
-                            Color.black.opacity(0.28)
-                            GameImageCard(game: game, url: url, isImageEmpty: $imageEmpty,
-                                withBlur: false, contentMode: .fit)
-                                .padding(.vertical, 20)
-                                .shadow(color: .black.opacity(0.55), radius: 18)
-                        }.clipped()
-                    } else {
-                        GameImageCard(game: game, url: url, isImageEmpty: $imageEmpty, withBlur: false,
-                            contentMode: .fill, romArtworkKind: game is ROMGame ? .scene : .boxart)
-                    }
+                    HubCinematicBackdrop(
+                        game: game,
+                        primaryURL: scene.poster ?? game.horizontalImageURL,
+                        motionEnabled: model.motionEnabled && scene.player == nil,
+                        reduceMotion: reduceMotion,
+                        isImageEmpty: $imageEmpty
+                    )
+                } else {
+                    HubBackdropPlaceholder()
                 }
                 if let player = scene.player, model.motionEnabled {
-                    HubScenePlayer(player: player).allowsHitTesting(false)
+                    HubScenePlayer(player: player)
+                        .frame(width: geometry.size.width, height: geometry.size.height)
+                        // AVPlayerView can report a slightly smaller drawable region
+                        // while its HLS item becomes ready. A small uniform overscan
+                        // keeps the window full-bleed without changing aspect ratio.
+                        .scaleEffect(1.08)
+                        .clipped()
+                        .allowsHitTesting(false)
                 }
                 LinearGradient(colors: [.black.opacity(0.7), .black.opacity(0.2), .clear], startPoint: .leading, endPoint: .trailing)
                 LinearGradient(colors: [.black.opacity(0.15), .clear, .black.opacity(0.75)], startPoint: .top, endPoint: .bottom)
             }.frame(width: geometry.size.width, height: geometry.size.height).clipped()
         }.allowsHitTesting(false).accessibilityHidden(true)
+    }
+    private var supportsMotion: Bool {
+        guard let game = model.game else { return false }
+        return scene.hasVideo || game is ROMGame || game.horizontalImageURL != nil || game.verticalImageURL != nil
     }
     private func option(_ index: Int, label: String) -> some View {
         Button { model.row = index; model.activate() } label: {
@@ -640,6 +642,105 @@ struct HubGameOptionsView: View {
                     }
                 }
         }.font(.system(size: 17))
+    }
+}
+
+/// A full-window artwork stack that keeps every source at its natural ratio.
+/// Remote landscape art fades over an immediately useful cover composition, while
+/// non-video titles receive a slow GPU-backed drift instead of a busy animation loop.
+private struct HubCinematicBackdrop: View {
+    let game: Game
+    let primaryURL: URL?
+    let motionEnabled: Bool
+    let reduceMotion: Bool
+    @Binding var isImageEmpty: Bool
+    @State private var drifting = false
+
+    private var hasLandscape: Bool {
+        primaryURL != nil && !(game is ROMGame)
+    }
+
+    var body: some View {
+        ZStack {
+            HubBackdropPlaceholder()
+
+            // Load the cover independently so a cold landscape request never leaves
+            // the details page as an empty block of colour.
+            if let coverURL = game.verticalImageURL {
+                portraitComposition(url: coverURL)
+            }
+
+            if game is ROMGame {
+                GameImageCard(game: game, url: nil, isImageEmpty: $isImageEmpty,
+                    withBlur: false, contentMode: .fill, romArtworkKind: .scene,
+                    hidesRemotePlaceholder: true, cornerRadius: 0)
+            } else if hasLandscape, let primaryURL {
+                GameImageCard(game: game, url: primaryURL, isImageEmpty: $isImageEmpty,
+                    withBlur: false, contentMode: .fill,
+                    hidesRemotePlaceholder: true, cornerRadius: 0)
+            } else if game.verticalImageURL == nil {
+                GameImageCard(game: game, url: nil, isImageEmpty: $isImageEmpty,
+                    withBlur: false, contentMode: .fit,
+                    hidesRemotePlaceholder: true, cornerRadius: 0)
+                    .padding(.vertical, 28)
+            }
+        }
+        .scaleEffect(motionEnabled && !reduceMotion && drifting ? 1.045 : 1.0)
+        .offset(x: motionEnabled && !reduceMotion && drifting ? 12 : -8,
+                y: motionEnabled && !reduceMotion && drifting ? -7 : 6)
+        .animation(motionEnabled && !reduceMotion
+            ? .easeInOut(duration: 18).repeatForever(autoreverses: true)
+            : .easeOut(duration: 0.35), value: drifting)
+        .onAppear { drifting = motionEnabled && !reduceMotion }
+        .onChange(of: motionEnabled) { _, enabled in drifting = enabled && !reduceMotion }
+        .onChange(of: reduceMotion) { _, reduced in drifting = motionEnabled && !reduced }
+        .clipped()
+    }
+
+    private func portraitComposition(url: URL) -> some View {
+        ZStack {
+            GameImageCard(game: game, url: url, isImageEmpty: $isImageEmpty,
+                withBlur: false, contentMode: .fill, hidesRemotePlaceholder: true,
+                cornerRadius: 0)
+                .scaleEffect(1.08).blur(radius: 30).opacity(0.78)
+            Color.black.opacity(0.22)
+            GameImageCard(game: game, url: url, isImageEmpty: $isImageEmpty,
+                withBlur: false, contentMode: .fit, hidesRemotePlaceholder: true,
+                cornerRadius: 0)
+                .padding(.vertical, 24)
+                .shadow(color: .black.opacity(0.6), radius: 20)
+        }
+        .clipped()
+    }
+}
+
+private struct HubBackdropPlaceholder: View {
+    var body: some View {
+        GeometryReader { proxy in
+            ZStack {
+                LinearGradient(
+                    colors: [HubTheme.canvas, HubTheme.blue.opacity(0.82), HubTheme.canvas],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+                RoundedRectangle(cornerRadius: 140)
+                    .stroke(HubTheme.blue.opacity(0.32), lineWidth: 52)
+                    .frame(width: proxy.size.width * 0.78, height: proxy.size.height * 1.05)
+                    .offset(x: proxy.size.width * 0.33, y: proxy.size.height * 0.18)
+                VStack {
+                    Spacer()
+                    HStack(spacing: 10) {
+                        Capsule().fill(HubTheme.blue.opacity(0.72)).frame(width: proxy.size.width * 0.22)
+                        Capsule().fill(HubTheme.yellow.opacity(0.75)).frame(width: proxy.size.width * 0.08)
+                        Capsule().fill(HubTheme.green.opacity(0.68)).frame(width: proxy.size.width * 0.06)
+                        Capsule().fill(HubTheme.purple.opacity(0.7)).frame(width: proxy.size.width * 0.11)
+                        Spacer()
+                    }
+                    .frame(height: 12)
+                    .padding(30)
+                }
+            }
+        }
     }
 }
 
@@ -768,7 +869,12 @@ struct HubScenePlayer: NSViewRepresentable {
         view.controlsStyle = .none
         view.alphaValue = 0
         context.coordinator.readiness = view.observe(\.isReadyForDisplay, options: [.initial, .new]) { view, _ in
-            DispatchQueue.main.async { view.alphaValue = view.isReadyForDisplay ? 1 : 0 }
+            DispatchQueue.main.async {
+                NSAnimationContext.runAnimationGroup { context in
+                    context.duration = 0.45
+                    view.animator().alphaValue = view.isReadyForDisplay ? 1 : 0
+                }
+            }
         }
         view.videoGravity = .resizeAspectFill
         view.player = player

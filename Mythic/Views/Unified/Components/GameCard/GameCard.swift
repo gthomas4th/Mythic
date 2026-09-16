@@ -18,7 +18,7 @@ struct GameCard: View {
     @State private var isImageEmpty = true
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            GameImageCard(game: game, url: artworkURL ?? game.verticalImageURL, isImageEmpty: $isImageEmpty, withBlur: false, contentMode: .fit)
+            cardArtwork
                 .frame(height: 210)
                 .frame(maxWidth: .infinity)
                 .overlay(alignment: .topTrailing) {
@@ -40,6 +40,30 @@ struct GameCard: View {
             }.padding(.top, 16)
         }
 
+    }
+
+    @ViewBuilder private var cardArtwork: some View {
+        if artworkURL != nil || game.verticalImageURL != nil || game is ROMGame || game is ConnectionGame {
+            GameImageCard(game: game, url: artworkURL ?? game.verticalImageURL,
+                isImageEmpty: $isImageEmpty, withBlur: false, contentMode: .fit)
+        } else if let landscape = game.horizontalImageURL {
+            // Some storefronts only publish wide key art. Keep the full image
+            // readable inside the portrait card and use a softened copy as fill.
+            ZStack {
+                HubPlaceholderArtwork(title: game.title, system: game.typeLabel ?? "PC")
+                GameImageCard(game: game, url: landscape, isImageEmpty: $isImageEmpty,
+                    withBlur: false, contentMode: .fill, hidesRemotePlaceholder: true)
+                    .scaleEffect(1.08).blur(radius: 20).opacity(0.66)
+                Color.black.opacity(0.18)
+                GameImageCard(game: game, url: landscape, isImageEmpty: $isImageEmpty,
+                    withBlur: false, contentMode: .fit, hidesRemotePlaceholder: true)
+                    .padding(8)
+            }
+            .clipShape(.rect(cornerRadius: 20))
+        } else {
+            GameImageCard(game: game, url: nil, isImageEmpty: $isImageEmpty,
+                withBlur: false, contentMode: .fit)
+        }
     }
 }
 

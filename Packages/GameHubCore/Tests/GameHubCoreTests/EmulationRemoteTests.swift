@@ -6,6 +6,7 @@ final class EmulationRemoteTests: XCTestCase {
         XCTAssertEqual(ROMTitle.displayName("Addams Family, The"), "The Addams Family")
         XCTAssertEqual(ROMTitle.displayName("Legend of Zelda, The - Majora's Mask"), "The Legend of Zelda - Majora's Mask")
         XCTAssertEqual(ROMTitle.displayName("[Krnl.vip] SUPER MARIO ODYSSEY [0100000000010000] [v262144] (1G+1U)"), "SUPER MARIO ODYSSEY")
+        XCTAssertEqual(ROMTitle.displayName("Sonic Mania (1G+1U+1D)"), "Sonic Mania")
         XCTAssertEqual(ROMTitle.displayName("Legend of Zelda, The (USA) [Rev 1]"), "The Legend of Zelda")
         XCTAssertEqual(ROMTitle.displayName("Game - [Prototype]"), "Game")
         XCTAssertEqual(ROMTitle.displayName("Baten Kaitos (Disc 1)(USA)"), "Baten Kaitos (Disc 1)")

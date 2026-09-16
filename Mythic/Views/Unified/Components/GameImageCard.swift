@@ -20,17 +20,22 @@ struct GameImageCard: View {
     var contentMode: ContentMode
     var withBlur: Bool
     var romArtworkKind: ROMArtworkKind
+    var hidesRemotePlaceholder: Bool
+    var cornerRadius: CGFloat
     @AppStorage("gameImageCardBlur") private var imageCardBlur: Double = 0.0
     
     /// - Note: `game` must be passed as a parameter in order to include fallback image URLs.
     init(game: Game? = nil, url: URL?, isImageEmpty: Binding<Bool>, withBlur: Bool = true,
-         contentMode: ContentMode = .fill, romArtworkKind: ROMArtworkKind = .boxart) {
+         contentMode: ContentMode = .fill, romArtworkKind: ROMArtworkKind = .boxart,
+         hidesRemotePlaceholder: Bool = false, cornerRadius: CGFloat = 20) {
         self.game = game
         self.url = url
         self._isImageEmpty = isImageEmpty
         self.withBlur = withBlur
         self.contentMode = contentMode
         self.romArtworkKind = romArtworkKind
+        self.hidesRemotePlaceholder = hidesRemotePlaceholder
+        self.cornerRadius = cornerRadius
     }
     
     var body: some View {
@@ -44,17 +49,18 @@ struct GameImageCard: View {
                 ROMArtwork(title: game.title, system: game.source?.system ?? "Games",
                            kind: romArtworkKind, contentMode: contentMode)
             } else if let url, url.isFileURL {
-                HubLocalArtworkImage(url: url, contentMode: contentMode, isImageEmpty: $isImageEmpty)
+                HubLocalArtworkImage(url: url, contentMode: contentMode,
+                    hidesPlaceholder: hidesRemotePlaceholder, isImageEmpty: $isImageEmpty)
                     .frame(width: geometry.size.width, height: geometry.size.height)
             } else if let url = url {
                 AsyncImage(url: url) { phase in
                     switch phase {
                     case .empty:
-                        Rectangle()
-                            .onAppear {
-                                withAnimation { isImageEmpty = true }
-                            }
-                            .foregroundStyle(.quinary)
+                        Group {
+                            if hidesRemotePlaceholder { Color.clear }
+                            else { Rectangle().foregroundStyle(.quinary) }
+                        }
+                        .onAppear { withAnimation { isImageEmpty = true } }
                     case .success(let image):
                         ZStack {
                             // blurred image as background
@@ -86,22 +92,26 @@ struct GameImageCard: View {
                         .frame(width: geometry.size.width,
                                height: geometry.size.height)
                     case .failure(let error):
-                        ContentUnavailableView(
-                            "Unable to load the image.",
-                            systemImage: "photo.badge.exclamationmark",
-                            description: .init(error.localizedDescription)
-                        )
-                        .onAppear {
-                            withAnimation { isImageEmpty = true }
+                        if hidesRemotePlaceholder {
+                            Color.clear.onAppear { withAnimation { isImageEmpty = true } }
+                        } else {
+                            ContentUnavailableView(
+                                "Unable to load the image.",
+                                systemImage: "photo.badge.exclamationmark",
+                                description: .init(error.localizedDescription)
+                            )
+                            .onAppear { withAnimation { isImageEmpty = true } }
                         }
                     @unknown default:
-                        ContentUnavailableView(
-                            "Unable to load the image.",
-                            systemImage: "photo.badge.exclamationmark",
-                            description: .init("Please check your internet connection, and try again.")
-                        )
-                        .onAppear {
-                            withAnimation { isImageEmpty = true }
+                        if hidesRemotePlaceholder {
+                            Color.clear.onAppear { withAnimation { isImageEmpty = true } }
+                        } else {
+                            ContentUnavailableView(
+                                "Unable to load the image.",
+                                systemImage: "photo.badge.exclamationmark",
+                                description: .init("Please check your internet connection, and try again.")
+                            )
+                            .onAppear { withAnimation { isImageEmpty = true } }
                         }
                     }
                 }
@@ -124,7 +134,7 @@ struct GameImageCard: View {
                        height: geometry.size.height)
             }
         }
-        .clipShape(.rect(cornerRadius: 20))
+        .clipShape(.rect(cornerRadius: cornerRadius))
     }
 }
 
@@ -143,6 +153,7 @@ struct HubConnectionArtwork: View {
 private struct HubLocalArtworkImage: View {
     let url: URL
     let contentMode: ContentMode
+    let hidesPlaceholder: Bool
     @Binding var isImageEmpty: Bool
     @State private var image: NSImage?
 
@@ -150,6 +161,8 @@ private struct HubLocalArtworkImage: View {
         Group {
             if let image {
                 Image(nsImage: image).resizable().aspectRatio(contentMode: contentMode)
+            } else if hidesPlaceholder {
+                Color.clear
             } else {
                 Rectangle().foregroundStyle(.quinary)
             }
@@ -351,7 +364,9 @@ private struct ROMArtwork: View {
             if let artworkURL {
                 if artworkURL.isFileURL, let image = localImage {
                     let ratio = image.size.height > 0 ? image.size.width / image.size.height : 2
-                    resolvedImage(Image(nsImage: image), preserveWholeImage: kind == .scene && ratio < 1.25)
+                    // Preserve the full 4:3 frame used by most retro systems. Only
+                    // true landscape scenes fill the widescreen canvas directly.
+                    resolvedImage(Image(nsImage: image), preserveWholeImage: kind == .scene && ratio < 1.55)
                 } else {
                     AsyncImage(url: artworkURL) { phase in
                         switch phase {

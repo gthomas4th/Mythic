@@ -108,18 +108,40 @@ and the landscape still; preference persists. Artwork stays visible while video
 loads. The observed app process was about 6.4% CPU during the live scene check;
 this is a spot check, not a sustained performance benchmark.
 
-Other systems retain existing art without enlarging a portrait cover to fill the
-screen. Automatic scene discovery currently applies to Steam titles only. No ROM
-files or full trailer files are downloaded as local library copies.
+ROM details use their title-specific cached gameplay scenes. Native 16:9 scenes fill
+the canvas; 4:3 and portrait sources stay intact over a softened full-window copy, so
+no artwork is stretched. Epic details use the storefront's landscape key art. Steam
+remains the only source of true trailer video; other suitable artwork receives a slow,
+GPU-backed cinematic drift that honors Reduce Motion and the same Still image control.
+No ROM files or full trailer files are downloaded as local library copies.
 
 ## Full-screen artwork options
 
-The details screen now uses edge-to-edge still artwork with directional dark
-scrims for readable text. The approved Trek title typeface is retained. Options
+The details screen now uses edge-to-edge artwork with directional dark scrims for
+readable text. The approved Trek title typeface is retained. Options
 are compact translucent rows in a narrow panel; A remains next to Play and B
 returns to the library. Editing remains controller accessible over the background.
-This uses a still image, not a video or an animation loop. Missing artwork falls
-back to the theme background. Native layout and navigation regression verified.
+Steam trailers fade over their still-art composition when ready. Other suitable art
+uses restrained ambient motion rather than a decoded animation loop. Missing or slow
+remote artwork retains a designed LCARS backdrop instead of flashing a blank panel or
+error card. Native layout and navigation regression verified.
+
+## Final cinematic artwork audit
+
+The final installed pass visually checked Home, PC/Epic cards, GameCube, Switch,
+PlayStation, Steam and connection details. All seven Switch titles now use distinct,
+title-verified 16:9 Nintendo scenes; the unrelated legacy Switch cache was archived
+outside the active artwork path. Retro 4:3 screenshots render whole over softened side
+fill, storefront portrait covers remain intact while landscape art loads, and wide-only
+Epic art receives a contained card composition. Steam video now overscans uniformly so
+its full-window player cannot reveal an uncovered edge while HLS becomes ready.
+
+Sonic Mania's multi-part dump suffix is removed by the catalog title normalizer. The
+installed Home view shows the clean title, and a core regression covers this form.
+Representative visual checks passed for 007: Agent Under Fire, Sonic Mania, Fortnite,
+Final Fantasy VII Rebirth, Gundam Battle Assault 2, PS5 Remote Play and Yoda. The signed
+Debug build, all 83 GameHubCore tests and the installed controller/navigation regression
+passed with zero failures.
 
 ## Game details and actual ROM launch recovery
 

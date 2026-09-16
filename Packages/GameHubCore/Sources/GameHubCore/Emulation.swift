@@ -140,7 +140,7 @@ public enum ROMTitle {
             with: "", options: .regularExpression
         )
         result = result.replacingOccurrences(
-            of: #"\s*\((?i:(?:v(?:ersion)?\s*\d+(?:\.\d+)*|rev(?:ision)?[-\s]*[A-Z0-9.]+|\d+G(?:\+\d+[A-Z])?))\)"#,
+            of: #"\s*\((?i:(?:v(?:ersion)?\s*\d+(?:\.\d+)*|rev(?:ision)?[-\s]*[A-Z0-9.]+|\d+G(?:\+\d+[A-Z])+))\)"#,
             with: "", options: .regularExpression
         )
         return result
