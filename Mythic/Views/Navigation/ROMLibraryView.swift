@@ -11,12 +11,55 @@ struct ROMSource: Codable, Identifiable {
     var applicationVersion: String?
     var locationHint: String?
     var dolphinPreset: DolphinGraphicsPreset?
+    /// Known mounted paths keep NAS sources usable after a share remount invalidates a bookmark.
+    var fallbackRoot: String?
+    var fallbackApplication: String?
+    var fallbackCore: String?
     var index = ROMIndex()
-    func resolve(_ data: Data) throws -> URL {
+    func resolve(_ data: Data, fallback: String? = nil) throws -> URL {
+        // A configured source path identifies the actual current mounted folder. Prefer it to a
+        // reusable bookmark copied from another source, which can resolve to a different folder.
+        if let fallback, FileManager.default.fileExists(atPath: fallback) { return URL(fileURLWithPath: fallback) }
         var stale = false
-        let url = try URL(resolvingBookmarkData: data, options: [.withSecurityScope, .withoutUI], bookmarkDataIsStale: &stale)
-        guard !stale else { throw GameHubRuntime.RuntimeError.access }
-        return url
+        if let url = try? URL(resolvingBookmarkData: data, options: [.withSecurityScope, .withoutUI], bookmarkDataIsStale: &stale), !stale { return url }
+        throw GameHubRuntime.RuntimeError.access
+    }
+    func rootURL() throws -> URL { try resolve(root, fallback: fallbackRoot) }
+    func applicationURL() throws -> URL {
+        if let url = try? resolve(application, fallback: fallbackApplication) { return url }
+        let name: String
+        switch emulator {
+        case .retroArch: name = "RetroArch"
+        case .duckStation: name = "DuckStation"
+        case .pcsx2: name = "PCSX2"
+        case .rpcs3: name = "RPCS3"
+        case .dolphin: name = "Dolphin"
+        case .ryujinx: name = "Ryujinx"
+        }
+        let roots = [FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Applications"),
+                     URL(fileURLWithPath: "/Applications")]
+        for root in roots {
+            let candidate = root.appendingPathComponent(name + ".app")
+            if (try? EmulatorApplicationInfo.inspect(application: candidate)) != nil { return candidate }
+        }
+        throw ROMError.emulatorMissing
+    }
+    func coreURL() throws -> URL? {
+        guard let core else { return nil }
+        if let url = try? resolve(core, fallback: fallbackCore), FileManager.default.fileExists(atPath: url.path) { return url }
+        guard emulator == .retroArch else { throw ROMError.coreMissing }
+        let coreName: String
+        switch system.lowercased() {
+        case "n64", "nintendo 64": coreName = "mupen64plus_next_libretro.dylib"
+        case "dreamcast": coreName = "flycast_libretro.dylib"
+        case "megadrive", "mega drive", "genesis", "sega": coreName = "picodrive_libretro.dylib"
+        default: throw ROMError.coreMissing
+        }
+        let candidate = FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent("Library/Application Support/RetroArch/cores")
+            .appendingPathComponent(coreName)
+        guard FileManager.default.fileExists(atPath: candidate.path) else { throw ROMError.coreMissing }
+        return candidate
     }
 }
 struct ROMLocalCopy: Codable {
@@ -73,7 +116,7 @@ struct ROMLocalCopy: Codable {
             Task {
                 defer { resolvingSources.remove(source.id) }
                 let result = await Task.detached(priority: .utility) { () -> (URL?, String?) in
-                    guard let root = try? source.resolve(source.root) else { return (nil, nil) }
+                    guard let root = try? source.rootURL() else { return (nil, nil) }
                     let access = root.startAccessingSecurityScopedResource()
                     defer { if access { root.stopAccessingSecurityScopedResource() } }
                     let local = (try? root.resourceValues(forKeys: [.volumeIsLocalKey]))?.volumeIsLocal
@@ -113,7 +156,7 @@ struct ROMLocalCopy: Codable {
         panel.prompt = "Download here"
         guard panel.runModal() == .OK, let destination = panel.url else { return }
         do {
-            let root = try source.resolve(source.root)
+            let root = try source.rootURL()
             guard (try destination.resourceValues(forKeys: [.volumeIsLocalKey])).volumeIsLocal == true else {
                 downloadStatus = "Choose a folder on this Mac or an attached drive."; return
             }
@@ -201,8 +244,8 @@ struct ROMLocalCopy: Codable {
                 do {
                     let source = sources[position]
                     let token = UUID(); scanToken = token
-                    status = "Scanning \(source.system)… Unchanged files reuse their saved hashes."
-                    let root = try source.resolve(source.root)
+                    status = "Scanning \(HubSystemMark.shortName(for: source.system))… Unchanged files reuse their saved hashes."
+                    let root = try source.rootURL()
                     let access = root.startAccessingSecurityScopedResource()
                     defer { if access { root.stopAccessingSecurityScopedResource() } }
                     let index = try await Task.detached(priority: .utility) {
@@ -224,6 +267,193 @@ struct ROMLocalCopy: Codable {
         }
     }
 }
+@MainActor final class EmulatorSessionCoordinator {
+    static let shared = EmulatorSessionCoordinator()
+
+    private var application: NSRunningApplication?
+    private var terminationObserver: NSObjectProtocol?
+    private var escapeMonitor: Any?
+    private var shuttingDown = false
+
+    var hasActiveSession: Bool { application?.isTerminated == false }
+
+    func quitActiveSession() async {
+        guard hasActiveSession else { return }
+        await closeActiveSession(reactivateGameHub: true)
+    }
+
+    /// Prepares only the settings that an emulator cannot receive on its command line.
+    /// Every other emulator keeps its native pause/quit behavior.
+    func sessionConfiguration(for kind: EmulatorKind) throws -> URL? {
+        switch kind {
+        case .retroArch:
+            let directory = GameHubRuntime.support.appendingPathComponent("Emulator Sessions", isDirectory: true)
+            try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+            let file = directory.appendingPathComponent("retroarch-gamehub.cfg")
+            let settings = """
+            video_fullscreen = "true"
+            video_windowed_fullscreen = "true"
+            input_exit_emulator = "escape"
+            quit_press_twice = "false"
+            quit_on_close_content = "1"
+            menu_pause_libretro = "true"
+            config_save_on_exit = "false"
+            """
+            try settings.write(to: file, atomically: true, encoding: .utf8)
+            return file
+        case .ryujinx:
+            try prepareRyujinxSettings()
+            return nil
+        case .dolphin:
+            try prepareDolphinSettings()
+            return nil
+        default:
+            return nil
+        }
+    }
+
+    func launch(application url: URL, configuration: NSWorkspace.OpenConfiguration, kind: EmulatorKind) async throws {
+        await closeActiveSession(reactivateGameHub: false)
+        configuration.createsNewApplicationInstance = true
+        let launched = try await NSWorkspace.shared.openApplication(at: url, configuration: configuration)
+        application = launched
+        terminationObserver = NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.didTerminateApplicationNotification, object: nil, queue: .main
+        ) { [weak self] notification in
+            guard let terminated = notification.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication,
+                  terminated.processIdentifier == launched.processIdentifier else { return }
+            Task { @MainActor in self?.finish(launched, reactivateGameHub: true) }
+        }
+        if kind == .ryujinx {
+            escapeMonitor = NSEvent.addGlobalMonitorForEvents(matching: .keyDown) { [weak self] event in
+                guard event.keyCode == 53 else { return }
+                Task { @MainActor in
+                    await self?.closeActiveSession(reactivateGameHub: true)
+                }
+            }
+        }
+        launched.activate(options: [.activateAllWindows, .activateIgnoringOtherApps])
+    }
+
+    func applicationWillTerminate() {
+        shuttingDown = true
+        removeObserver()
+        guard let application, !application.isTerminated else { return }
+        if !application.terminate() { application.forceTerminate() }
+        self.application = nil
+    }
+
+    private func closeActiveSession(reactivateGameHub: Bool) async {
+        guard let application, !application.isTerminated else {
+            finish(application, reactivateGameHub: reactivateGameHub)
+            return
+        }
+        _ = application.terminate()
+        for _ in 0..<20 where !application.isTerminated {
+            try? await Task.sleep(for: .milliseconds(100))
+        }
+        if !application.isTerminated {
+            _ = application.forceTerminate()
+            for _ in 0..<10 where !application.isTerminated {
+                try? await Task.sleep(for: .milliseconds(100))
+            }
+        }
+        finish(application, reactivateGameHub: reactivateGameHub)
+    }
+
+    private func finish(_ finishedApplication: NSRunningApplication?, reactivateGameHub: Bool) {
+        guard finishedApplication == nil || application?.processIdentifier == finishedApplication?.processIdentifier else { return }
+        removeObserver()
+        application = nil
+        guard reactivateGameHub, !shuttingDown else { return }
+        NSRunningApplication.current.activate(options: [.activateAllWindows, .activateIgnoringOtherApps])
+        NSApp.windows.first(where: { $0.canBecomeKey && $0.isVisible })?.makeKeyAndOrderFront(nil)
+    }
+
+    private func removeObserver() {
+        if let terminationObserver {
+            NSWorkspace.shared.notificationCenter.removeObserver(terminationObserver)
+            self.terminationObserver = nil
+        }
+        if let escapeMonitor {
+            NSEvent.removeMonitor(escapeMonitor)
+            self.escapeMonitor = nil
+        }
+    }
+
+    private func prepareDolphinSettings() throws {
+        let directory = FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent("Library/Application Support/Dolphin/Config", isDirectory: true)
+        let file = directory.appendingPathComponent("Dolphin.ini")
+        guard let original = try? String(contentsOf: file, encoding: .utf8) else { return }
+        var updated = setting("Fullscreen", to: "True", in: "Display", text: original)
+        updated = setting("ConfirmStop", to: "False", in: "Interface", text: updated)
+        if updated != original {
+            let backup = directory.appendingPathComponent("Dolphin.before-gamehub-session.ini")
+            if !FileManager.default.fileExists(atPath: backup.path) {
+                try original.write(to: backup, atomically: true, encoding: .utf8)
+            }
+            try updated.write(to: file, atomically: true, encoding: .utf8)
+        }
+
+        let hotkeys = directory.appendingPathComponent("Hotkeys.ini")
+        let originalHotkeys = (try? String(contentsOf: hotkeys, encoding: .utf8)) ?? ""
+        var updatedHotkeys = setting("Device", to: "Quartz/0/Keyboard & Mouse", in: "Hotkeys", text: originalHotkeys)
+        updatedHotkeys = setting("General/Stop", to: "Escape", in: "Hotkeys", text: updatedHotkeys)
+        if updatedHotkeys != originalHotkeys {
+            let hotkeyBackup = directory.appendingPathComponent("Hotkeys.before-gamehub-session.ini")
+            if !originalHotkeys.isEmpty, !FileManager.default.fileExists(atPath: hotkeyBackup.path) {
+                try originalHotkeys.write(to: hotkeyBackup, atomically: true, encoding: .utf8)
+            }
+            try updatedHotkeys.write(to: hotkeys, atomically: true, encoding: .utf8)
+        }
+    }
+
+    private func setting(_ key: String, to value: String, in section: String, text: String) -> String {
+        var lines = text.components(separatedBy: .newlines)
+        let header = "[\(section)]"
+        guard let start = lines.firstIndex(where: { $0.trimmingCharacters(in: .whitespaces) == header }) else {
+            if lines.last?.isEmpty == false { lines.append("") }
+            lines += [header, "\(key) = \(value)"]
+            return lines.joined(separator: "\n")
+        }
+        let end = lines[(start + 1)...].firstIndex(where: {
+            let line = $0.trimmingCharacters(in: .whitespaces)
+            return line.hasPrefix("[") && line.hasSuffix("]")
+        }) ?? lines.endIndex
+        if let index = lines[(start + 1)..<end].firstIndex(where: {
+            $0.split(separator: "=", maxSplits: 1).first?.trimmingCharacters(in: .whitespaces) == key
+        }) {
+            lines[index] = "\(key) = \(value)"
+        } else {
+            lines.insert("\(key) = \(value)", at: end)
+        }
+        return lines.joined(separator: "\n")
+    }
+
+    private func prepareRyujinxSettings() throws {
+        let directory = FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent("Library/Application Support/Ryujinx", isDirectory: true)
+        let file = directory.appendingPathComponent("Config.json")
+        guard let data = try? Data(contentsOf: file),
+              var settings = try JSONSerialization.jsonObject(with: data) as? [String: Any] else { return }
+        let desired: [String: Bool] = [
+            "start_fullscreen": true,
+            "start_no_ui": true,
+            "show_console": false,
+            "show_confirm_exit": false
+        ]
+        guard desired.contains(where: { settings[$0.key] as? Bool != $0.value }) else { return }
+        let backup = directory.appendingPathComponent("Config.before-gamehub-session.json")
+        if !FileManager.default.fileExists(atPath: backup.path) {
+            try data.write(to: backup, options: .atomic)
+        }
+        for (key, value) in desired { settings[key] = value }
+        let updated = try JSONSerialization.data(withJSONObject: settings, options: [.prettyPrinted, .sortedKeys])
+        try updated.write(to: file, options: .atomic)
+    }
+}
+
 @Observable final class ROMGame: Game {
     var localCopySelected = false
     var sourceLocationLabel: String?
@@ -240,7 +470,7 @@ struct ROMLocalCopy: Codable {
     override var supportsLaunchArguments: Bool { false }
     init(source: ROMSource, entry: ROMEntry, content: URL) {
         self.source = source; self.entry = entry
-        super.init(id: entry.id, title: entry.title, installationState: .installed(location: content, platform: .macOS))
+        super.init(id: entry.id, title: ROMTitle.displayName(entry.title), installationState: .installed(location: content, platform: .macOS))
     }
     required init(from decoder: any Decoder) throws { source = nil; entry = nil; try super.init(from: decoder) }
     @MainActor override func _launch() async throws {
@@ -251,14 +481,14 @@ struct ROMLocalCopy: Codable {
             root = try URL(resolvingBookmarkData: copy.root, options: [.withSecurityScope, .withoutUI], bookmarkDataIsStale: &stale)
             guard !stale else { throw ROMError.missingPart }
         } else {
-            do { root = try source.resolve(source.root) }
+            do { root = try source.rootURL() }
             catch {
                 throw NSError(domain: "GameHub.ROMSource", code: 1, userInfo: [NSLocalizedDescriptionKey:
                     "Cannot access the ROM folder. Reconnect its server share or drive, then press Play again. (\(error.localizedDescription))"])
             }
         }
-        let app = try source.resolve(source.application)
-        let core = try source.core.map { try source.resolve($0) }
+        let app = try source.applicationURL()
+        let core = try source.coreURL()
         let urls = [root, app] + [core].compactMap { $0 }
         let access = urls.map { $0.startAccessingSecurityScopedResource() }
         defer { for (index, url) in urls.enumerated() where access[index] { url.stopAccessingSecurityScopedResource() } }
@@ -267,10 +497,73 @@ struct ROMLocalCopy: Codable {
         _ = try EmulatorApplicationInfo.inspect(application: app)
         guard core.map({ FileManager.default.fileExists(atPath: $0.path) }) ?? true else { throw ROMError.coreMissing }
         let config = NSWorkspace.OpenConfiguration()
-        config.arguments = try EmulatorCommand.arguments(kind: source.emulator, content: content, core: core, dolphinPreset: source.dolphinPreset ?? .emulatorSettings)
-        try await NSWorkspace.shared.openApplication(at: app, configuration: config)
+        let sessionConfiguration = try EmulatorSessionCoordinator.shared.sessionConfiguration(for: source.emulator)
+        config.arguments = try EmulatorCommand.arguments(kind: source.emulator, content: content, core: core,
+            dolphinPreset: source.dolphinPreset ?? .emulatorSettings, sessionConfiguration: sessionConfiguration)
+        try await EmulatorSessionCoordinator.shared.launch(application: app, configuration: config, kind: source.emulator)
     }
 }
+
+enum ROMCatalogPolicy {
+    private static let specialFolders: Set<String> = [
+        "hack", "hacks", "homebrew", "homebrew & unlicensed", "unlicensed",
+        "translation", "translations", "unreleased"
+    ]
+
+    /// The final artwork audit removed unresolved entries from the active ROM
+    /// sources, so no valid catalog item needs to be hidden here.
+    private static let hiddenWithoutArtwork: Set<String> = []
+
+    static func isHacksOrHomebrew(_ game: Game) -> Bool {
+        guard let entry = (game as? ROMGame)?.entry else { return false }
+        let components = entry.relativePath.split(separator: "/").dropLast().map { $0.lowercased() }
+        return components.contains { specialFolders.contains($0) }
+    }
+
+    static func isHiddenWithoutArtwork(_ game: Game) -> Bool {
+        game is ROMGame && hiddenWithoutArtwork.contains(game.id)
+    }
+
+    static func deduplicationKey(for game: ROMGame) -> String {
+        let system = game.source?.system.lowercased() ?? "rom"
+        return system + "|" + game.title.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current)
+    }
+
+    static func prefers(_ candidate: ROMGame, over current: ROMGame) -> Bool {
+        let candidateExtension = URL(fileURLWithPath: candidate.entry?.relativePath ?? "").pathExtension.lowercased()
+        let currentExtension = URL(fileURLWithPath: current.entry?.relativePath ?? "").pathExtension.lowercased()
+        // Extracted disc/cart images are launchable by every configured emulator;
+        // archives are retained as a fallback but should not create another tile.
+        if (candidateExtension != "zip") != (currentExtension != "zip") {
+            return candidateExtension != "zip"
+        }
+        let candidateRaw = candidate.entry?.title ?? candidate.title
+        let currentRaw = current.entry?.title ?? current.title
+        let candidateRevision = revisionScore(candidateRaw)
+        let currentRevision = revisionScore(currentRaw)
+        if candidateRevision != currentRevision { return candidateRevision > currentRevision }
+        if candidateRaw.count != currentRaw.count { return candidateRaw.count < currentRaw.count }
+        return (candidate.entry?.relativePath ?? "").localizedStandardCompare(current.entry?.relativePath ?? "") == .orderedAscending
+    }
+
+    private static func revisionScore(_ value: String) -> Int {
+        let patterns = [#"(?i)\bv(\d+)(?:\.(\d+))?"#, #"(?i)\brev(?:ision)?[-\s]*(\d+|[A-Z])"#]
+        for pattern in patterns {
+            guard let expression = try? NSRegularExpression(pattern: pattern),
+                  let match = expression.firstMatch(in: value, range: NSRange(value.startIndex..., in: value)),
+                  let majorRange = Range(match.range(at: 1), in: value) else { continue }
+            let majorText = String(value[majorRange])
+            let major = Int(majorText) ?? Int(majorText.uppercased().unicodeScalars.first?.value ?? 64) - 64
+            var minor = 0
+            if match.numberOfRanges > 2, let minorRange = Range(match.range(at: 2), in: value) {
+                minor = Int(value[minorRange]) ?? 0
+            }
+            return max(0, major) * 1_000 + minor
+        }
+        return 0
+    }
+}
+
 struct ROMLibraryView: View {
     @Bindable private var store = ROMLibrary.shared
     @State private var system = "ps1"
@@ -297,7 +590,7 @@ struct ROMLibraryView: View {
             Section("Sources") {
                 ForEach(store.sources) { source in
                     VStack(alignment: .leading, spacing: 4) {
-                        LabeledContent(source.system, value: "\(source.index.entries.count) games · \(source.emulator.displayName)")
+                        LabeledContent(HubSystemMark.shortName(for: source.system), value: "\(source.index.entries.count) games · \(source.emulator.displayName)")
                         Text(store.sourcePaths[source.id] ?? "Checking source…")
                             .font(.caption).foregroundStyle(.secondary).textSelection(.enabled)
                         Text("Version when added: \(source.applicationVersion ?? "Not checked")")
@@ -324,5 +617,122 @@ struct ROMLibraryView: View {
         .formStyle(.grouped).navigationTitle("ROM Library")
         .task { store.refreshSourceLocations(force: true) }
         .sheet(isPresented: $deckPresented) { SteamDeckLibraryView() }
+    }
+}
+
+struct HacksHomebrewView: View {
+    @Bindable private var gameDataStore = GameDataStore.shared
+    @State private var input = HubControllerInput.shared
+    @State private var search = ""
+    @State private var selectedSystem = ""
+    @State private var selection = 0
+    @State private var gridColumns = 1
+    @State private var launchMessage = ""
+    @AppStorage("gameCardSize") private var gameCardSize: Double = 200
+    @AppStorage("hubTheme") private var theme = "lcars"
+
+    private var allGames: [Game] {
+        gameDataStore.hacksAndHomebrewLibrary.sorted {
+            ROMTitle.sortKeyForDisplayName($0.title).localizedStandardCompare(ROMTitle.sortKeyForDisplayName($1.title)) == .orderedAscending
+        }
+    }
+    private var systems: [String] {
+        Set(allGames.map(GameListViewModel.systemName(for:))).sorted()
+    }
+    private var games: [Game] {
+        allGames.filter {
+            (search.isEmpty || $0.title.localizedStandardContains(search)) &&
+            (selectedSystem.isEmpty || GameListViewModel.systemName(for: $0) == selectedSystem)
+        }
+    }
+    private func updateColumns(_ width: CGFloat) {
+        gridColumns = max(1, Int((Double(width) - 34) / (max(240, gameCardSize) + 22)))
+    }
+    private func controllerAction(_ action: String) -> Bool {
+        if action == "back" || action == "sidebar" { return false }
+        if action == "filter" {
+            let choices = [""] + systems
+            let current = choices.firstIndex(of: selectedSystem) ?? 0
+            selectedSystem = choices[(current + 1) % choices.count]
+            selection = 0
+            return true
+        }
+        guard !games.isEmpty else { return false }
+        selection = min(selection, games.count - 1)
+        switch action {
+        case "left", "right", "up", "down":
+            selection = HubGridNavigation.destination(from: selection, action: action, columns: gridColumns, count: games.count)
+        case "options": HubGameOptions.shared.open(games[selection])
+        case "select":
+            let game = games[selection]
+            Task { do { try await game.launch(); launchMessage = "" } catch { launchMessage = error.localizedDescription } }
+        default: return false
+        }
+        return true
+    }
+
+    var body: some View {
+        let selectedID = games.indices.contains(selection) ? games[selection].id : nil
+        VStack(spacing: 0) {
+            HubSectionBanner(title: "Hacks & Homebrew")
+                .padding(.horizontal, 28).padding(.vertical, 16)
+            if input.connected {
+                HubControllerHints(actions: [("Move", "Move"), ("A", "Play"), ("X", "Options"), ("Y", "System"), ("B", "Sidebar")])
+                    .padding(.bottom, 12)
+            }
+            if !launchMessage.isEmpty { Text(launchMessage).padding(8) }
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    categoryButton("All", system: nil)
+                    ForEach(systems, id: \.self) { system in categoryButton(system, system: system) }
+                }.padding(.horizontal, 28)
+            }.padding(.bottom, 12)
+            if games.isEmpty {
+                ContentUnavailableView("No matching titles", systemImage: "hammer",
+                    description: Text("Try another system or clear the search."))
+            } else {
+                ScrollViewReader { proxy in
+                    ScrollView {
+                        LazyVGrid(columns: [.init(.adaptive(minimum: max(240, gameCardSize)), spacing: 22)], spacing: 24) {
+                            ForEach(games) { game in
+                                GameCard(game: .constant(game))
+                                    .padding(4)
+                                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(
+                                        input.connected && input.contentFocused && selectedID == game.id ? HubTheme.yellow : .clear,
+                                        lineWidth: 3))
+                                    .id(game.id)
+                            }
+                        }.padding(28)
+                    }
+                    .background(GeometryReader { geometry in
+                        Color.clear.onAppear { updateColumns(geometry.size.width) }
+                            .onChange(of: geometry.size.width) { _, width in updateColumns(width) }
+                    })
+                    .onChange(of: selection) { _, _ in if let selectedID { proxy.scrollTo(selectedID, anchor: .center) } }
+                }
+            }
+        }
+        .searchable(text: $search, placement: .toolbar, prompt: "Search hacks and homebrew")
+        .onAppear { input.setContent("hacks-homebrew", action: controllerAction) }
+        .onDisappear { input.clearContent("hacks-homebrew") }
+        .onChange(of: games.map(\.id)) { _, ids in selection = min(selection, max(0, ids.count - 1)) }
+        .background(theme == "lcars" ? HubTheme.canvas : Color(nsColor: .windowBackgroundColor))
+        .navigationTitle("Hacks & Homebrew")
+    }
+
+    private func categoryButton(_ title: String, system: String?) -> some View {
+        Button {
+            selectedSystem = system ?? ""; selection = 0
+        } label: {
+            HStack(spacing: 7) {
+                if let system { HubSystemMark(system: system, size: 20) }
+                else { Image(systemName: "hammer.fill") }
+                Text(title)
+            }
+            .font(.system(size: 15, weight: .bold)).lineLimit(1)
+            .padding(.horizontal, 14).padding(.vertical, 9)
+            .foregroundStyle(HubTheme.ink)
+            .background(selectedSystem == (system ?? "") ? HubTheme.yellow : HubTheme.blue.opacity(0.18), in: .capsule)
+        }.buttonStyle(.plain)
     }
 }

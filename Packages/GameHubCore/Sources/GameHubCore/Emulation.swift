@@ -61,16 +61,30 @@ public struct EmulatorApplicationInfo: Equatable, Sendable {
     }
 }
 public enum EmulatorCommand {
-    public static func arguments(kind: EmulatorKind, content: URL, core: URL? = nil, dolphinPreset: DolphinGraphicsPreset = .emulatorSettings) throws -> [String] {
+    public static func arguments(kind: EmulatorKind, content: URL, core: URL? = nil,
+                                 dolphinPreset: DolphinGraphicsPreset = .emulatorSettings,
+                                 sessionConfiguration: URL? = nil) throws -> [String] {
         guard content.isFileURL, content.path.hasPrefix("/"), !content.path.contains("\0") else { throw ROMError.invalid }
+        if let sessionConfiguration {
+            guard sessionConfiguration.isFileURL, sessionConfiguration.path.hasPrefix("/"),
+                  !sessionConfiguration.path.contains("\0") else { throw ROMError.invalid }
+        }
         switch kind {
         case .retroArch:
             guard let core, core.isFileURL else { throw ROMError.coreMissing }
-            return ["-f", "-L", core.path, content.path]
-        case .duckStation, .pcsx2: return ["-batch", "-fullscreen", "--", content.path]
-        case .rpcs3, .ryujinx: return [content.path]
+            var arguments = ["-f"]
+            if let sessionConfiguration { arguments.append("--appendconfig=\(sessionConfiguration.path)") }
+            return arguments + ["-L", core.path, content.path]
+        case .duckStation, .pcsx2:
+            return ["-batch", "-fullscreen", "--", content.path]
+        case .rpcs3:
+            return ["--no-gui", "--fullscreen", content.path]
+        case .ryujinx:
+            return ["--no-gui", content.path]
         case .dolphin:
-            return ["-b", "-C", "Dolphin.Display.Fullscreen=True"] + dolphinPreset.arguments + ["-e", content.path]
+            return ["-b", "-C", "Dolphin.Display.Fullscreen=True",
+                    "-C", "Dolphin.Interface.ConfirmStop=False"]
+                + dolphinPreset.arguments + ["-e", content.path]
         }
     }
 }
@@ -85,6 +99,81 @@ public enum ROMError: LocalizedError {
         }
     }
 }
+
+/// Normalizes catalog titles without changing the source filename. ROM sets
+/// commonly include release metadata in brackets and store leading articles as
+/// “Addams Family, The”, while storefronts use “The Addams Family”.
+public enum ROMTitle {
+    public static func displayName(_ value: String) -> String {
+        let withoutMetadata = removingCatalogMetadata(from: value)
+        let collapsed = withoutMetadata
+            .replacingOccurrences(of: #"\s+"#, with: " ", options: .regularExpression)
+            .trimmingCharacters(in: .whitespacesAndNewlines.union(CharacterSet(charactersIn: "-_")))
+        let range = NSRange(collapsed.startIndex..., in: collapsed)
+        let pattern = #"^(.+),\s*The((?:\s+-.*|\s*[\(\[].*)?)$"#
+        guard let expression = try? NSRegularExpression(pattern: pattern, options: [.caseInsensitive]),
+              let match = expression.firstMatch(in: collapsed, range: range),
+              let baseRange = Range(match.range(at: 1), in: collapsed),
+              let suffixRange = Range(match.range(at: 2), in: collapsed) else { return collapsed }
+        return "The \(collapsed[baseRange].trimmingCharacters(in: .whitespaces))\(collapsed[suffixRange])"
+    }
+
+    private static func removingCatalogMetadata(from value: String) -> String {
+        // Square and curly groups in ROM-set names are release tags, hashes, or
+        // source labels. Parentheses may be part of the actual game name, so
+        // only region/language and revision metadata is removed from them.
+        let pairs: [Character: Character] = ["[": "]", "{": "}"]
+        var closing: [Character] = []
+        var result = ""
+        for character in value {
+            if let end = pairs[character] {
+                closing.append(end)
+            } else if closing.last == character {
+                closing.removeLast()
+            } else if closing.isEmpty {
+                result.append(character)
+            }
+        }
+        let regions = #"(?:USA|US|World|Europe|Japan|Korea|Australia|Canada|Asia|UK|En|Ja|Fr|De|Es|It|Ru|Ko|Zh|Pt|Nl|Sv|No|Da|Fi|Pl|Cs|Hu|Tr)"#
+        result = result.replacingOccurrences(
+            of: #"\s*\((?i:"# + regions + #"(?:\s*,\s*"# + regions + #")*)\)"#,
+            with: "", options: .regularExpression
+        )
+        result = result.replacingOccurrences(
+            of: #"\s*\((?i:(?:v(?:ersion)?\s*\d+(?:\.\d+)*|rev(?:ision)?[-\s]*[A-Z0-9.]+|\d+G(?:\+\d+[A-Z])?))\)"#,
+            with: "", options: .regularExpression
+        )
+        return result
+    }
+
+    public static func sortKey(_ value: String) -> String {
+        sortKeyForDisplayName(displayName(value))
+    }
+
+    /// Game Hub normalizes ROM titles when it creates the catalog. UI sorting can
+    /// use this path without repeating the metadata regular expressions for every
+    /// comparison during every SwiftUI update.
+    public static func sortKeyForDisplayName(_ display: String) -> String {
+        guard display.lowercased().hasPrefix("the ") else { return display }
+        return String(display.dropFirst(4)) + ", The"
+    }
+
+    public static func lookupNames(_ value: String) -> [String] {
+        let display = displayName(value)
+        var names = [value, display]
+        if display.lowercased().hasPrefix("the ") {
+            let remainder = String(display.dropFirst(4))
+            let boundaries = [remainder.range(of: " - ")?.lowerBound,
+                              remainder.range(of: " (")?.lowerBound,
+                              remainder.range(of: " [")?.lowerBound].compactMap { $0 }
+            let boundary = boundaries.min() ?? remainder.endIndex
+            names.append(String(remainder[..<boundary]) + ", The" + String(remainder[boundary...]))
+        }
+        var seen: Set<String> = []
+        return names.filter { seen.insert($0.lowercased()).inserted }
+    }
+}
+
 public struct ROMEntry: Codable, Identifiable, Sendable {
     public let id: String
     public let title: String
@@ -117,7 +206,7 @@ public struct ROMIndex: Codable, Sendable {
             let values = try url.resourceValues(forKeys: [.isRegularFileKey, .isSymbolicLinkKey])
             if values.isSymbolicLink == true { iterator.skipDescendants(); continue }
             guard values.isRegularFile == true else { continue }
-            if ["xci", "nsp", "zip", "nes", "sfc", "smc", "gb", "gbc", "gba", "n64", "z64", "v64", "pbp", "gen", "md", "smd", "32x", "iso", "chd", "cue", "gdi", "m3u", "gcm", "rvz", "wia", "wbfs", "ciso"].contains(url.pathExtension.lowercased()) || url.lastPathComponent.uppercased() == "EBOOT.BIN" { candidates.append(url.resolvingSymlinksInPath()) }
+            if ["xci", "nsp", "nes", "sfc", "smc", "gb", "gbc", "gba", "n64", "z64", "v64", "pbp", "gen", "md", "smd", "32x", "iso", "chd", "cue", "gdi", "m3u", "gcm", "rvz", "wia", "wbfs", "ciso"].contains(url.pathExtension.lowercased()) || url.lastPathComponent.uppercased() == "EBOOT.BIN" { candidates.append(url.resolvingSymlinksInPath()) }
         }
         var suppressed: Set<String> = []
         for descriptor in candidates where ["cue", "gdi", "m3u"].contains(descriptor.pathExtension.lowercased()) {
@@ -162,7 +251,7 @@ public struct ROMIndex: Codable, Sendable {
                     let values = try part.resourceValues(forKeys: [.fileSizeKey, .contentModificationDateKey])
                     let size = Int64(values.fileSize ?? 0)
                     let modified = values.contentModificationDate?.timeIntervalSince1970 ?? 0
-                    digest.update(data: Data("\(part.lastPathComponent):\(size):\(modified)".utf8))
+                    digest.update(data: Data("\(size):\(modified)".utf8))
                     let handle = try FileHandle(forReadingFrom: part)
                     defer { try? handle.close() }
                     let head = try handle.read(upToCount: sampleBytes) ?? Data()

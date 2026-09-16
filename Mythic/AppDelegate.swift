@@ -149,6 +149,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     @MainActor
     func applicationWillTerminate(_: Notification) {
+        EmulatorSessionCoordinator.shared.applicationWillTerminate()
         if UserDefaults.standard.bool(forKey: "quitOnAppClose") {
             try? Wine.killAll()
         }

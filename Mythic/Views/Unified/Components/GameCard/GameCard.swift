@@ -94,24 +94,73 @@ struct HubGameBadges: View {
 struct HubSystemBadge: View {
     let system: String
 
-    private var icon: String {
+    var body: some View {
+        HubSystemMark(system: system, size: 18)
+            .font(.system(size: 14, weight: .semibold))
+            .lineLimit(1).fixedSize(horizontal: true, vertical: false)
+            .padding(.horizontal, 9).padding(.vertical, 6)
+            .foregroundStyle(HubTheme.ink)
+            .background(HubTheme.blue.opacity(0.20), in: .capsule)
+            .help("System: \(HubSystemMark.shortName(for: system))")
+            .accessibilityLabel("System: \(HubSystemMark.shortName(for: system))")
+    }
+}
+
+/// Official platform marks used wherever a ROM system is shown. The logos are
+/// bundled in the app so they remain visible without a network connection.
+struct HubSystemMark: View {
+    let system: String
+    var size: CGFloat = 20
+
+    static func shortName(for system: String) -> String {
         switch system.lowercased() {
-        case "gc", "wii": return "gamecontroller.fill"
-        case "ps1", "ps2", "ps3": return "circle.grid.3x3.fill"
-        case "n64": return "rectangle.3.group.fill"
-        case "switch": return "rectangle.split.2x1.fill"
-        default: return "gamecontroller.fill"
+        case "gc", "gamecube": return "GC"
+        case "n64", "nintendo 64": return "N64"
+        case "ps1", "playstation": return "PS"
+        case "ps2", "playstation 2": return "PS2"
+        case "ps3", "playstation 3": return "PS3"
+        case "switch", "nintendo switch": return "SWITCH"
+        case "dreamcast": return "DC"
+        case "megadrive", "mega drive", "mega drive / genesis", "genesis", "sega": return "Sega"
+        case "wii": return "Wii"
+        case "pc & mac", "pc", "mac": return "PC"
+        case "connections": return "LINK"
+        default: return system.uppercased()
+        }
+    }
+
+    private var assetName: String? {
+        switch system.lowercased() {
+        case "gc", "gamecube": return "SystemGameCube"
+        case "n64", "nintendo 64": return "SystemNintendo64"
+        case "ps1", "playstation", "ps3", "playstation 3": return "SystemPlayStation"
+        case "ps2", "playstation 2": return "SystemPS2"
+        case "switch", "nintendo switch": return "SystemSwitch"
+        case "dreamcast": return "SystemDreamcast"
+        case "megadrive", "mega drive", "mega drive / genesis", "genesis", "sega": return "SystemSega"
+        default: return nil
         }
     }
 
     var body: some View {
-        Label(system.uppercased(), systemImage: icon)
-            .font(.system(size: 14, weight: .semibold))
-            .lineLimit(1).fixedSize(horizontal: true, vertical: false)
-            .padding(.horizontal, 10).padding(.vertical, 6)
-            .foregroundStyle(HubTheme.ink)
-            .background(HubTheme.blue.opacity(0.20), in: .capsule)
-            .help("System: \(system.uppercased())")
-            .accessibilityLabel("System: \(system.uppercased())")
+        Group {
+            if let assetName {
+                Image(assetName)
+                    .resizable()
+                    .scaledToFit()
+            } else if system.lowercased() == "connections" {
+                Image(systemName: "network")
+                    .resizable()
+                    .scaledToFit()
+                    .foregroundStyle(HubTheme.ink)
+            } else if ["pc & mac", "pc", "mac"].contains(system.lowercased()) {
+                Image(systemName: "desktopcomputer")
+                    .resizable()
+                    .scaledToFit()
+                    .foregroundStyle(HubTheme.ink)
+            }
+        }
+        .frame(width: size * 1.6, height: size)
+        .accessibilityHidden(true)
     }
 }

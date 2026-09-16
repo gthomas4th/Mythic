@@ -59,6 +59,8 @@ import OSLog
                 return game
             })
         }
+        connectionGames = ConnectionGame.libraryGames()
+        for game in connectionGames { restorePreferences(for: game) }
     }
 
     private func encodedLibrary() throws -> [String: Data] {
@@ -78,8 +80,38 @@ import OSLog
     }
 
     private(set) var discoveredGames: Set<Game> = []
+    private(set) var connectionGames: Set<Game> = []
     private(set) var discoveryDiagnostics: [String] = []
-    var displayLibrary: Set<Game> { library.union(discoveredGames).union(ROMLibrary.shared.games) }
+    private var completeLibrary: Set<Game> { library.union(discoveredGames).union(ROMLibrary.shared.games).union(connectionGames) }
+    var hacksAndHomebrewLibrary: Set<Game> {
+        Set(completeLibrary.filter(ROMCatalogPolicy.isHacksOrHomebrew))
+    }
+    var displayLibrary: Set<Game> {
+        let visible = completeLibrary.filter {
+            !ROMCatalogPolicy.isHacksOrHomebrew($0)
+                && !ROMCatalogPolicy.isHiddenWithoutArtwork($0)
+                && !Self.isEpicAddOn($0)
+        }
+        var uniqueROMs: [String: ROMGame] = [:]
+        var result = Set(visible.filter { !($0 is ROMGame) })
+        for case let game as ROMGame in visible {
+            let key = ROMCatalogPolicy.deduplicationKey(for: game)
+            if let current = uniqueROMs[key] {
+                if ROMCatalogPolicy.prefers(game, over: current) { uniqueROMs[key] = game }
+            } else {
+                uniqueROMs[key] = game
+            }
+        }
+        result.formUnion(uniqueROMs.values.map { $0 as Game })
+        return result
+    }
+
+    private static func isEpicAddOn(_ game: Game) -> Bool {
+        guard game.storefront == .epicGames else { return false }
+        let title = game.title.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current)
+        return title.localizedCaseInsensitiveContains("fortnite")
+            && title.localizedCaseInsensitiveContains("content")
+    }
 
     var recent: Game? {
         guard !displayLibrary.allSatisfy({ $0.lastLaunched == nil }) else { return nil }

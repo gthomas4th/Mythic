@@ -16,10 +16,12 @@ import OSLog
     static let shared: GameListViewModel = .init()
 
     var selectedSystem: String = ""
+    var selectedLetter: String = ""
     var availableSystems: [String] {
         Set(GameDataStore.shared.displayLibrary.map { Self.systemName(for: $0) }).sorted()
     }
     static func systemName(for game: Game) -> String {
+        if game is ConnectionGame { return "Connections" }
         guard let rom = game as? ROMGame else { return "PC & Mac" }
         let raw = rom.source?.system.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         switch raw.lowercased() {
@@ -29,7 +31,7 @@ import OSLog
         case "ps3", "playstation 3": return "PlayStation 3"
         case "snes", "super nintendo": return "Super Nintendo"
         case "n64", "nintendo 64": return "Nintendo 64"
-        case "genesis", "megadrive", "mega drive": return "Mega Drive / Genesis"
+        case "genesis", "megadrive", "mega drive", "mega drive / genesis", "sega": return "Sega"
         case "dreamcast": return "Dreamcast"
         case "switch", "nintendo switch": return "Nintendo Switch"
         case "nes": return "NES"
@@ -40,6 +42,16 @@ import OSLog
         case "wii": return "Wii"
         default: return raw.isEmpty ? "Other ROMs" : raw
         }
+    }
+
+    static let alphabetSections = ["#"] + (65...90).compactMap { UnicodeScalar($0).map(String.init) }
+    static func alphabetSection(for game: Game) -> String {
+        let title = (game is ROMGame ? ROMTitle.sortKeyForDisplayName(game.title) : game.title)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .folding(options: [.diacriticInsensitive, .caseInsensitive], locale: .current)
+            .uppercased()
+        guard let first = title.first, first >= "A", first <= "Z" else { return "#" }
+        return String(first)
     }
 
     var searchString: String = .init()
@@ -83,14 +95,18 @@ import OSLog
                         return game.isFavourited
                     }
                 }
-                return matchesText && matchesTokens && (selectedSystem.isEmpty || Self.systemName(for: game) == selectedSystem)
+                let matchesSystem = selectedSystem.isEmpty || Self.systemName(for: game) == selectedSystem
+                let matchesLetter = selectedLetter.isEmpty || Self.alphabetSection(for: game) == selectedLetter
+                return matchesText && matchesTokens && matchesSystem && matchesLetter
             }
             .sorted { left, right in
                 let leftOperating = operating.contains(left.id), rightOperating = operating.contains(right.id)
                 if leftOperating != rightOperating { return leftOperating }
                 if left.installationState > right.installationState { return true }
                 if right.installationState > left.installationState { return false }
-                if left.title != right.title { return left.title < right.title }
+                let leftTitle = left is ROMGame ? ROMTitle.sortKeyForDisplayName(left.title) : left.title
+                let rightTitle = right is ROMGame ? ROMTitle.sortKeyForDisplayName(right.title) : right.title
+                if leftTitle != rightTitle { return leftTitle.localizedStandardCompare(rightTitle) == .orderedAscending }
                 return left.id < right.id
             }
     }

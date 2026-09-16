@@ -2,6 +2,18 @@ import XCTest
 @testable import GameHubCore
 
 final class EmulationRemoteTests: XCTestCase {
+    func testROMTitleArticleNormalization() {
+        XCTAssertEqual(ROMTitle.displayName("Addams Family, The"), "The Addams Family")
+        XCTAssertEqual(ROMTitle.displayName("Legend of Zelda, The - Majora's Mask"), "The Legend of Zelda - Majora's Mask")
+        XCTAssertEqual(ROMTitle.displayName("[Krnl.vip] SUPER MARIO ODYSSEY [0100000000010000] [v262144] (1G+1U)"), "SUPER MARIO ODYSSEY")
+        XCTAssertEqual(ROMTitle.displayName("Legend of Zelda, The (USA) [Rev 1]"), "The Legend of Zelda")
+        XCTAssertEqual(ROMTitle.displayName("Game - [Prototype]"), "Game")
+        XCTAssertEqual(ROMTitle.displayName("Baten Kaitos (Disc 1)(USA)"), "Baten Kaitos (Disc 1)")
+        XCTAssertEqual(ROMTitle.displayName("Altered Beast (Enhanced Colors)"), "Altered Beast (Enhanced Colors)")
+        XCTAssertEqual(ROMTitle.sortKey("The Addams Family"), "Addams Family, The")
+        XCTAssertTrue(ROMTitle.lookupNames("The Addams Family").contains("Addams Family, The"))
+    }
+
     func folder() throws -> URL {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
@@ -45,9 +57,15 @@ final class EmulationRemoteTests: XCTestCase {
         let content = URL(fileURLWithPath: "/games/space name;ignored.iso")
         XCTAssertEqual(try EmulatorCommand.arguments(kind: .pcsx2, content: content), ["-batch", "-fullscreen", "--", content.path])
         XCTAssertThrowsError(try EmulatorCommand.arguments(kind: .retroArch, content: content))
-        XCTAssertEqual(try EmulatorCommand.arguments(kind: .retroArch, content: content, core: URL(fileURLWithPath: "/cores/test.dylib")).last, content.path)
+        let session = URL(fileURLWithPath: "/Game Hub/session.cfg")
+        let retroArch = try EmulatorCommand.arguments(kind: .retroArch, content: content,
+            core: URL(fileURLWithPath: "/cores/test.dylib"), sessionConfiguration: session)
+        XCTAssertTrue(retroArch.contains("--appendconfig=/Game Hub/session.cfg"))
+        XCTAssertEqual(retroArch.last, content.path)
+        XCTAssertEqual(try EmulatorCommand.arguments(kind: .rpcs3, content: content),
+                       ["--no-gui", "--fullscreen", content.path])
     }
-    func testSwitchFormatsAndGUILaunchPreservePaths() throws {
+    func testSwitchFormatsAndDirectLaunchPreservePaths() throws {
         let root = try folder()
         let game = root.appendingPathComponent("Switch Game [USA]; sample.xci")
         try Data([1, 2, 3]).write(to: game)
@@ -56,7 +74,7 @@ final class EmulationRemoteTests: XCTestCase {
         var index = ROMIndex(); try index.scan(root: root, system: "switch")
         XCTAssertEqual(index.entries.count, 2)
         XCTAssertEqual(Set(index.entries.map { URL(fileURLWithPath: $0.relativePath).pathExtension }), ["xci", "nsp"])
-        XCTAssertEqual(try EmulatorCommand.arguments(kind: .ryujinx, content: game), [game.path])
+        XCTAssertEqual(try EmulatorCommand.arguments(kind: .ryujinx, content: game), ["--no-gui", game.path])
         XCTAssertThrowsError(try EmulatorCommand.arguments(kind: .ryujinx, content: XCTUnwrap(URL(string: "https://example.com/game.xci"))))
     }
     func testRemoteInputAndHealthDoNotClaimQuality() throws {
@@ -75,6 +93,7 @@ final class EmulationRemoteTests: XCTestCase {
         let args = try EmulatorCommand.arguments(kind: .dolphin, content: content, dolphinPreset: .metal1080)
         XCTAssertEqual(Array(args.suffix(2)), ["-e", content.path])
         XCTAssertTrue(args.contains("Graphics.Settings.InternalResolution=3"))
+        XCTAssertTrue(args.contains("Dolphin.Interface.ConfirmStop=False"))
         XCTAssertTrue(args.contains("Metal"))
         let defaults = try EmulatorCommand.arguments(kind: .dolphin, content: content)
         XCTAssertFalse(defaults.contains("Metal"))

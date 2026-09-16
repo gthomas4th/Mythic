@@ -2,6 +2,65 @@ import SwiftUI
 import Network
 import Darwin
 
+@Observable final class ConnectionGame: Game {
+    enum Destination: String, Codable { case yoda, playStation5 }
+
+    let destination: Destination
+    var artworkAssetName: String { destination == .yoda ? "ConnectionYoda" : "ConnectionPS5" }
+    override var storefront: Storefront? { .local }
+    override var locationLabel: String? { destination == .yoda ? "PC" : "PS5" }
+    override var typeLabel: String? { "Remote Play" }
+    override var supportsFileManagement: Bool { false }
+    override var supportsLaunchArguments: Bool { false }
+    override var canPlayFromLocation: Bool { applicationURL != nil }
+
+    private var applicationURL: URL? {
+        let bundleID = destination == .yoda ? "com.moonlight-stream.Moonlight" : "org.streetpea.chiaking"
+        if let registered = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleID) { return registered }
+        let name = destination == .yoda ? "Moonlight.app" : "chiaki-ng.app"
+        return [URL(fileURLWithPath: "/Applications"), FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Applications")]
+            .map { $0.appendingPathComponent(name) }.first { FileManager.default.fileExists(atPath: $0.path) }
+    }
+
+    init(destination: Destination) {
+        self.destination = destination
+        let fallback = URL(fileURLWithPath: destination == .yoda ? "/Applications/Moonlight.app" : "/Applications/chiaki-ng.app")
+        super.init(id: "connection:\(destination.rawValue)",
+                   title: destination == .yoda ? "Yoda" : "PS5 Remote Play",
+                   installationState: .installed(location: fallback, platform: .macOS))
+    }
+
+    required init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: Game.CodingKeys.self)
+        let decodedID = try values.decode(String.self, forKey: .id)
+        destination = decodedID.contains("playStation5") ? .playStation5 : .yoda
+        try super.init(from: decoder)
+    }
+
+    @MainActor override func _launch() async throws {
+        switch destination {
+        case .yoda:
+            try await HubConnections.shared.openMoonlight(stream: true)
+        case .playStation5:
+            guard let applicationURL else { throw CocoaError(.fileNoSuchFile) }
+            let configuration = NSWorkspace.OpenConfiguration()
+            configuration.createsNewApplicationInstance = true
+            configuration.arguments = ["--exit-app-on-stream-exit"]
+            try await NSWorkspace.shared.openApplication(at: applicationURL, configuration: configuration)
+        }
+    }
+
+    @MainActor override func _move(from currentLocation: URL, to newLocation: URL) async throws {
+        throw CocoaError(.featureUnsupported)
+    }
+    override func _verifyInstallation() async throws { throw CocoaError(.featureUnsupported) }
+    @MainActor override func _update() async throws { throw CocoaError(.featureUnsupported) }
+
+    static func libraryGames() -> Set<Game> {
+        [ConnectionGame(destination: .playStation5), ConnectionGame(destination: .yoda)]
+    }
+}
+
 @MainActor @Observable final class HubConnections {
     static let shared = HubConnections()
     var host = RemoteHost(name: "Home PC", address: "", application: "Desktop") {

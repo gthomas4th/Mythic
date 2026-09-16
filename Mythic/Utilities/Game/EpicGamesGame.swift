@@ -12,6 +12,39 @@ import AppKit
 
 class EpicGamesGame: Game {
     override var storefront: Storefront? { .epicGames }
+    override var canPlayFromLocation: Bool {
+        if case .installed = installationState { return true }
+        return configuredRemoteHost != nil
+    }
+    override var locationLabel: String? {
+        if case .installed = installationState { return super.locationLabel }
+        return configuredRemoteHost == nil ? nil : "PC"
+    }
+    override var supportsFileManagement: Bool {
+        if case .installed = installationState { return true }
+        return false
+    }
+    override var supportsLaunchArguments: Bool {
+        if case .installed = installationState { return true }
+        return false
+    }
+
+    private var configuredRemoteHost: RemoteHost? {
+        let support = FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent("Library/Application Support/GameHub")
+        let hostFile = support.appendingPathComponent("remote-host.json")
+        let mappingFile = support.appendingPathComponent("remote-epic-mappings.json")
+        let moonlight = URL(fileURLWithPath: "/Applications/Moonlight.app")
+        guard FileManager.default.fileExists(atPath: moonlight.path),
+              let hostData = try? Data(contentsOf: hostFile),
+              var host = try? JSONDecoder().decode(RemoteHost.self, from: hostData),
+              let mappingData = try? Data(contentsOf: mappingFile),
+              let mappings = try? JSONDecoder().decode([String: String].self, from: mappingData),
+              let application = mappings[id] else { return nil }
+        host.application = application
+        guard (try? host.validate()) != nil else { return nil }
+        return host
+    }
 
     override var computedVerticalImageURL: URL? { Legendary.getImageURL(gameID: self.id, type: .tall) }
     override var computedHorizontalImageURL: URL? { Legendary.getImageURL(gameID: self.id, type: .normal) }
@@ -63,7 +96,13 @@ class EpicGamesGame: Game {
     }
     
     @MainActor override func _launch() async throws {
-        try await EpicGamesGameManager.launch(game: self)
+        if case .installed = installationState {
+            try await EpicGamesGameManager.launch(game: self)
+            return
+        }
+        guard let remoteHost = configuredRemoteHost else { throw GameHubRuntime.RuntimeError.unconfigured }
+        guard await HubConnections.shared.checkReachability() else { throw SteamGame.LaunchError.remoteUnavailable }
+        try await HubConnections.shared.openMoonlight(stream: true, application: remoteHost.application)
     }
     
     @MainActor override func _update() async throws {

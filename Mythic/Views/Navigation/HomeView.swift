@@ -49,8 +49,12 @@ struct HomeView: View {
         guard !rows.isEmpty else { return false }
         if command == "back" || command == "sidebar" { return false }
         switch command {
-        case "up": shelfIndex = max(0, shelfIndex - 1); column = 0
-        case "down": shelfIndex = min(rows.count - 1, shelfIndex + 1); column = 0
+        case "up":
+            shelfIndex = max(0, shelfIndex - 1)
+            column = min(column, max(0, rows[shelfIndex].1.count - 1))
+        case "down":
+            shelfIndex = min(rows.count - 1, shelfIndex + 1)
+            column = min(column, max(0, rows[shelfIndex].1.count - 1))
         case "left": column = max(0, column - 1)
         case "right": column = min(rows[min(shelfIndex, rows.count - 1)].1.count - 1, column + 1)
         case "options": if let game = activeGame { HubGameOptions.shared.open(game) }
@@ -72,8 +76,6 @@ struct HomeView: View {
         GeometryReader { geometry in
             ScrollViewReader { verticalProxy in
             ScrollView {
-                HubSectionBanner(title: "Welcome back", subtitle: "Choose a game and make yourself at home.").padding(.horizontal, 28).padding(.top, 20)
-
                 if input.connected { HubControllerHints(actions: [("Move", "Rows / Games"), ("A", "Play"), ("X", "Options"), ("Y", "Favorite"), ("B", "Sidebar")]).padding(.horizontal, 28) }
                 if !launchMessage.isEmpty { Text(launchMessage).padding(.horizontal, 28) }
                 if let recentGame = gameDataStore.recent {
@@ -114,11 +116,7 @@ struct HomeView: View {
                 
                 VStack(alignment: .leading, spacing: 28) {
                     if favouriteGames.isEmpty {
-                        VStack(alignment: .leading, spacing: 6) {
-                            Text("FAVORITES").font(HubTheme.heading(26))
-                            Text("Favorite a game from its options menu to keep it here.")
-                                .foregroundStyle(.secondary)
-                        }
+                        Text("FAVORITES").font(HubTheme.heading(26))
                     } else {
                         gameRow("Favorites", games: favouriteGames)
                     }

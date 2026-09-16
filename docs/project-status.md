@@ -14,6 +14,36 @@ passes `codesign --verify --deep --strict`. This is not a notarized public relea
 The original app and runtime are preserved. Development builds and the test host
 are not the user entry point. Do not remove recovery copies before final live acceptance.
 
+## Library connections and title navigation
+
+Yoda and PS5 Remote Play are first-class searchable library entries with bundled artwork,
+location/type badges, full details screens and working Play actions. The Library keeps both
+in a Quick Play row and groups them under a Connections system filter. An All/#/A–Z strip
+combines with system and search filters for direct title navigation. Live checks verified
+PS5 launches chiaki-ng with its clean-exit argument and Yoda launches Moonlight at the saved
+1080p60, 20 Mb/s, HDR-off profile.
+
+## Epic games on Yoda
+
+Epic catalog titles that are not installed on the Mac now use Yoda as their playable
+location. Game Hub maps each title to an exact Sunshine application and starts Moonlight
+at 1920×1080, 60 fps, 20 Mb/s with HDR off. Fortnite add-on entitlements are hidden from
+Home and Library, leaving one main Fortnite result with `PC` and `Epic` badges.
+
+Fortnite and Fall Guys keep Epic Games Launcher detached and signed in. Their managed
+PowerShell wrapper sends the exact Epic launch URI, moves the launcher window to the
+system tray, waits for the selected game, and never stops or restarts Epic. FF7 Remake
+uses its game executable directly. Epic completed and committed pending FF7, Fall Guys,
+and Fortnite updates before validation.
+
+Live validation launched Fortnite repeatedly from the same Game Hub Play button while
+the same Epic launcher process remained active. Epic cloud sync and playtime tracking
+succeeded without `invalid_token` errors. Sunshine now makes its captured LG display
+primary for the stream, applies 1920×1080 at 60 Hz with HDR off, and restores the normal
+display topology after disconnect. This fixed Fortnite opening on the separate 1440×900
+display while Moonlight showed a black screen; the final stream visibly rendered the
+Fortnite title screen edge to edge.
+
 ## Options dismissal crash fix
 
 Two owner crash reports identify Array.subscript in HubGameOptionsView.option.

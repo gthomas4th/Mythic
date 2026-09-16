@@ -10,6 +10,24 @@
 import Foundation
 import SwiftUI
 
+enum HubGridNavigation {
+    static func destination(from index: Int, action: String, columns: Int, count: Int) -> Int {
+        guard count > 0 else { return 0 }
+        let columns = max(1, columns)
+        let index = min(max(0, index), count - 1)
+        let column = index % columns
+        switch action {
+        case "left": return column > 0 ? index - 1 : index
+        case "right": return column < columns - 1 && index + 1 < count ? index + 1 : index
+        case "up": return index >= columns ? index - columns : index
+        case "down":
+            let candidate = index + columns
+            return candidate < count ? candidate : index
+        default: return index
+        }
+    }
+}
+
 struct GameListView: View {
     @Bindable var viewModel: GameListViewModel = .shared
     @Bindable var gameDataStore: GameDataStore = .shared
@@ -44,10 +62,14 @@ struct GameListView: View {
         guard !games.isEmpty else { return false }
         selection = min(selection, games.count - 1)
         switch action {
-        case "left": selection = max(0, selection - 1)
-        case "right": selection = min(games.count - 1, selection + 1)
-        case "up": selection = max(0, selection - (layout == .grid ? gridColumns : 1))
-        case "down": selection = min(games.count - 1, selection + (layout == .grid ? gridColumns : 1))
+        case "left", "right", "up", "down":
+            if layout == .grid {
+                selection = HubGridNavigation.destination(from: selection, action: action, columns: gridColumns, count: games.count)
+            } else if action == "up" {
+                selection = max(0, selection - 1)
+            } else if action == "down" {
+                selection = min(games.count - 1, selection + 1)
+            }
         case "options": HubGameOptions.shared.open(games[selection])
         case "select":
             let game = games[selection]
@@ -69,26 +91,53 @@ struct GameListView: View {
     }
     var body: some View {
         let displayedGames = viewModel.sortedLibrary
+        let connections = gameDataStore.connectionGames.compactMap { $0 as? ConnectionGame }
+            .sorted { $0.title.localizedStandardCompare($1.title) == .orderedAscending }
         let selectedID = displayedGames.indices.contains(selection) ? displayedGames[selection].id : nil
         VStack(spacing: 0) {
-            HubSectionBanner(title: "Your library", subtitle: "\(displayedGames.count) games · Pick your next adventure")
+            HubSectionBanner(title: "Your library")
                 .padding(.horizontal, 28).padding(.vertical, 16)
             if input.connected {
                 HubControllerHints(actions: [("Move", "Move"), ("A", "Play"), ("X", "Options"), ("Y", "System"), ("B", "Sidebar")]).padding(.bottom, 12)
             }
             if !launchMessage.isEmpty { Text(launchMessage).padding(8) }
-            VStack(alignment: .leading, spacing: 8) {
+            VStack(alignment: .leading, spacing: 10) {
+                Label("QUICK PLAY", systemImage: "bolt.fill")
+                    .font(.system(size: 14, weight: .bold)).foregroundStyle(HubTheme.ink)
+                HStack(spacing: 10) {
+                    ForEach(connections) { game in
+                        HubConnectionQuickButton(game: game) {
+                            Task { do { try await game.launch(); launchMessage = "" } catch { launchMessage = error.localizedDescription } }
+                        }
+                    }
+                }
+
                 Label("SYSTEM", systemImage: "gamecontroller.fill")
                     .font(.system(size: 14, weight: .bold))
                     .foregroundStyle(HubTheme.ink)
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 8) {
-                        HubSystemFilterButton(title: "All", icon: "square.grid.2x2.fill", selected: viewModel.selectedSystem.isEmpty) {
-                            viewModel.selectedSystem = ""
+                        HubSystemFilterButton(title: "All", system: nil, selected: viewModel.selectedSystem.isEmpty) {
+                            viewModel.selectedSystem = ""; selection = 0
                         }
                         ForEach(viewModel.availableSystems, id: \.self) { system in
-                            HubSystemFilterButton(title: system, icon: HubSystemFilterButton.icon(for: system), selected: viewModel.selectedSystem == system) {
-                                viewModel.selectedSystem = system
+                            HubSystemFilterButton(title: system, system: system, selected: viewModel.selectedSystem == system) {
+                                viewModel.selectedSystem = system; selection = 0
+                            }
+                        }
+                    }
+                }
+
+                Label("TITLE", systemImage: "textformat")
+                    .font(.system(size: 14, weight: .bold)).foregroundStyle(HubTheme.ink)
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 6) {
+                        HubAlphabetFilterButton(title: "All", selected: viewModel.selectedLetter.isEmpty) {
+                            viewModel.selectedLetter = ""; selection = 0
+                        }
+                        ForEach(GameListViewModel.alphabetSections, id: \.self) { letter in
+                            HubAlphabetFilterButton(title: letter, selected: viewModel.selectedLetter == letter) {
+                                viewModel.selectedLetter = letter; selection = 0
                             }
                         }
                     }
@@ -98,7 +147,8 @@ struct GameListView: View {
                 ContentUnavailableView("No matching games", systemImage: "line.3.horizontal.decrease",
                     description: Text("Try another system or clear your search and filters."))
                 Button("Clear all filters") {
-                    viewModel.selectedSystem = ""; viewModel.searchString = ""; viewModel.searchTokens = []
+                    viewModel.selectedSystem = ""; viewModel.selectedLetter = ""
+                    viewModel.searchString = ""; viewModel.searchTokens = []
                 }.padding(.bottom, 16)
             }
             if gameDataStore.displayLibrary.isEmpty {
@@ -188,7 +238,6 @@ struct GameListView: View {
         }
         .sheet(isPresented: $isSteamDeckLibraryPresented) { SteamDeckLibraryView() }
         .animation(.easeInOut, value: layout)
-        .animation(.default, value: displayedGames)
     }
 }
     
@@ -199,24 +248,17 @@ struct GameListView: View {
 
 private struct HubSystemFilterButton: View {
     let title: String
-    let icon: String
+    let system: String?
     let selected: Bool
     let action: () -> Void
 
-    static func icon(for system: String) -> String {
-        switch system {
-        case "GameCube", "Wii": return "gamecontroller.fill"
-        case "Nintendo 64": return "rectangle.3.group.fill"
-        case "PlayStation", "PlayStation 2", "PlayStation 3", "PSP": return "circle.grid.3x3.fill"
-        case "Nintendo Switch": return "rectangle.split.2x1.fill"
-        case "PC & Mac": return "desktopcomputer"
-        default: return "gamecontroller.fill"
-        }
-    }
-
     var body: some View {
         Button(action: action) {
-            Label(title, systemImage: icon)
+            HStack(spacing: 7) {
+                if let system { HubSystemMark(system: system, size: 20) }
+                else { Image(systemName: "square.grid.2x2.fill") }
+                Text(title)
+            }
                 .font(.system(size: 15, weight: .bold))
                 .lineLimit(1)
                 .padding(.horizontal, 14).padding(.vertical, 9)
@@ -225,5 +267,49 @@ private struct HubSystemFilterButton: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel("Show \(title) games")
+    }
+}
+
+private struct HubConnectionQuickButton: View {
+    let game: ConnectionGame
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 10) {
+                Image(game.artworkAssetName)
+                    .resizable().scaledToFill()
+                    .frame(width: 38, height: 38).clipShape(.rect(cornerRadius: 8))
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(game.title).font(.system(size: 16, weight: .bold))
+                    Text(game.locationLabel ?? "Remote").font(.system(size: 12, weight: .semibold))
+                }
+                Image(systemName: "play.fill").font(.system(size: 13, weight: .bold))
+            }
+            .padding(.horizontal, 12).padding(.vertical, 8)
+            .foregroundStyle(HubTheme.ink)
+            .background(HubTheme.blue.opacity(0.18), in: .rect(cornerRadius: 12))
+            .overlay(RoundedRectangle(cornerRadius: 12).stroke(HubTheme.blue.opacity(0.35), lineWidth: 1))
+        }
+        .buttonStyle(.plain)
+        .help("Launch \(game.title)")
+    }
+}
+
+private struct HubAlphabetFilterButton: View {
+    let title: String
+    let selected: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Text(title).font(.system(size: 14, weight: .bold))
+                .frame(minWidth: title == "All" ? 34 : 24, minHeight: 28)
+                .padding(.horizontal, 4)
+                .foregroundStyle(HubTheme.ink)
+                .background(selected ? HubTheme.yellow : HubTheme.blue.opacity(0.14), in: .capsule)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(title == "All" ? "Show every title" : "Show titles beginning with \(title)")
     }
 }

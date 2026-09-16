@@ -45,6 +45,7 @@ struct MythicApp: App {
             .modifier(SparkleUpdater())
             .frame(minWidth: 850, minHeight: 400)
         }
+        .windowStyle(.hiddenTitleBar)
         .handlesExternalEvents(matching: ["open"])
         .environment(
             \.whatsNew,

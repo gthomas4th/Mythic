@@ -17,6 +17,10 @@ import AVKit
     }
     private var stickDirection: String?
     private var stickTask: Task<Void, Never>?
+    private var sessionQuitTask: Task<Void, Never>?
+    private var lastAction = ""
+    private var lastActionTime = Date.distantPast
+    private let duplicateWindow: TimeInterval = 0.09
     var onAction: ((String) -> Void)?
     private var observers: [NSObjectProtocol] = []
     func start() {
@@ -32,6 +36,8 @@ import AVKit
         for observer in observers { NotificationCenter.default.removeObserver(observer) }
         observers = []
         stickTask?.cancel(); stickTask = nil; stickDirection = nil
+        sessionQuitTask?.cancel(); sessionQuitTask = nil
+        lastAction = ""; lastActionTime = .distantPast
         for controller in GCController.controllers() {
             guard let pad = controller.extendedGamepad else { continue }
             pad.leftThumbstick.valueChangedHandler = nil
@@ -42,39 +48,73 @@ import AVKit
     }
     private func bind() {
         stickTask?.cancel(); stickTask = nil; stickDirection = nil
-        connected = !GCController.controllers().isEmpty
+        connected = GCController.controllers().contains { $0.extendedGamepad != nil }
         for controller in GCController.controllers() {
             guard let pad = controller.extendedGamepad else { continue }
             pad.leftThumbstick.valueChangedHandler = { [weak self] _, axisX, axisY in
-                let direction: String? = max(abs(axisX), abs(axisY)) < 0.55 ? nil : (abs(axisY) >= abs(axisX) ? (axisY > 0 ? "up" : "down") : (axisX > 0 ? "right" : "left"))
+                let direction: String? = max(abs(axisX), abs(axisY)) < 0.65 ? nil : (abs(axisY) >= abs(axisX) ? (axisY > 0 ? "up" : "down") : (axisX > 0 ? "right" : "left"))
                 Task { @MainActor in self?.moveStick(direction) }
             }
             for (button, action) in [(pad.dpad.up, "up"), (pad.dpad.down, "down"), (pad.dpad.left, "left"),
                 (pad.dpad.right, "right"), (pad.buttonA, "select"), (pad.buttonB, "back"), (pad.buttonX, "options"), (pad.buttonY, "filter"), (pad.buttonMenu, "settings")] {
                 button.pressedChangedHandler = { [weak self] _, _, pressed in
-                    guard pressed else { return }
+                    let sessionShortcutPressed = pad.buttonMenu.isPressed && pad.buttonB.isPressed
                     Task { @MainActor in
-                        guard NSApp.isActive else { return }
-                        self?.onAction?(action)
+                        guard NSApp.isActive else {
+                            self?.updateSessionShortcut(sessionShortcutPressed)
+                            return
+                        }
+                        self?.updateSessionShortcut(false)
+                        guard pressed else { return }
+                        self?.dispatch(action)
                     }
                 }
             }
         }
     }
+    private func updateSessionShortcut(_ pressed: Bool) {
+        guard pressed else {
+            sessionQuitTask?.cancel(); sessionQuitTask = nil
+            return
+        }
+        guard sessionQuitTask == nil, EmulatorSessionCoordinator.shared.hasActiveSession else { return }
+        sessionQuitTask = Task { [weak self] in
+            do {
+                try await Task.sleep(for: .milliseconds(800))
+                self?.sessionQuitTask = nil
+                await EmulatorSessionCoordinator.shared.quitActiveSession()
+            } catch { }
+        }
+    }
     private func moveStick(_ direction: String?) {
-        guard direction != stickDirection else { return }
-        stickDirection = direction; stickTask?.cancel()
-        guard let direction else { return }
-        if NSApp.isActive { onAction?(direction) }
+        if direction == nil {
+            stickDirection = nil
+            stickTask?.cancel(); stickTask = nil
+            return
+        }
+        // Lock one axis until the stick returns to center. A near-diagonal gesture
+        // can otherwise alternate between axes and advance more than once.
+        guard stickDirection == nil, let direction else { return }
+        stickDirection = direction
+        stickTask?.cancel()
+        if NSApp.isActive { dispatch(direction) }
         stickTask = Task { [weak self] in
             do {
                 try await Task.sleep(for: .milliseconds(350))
                 while !Task.isCancelled {
-                    if NSApp.isActive { self?.onAction?(direction) }
+                    if NSApp.isActive { self?.dispatch(direction) }
                     try await Task.sleep(for: .milliseconds(130))
                 }
             } catch { }
         }
+    }
+    private func dispatch(_ action: String) {
+        let now = Date()
+        // Multi-interface controllers can report one physical press several times.
+        // Collapse simultaneous duplicates while retaining deliberate taps and repeat.
+        guard action != lastAction || now.timeIntervalSince(lastActionTime) >= duplicateWindow else { return }
+        lastAction = action; lastActionTime = now
+        onAction?(action)
     }
 
 }
@@ -93,7 +133,11 @@ struct ControllerLibraryView: View {
     private var games: [Game] {
         GameDataStore.shared.displayLibrary.filter {
             (!favoritesOnly || $0.isFavourited) && (search.isEmpty || $0.title.localizedStandardContains(search))
-        }.sorted { $0.title < $1.title }
+        }.sorted {
+            let left = $0 is ROMGame ? ROMTitle.sortKeyForDisplayName($0.title) : $0.title
+            let right = $1 is ROMGame ? ROMTitle.sortKeyForDisplayName($1.title) : $1.title
+            return left.localizedStandardCompare(right) == .orderedAscending
+        }
     }
     var body: some View {
         let visibleGames = games
@@ -173,7 +217,7 @@ struct ControllerLibraryView: View {
         .navigationTitle("Controller Library")
         .focusable()
         .focused($focus, equals: .browsing)
-        .onMoveCommand { direction in if focus != .search { action(String(describing: direction)) } }
+        .onMoveCommand { direction in if !input.connected && focus != .search { action(String(describing: direction)) } }
         .onKeyPress(.return) {
             if focus == .search { details = selectedGame != nil; focus = .browsing } else { action("select") }
             return .handled
@@ -358,10 +402,11 @@ struct HubGameOptionsView: View {
     @State private var input = HubControllerInput.shared
     @State private var imageEmpty = true
     @State private var scene = HubGameScene()
+    @State private var toolbarWasVisible: Bool?
     var body: some View {
         GeometryReader { geometry in
             ZStack {
-                backdrop
+                backdrop.ignoresSafeArea()
                 ScrollViewReader { proxy in
                     ScrollView {
                         VStack(alignment: .leading, spacing: 22) {
@@ -388,14 +433,25 @@ struct HubGameOptionsView: View {
                             } else if let game = model.game {
                                 Spacer(minLength: max(24, geometry.size.height * 0.12))
                                 VStack(alignment: .leading, spacing: 12) {
-                                    Text(game.title.uppercased()).font(HubTheme.heading(52)).tracking(2)
-                                        .lineLimit(3).minimumScaleFactor(0.65).shadow(color: .black.opacity(0.6), radius: 12)
+                                    Text(game.title.uppercased())
+                                        .font(HubTheme.heading(game.title.count > 54 ? 36 : 52)).tracking(2)
+                                        .lineLimit(3).minimumScaleFactor(0.72).shadow(color: .black.opacity(0.6), radius: 12)
                                         .frame(maxWidth: 850, alignment: .leading)
                                     HStack(spacing: 16) {
                                         Text(game.locationLabel ?? "Unavailable")
-                                        if let rom = game as? ROMGame, let source = rom.source { Text(source.system) }
+                                        if let rom = game as? ROMGame, let source = rom.source {
+                                            HStack(spacing: 6) {
+                                                HubSystemMark(system: source.system, size: 18)
+                                                Text(HubSystemMark.shortName(for: source.system))
+                                            }
+                                        }
                                         if let played = game.lastLaunched { Text("Last played " + played.formatted(date: .abbreviated, time: .omitted)) }
                                     }.font(.system(size: 15)).foregroundStyle(.white.opacity(0.8))
+                                    if game is ROMGame {
+                                        Text("Full screen · Escape or hold Menu + B exits · Pause-menu Quit returns here")
+                                            .font(.system(size: 15, weight: .medium))
+                                            .foregroundStyle(.white.opacity(0.86))
+                                    }
                                 }
                                 VStack(alignment: .leading, spacing: 6) {
                                     ForEach(Array(model.labels.enumerated()), id: \.offset) { item in
@@ -417,6 +473,15 @@ struct HubGameOptionsView: View {
                 }
             }.foregroundStyle(.white)
         }.environment(\.colorScheme, .dark)
+            .onAppear {
+                if let toolbar = NSApp.keyWindow?.toolbar {
+                    toolbarWasVisible = toolbar.isVisible
+                    toolbar.isVisible = false
+                }
+            }
+            .onDisappear {
+                if let toolbarWasVisible { NSApp.keyWindow?.toolbar?.isVisible = toolbarWasVisible }
+            }
             .task(id: model.game?.id) {
                 await scene.load(model.game)
                 updateScene()
@@ -436,9 +501,25 @@ struct HubGameOptionsView: View {
         GeometryReader { geometry in
             ZStack {
                 HubTheme.blue
-                if let game = model.game, let url = scene.poster ?? game.horizontalImageURL ?? game.verticalImageURL {
-                    GameImageCard(game: game, url: url, isImageEmpty: $imageEmpty, withBlur: false,
-                        contentMode: scene.poster != nil || game.horizontalImageURL != nil ? .fill : .fit)
+                if let game = model.game {
+                    let url = scene.poster ?? game.horizontalImageURL ?? game.verticalImageURL
+                    if !(game is ROMGame), scene.poster == nil, game.horizontalImageURL == nil, url != nil {
+                        // Portrait storefront art becomes a full-bleed composition: a
+                        // blurred fill behind the intact cover, never a stretched image.
+                        ZStack {
+                            GameImageCard(game: game, url: url, isImageEmpty: $imageEmpty,
+                                withBlur: false, contentMode: .fill)
+                                .scaleEffect(1.06).blur(radius: 28)
+                            Color.black.opacity(0.28)
+                            GameImageCard(game: game, url: url, isImageEmpty: $imageEmpty,
+                                withBlur: false, contentMode: .fit)
+                                .padding(.vertical, 20)
+                                .shadow(color: .black.opacity(0.55), radius: 18)
+                        }.clipped()
+                    } else {
+                        GameImageCard(game: game, url: url, isImageEmpty: $imageEmpty, withBlur: false,
+                            contentMode: .fill, romArtworkKind: game is ROMGame ? .scene : .boxart)
+                    }
                 }
                 if let player = scene.player, model.motionEnabled {
                     HubScenePlayer(player: player).allowsHitTesting(false)

@@ -17,5 +17,9 @@
 	<string>https://dl.getmythic.app/updates/update.xml</string>
 	<key>SUPublicEDKey</key>
 	<string>g+sJ+Hhxtb5ziscjMaoIvjMcvycB1PpZhhRJeoF+YSM=</string>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>Game Hub connects to your PS5, gaming PC, and NAS to stream games and access your library.</string>
+	<key>NSNetworkVolumesUsageDescription</key>
+	<string>Game Hub accesses game files stored on your NAS and other network shares.</string>
 </dict>
 </plist>

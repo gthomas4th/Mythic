@@ -145,7 +145,7 @@ import AppKit
         guard !isLaunching else { return }
         isLaunching = true
         defer { isLaunching = false }
-        guard case .installed = installationState else {
+        guard canPlayFromLocation else {
             throw CocoaError(.fileNoSuchFile)
         }
 

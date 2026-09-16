@@ -64,16 +64,29 @@ struct ContentView: View {
             if theme == "lcars" { console } else { standardNavigation }
         }
         .safeAreaInset(edge: .bottom) {
-            if !ROMLibrary.shared.downloadStatus.isEmpty {
-                HStack {
-                    Text(ROMLibrary.shared.downloadStatus).font(.system(size: 15))
-                    Spacer()
-                    if ROMLibrary.shared.downloadingID != nil {
-                        Button("Cancel download") { ROMLibrary.shared.cancelDownload() }
-                    } else {
-                        Button("Dismiss") { ROMLibrary.shared.downloadStatus = "" }
-                    }
-                }.padding().background(HubTheme.canvas)
+            VStack(spacing: 0) {
+                if ROMLibrary.shared.scanning {
+                    HStack(spacing: 10) {
+                        ProgressView().controlSize(.small)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Scanning server games").font(.system(size: 15, weight: .semibold))
+                            Text(ROMLibrary.shared.status).font(.system(size: 12)).foregroundStyle(.secondary).lineLimit(1)
+                        }
+                        Spacer()
+                        Text("ROM library").font(.system(size: 12, weight: .medium)).foregroundStyle(.secondary)
+                    }.padding(.horizontal).padding(.vertical, 10).background(HubTheme.canvas)
+                }
+                if !ROMLibrary.shared.downloadStatus.isEmpty {
+                    HStack {
+                        Text(ROMLibrary.shared.downloadStatus).font(.system(size: 15))
+                        Spacer()
+                        if ROMLibrary.shared.downloadingID != nil {
+                            Button("Cancel download") { ROMLibrary.shared.cancelDownload() }
+                        } else {
+                            Button("Dismiss") { ROMLibrary.shared.downloadStatus = "" }
+                        }
+                    }.padding().background(HubTheme.canvas)
+                }
             }
         }
         .modifier(HubThemeModifier())
@@ -231,12 +244,13 @@ struct ContentView: View {
     }
 
     private enum HubDestination: String, CaseIterable {
-        case home = "Home", library = "Library", controller = "Controller", sources = "Game Sources"
+        case home = "Home", library = "Library", hacks = "Hacks & Homebrew", controller = "Controller", sources = "Game Sources"
         case connections = "PC & PS5", store = "Store", containers = "Containers", accounts = "Accounts", operations = "Operations"
         var symbol: String {
             switch self {
             case .home: "house.fill"
             case .library: "square.grid.2x2.fill"
+            case .hacks: "hammer.fill"
             case .controller: "gamecontroller.fill"
             case .sources: "externaldrive.fill"
             case .connections: "desktopcomputer"
@@ -251,10 +265,7 @@ struct ContentView: View {
     private var console: some View {
         VStack(spacing: 8) {
             HStack(alignment: .bottom, spacing: 8) {
-                VStack(alignment: .trailing, spacing: 2) {
-                    Text("GAME HUB").font(HubTheme.heading(28))
-                    Text("PERSONAL GAME LIBRARY").font(.system(size: 11, weight: .bold)).tracking(1)
-                }
+                Text("GAME HUB").font(HubTheme.heading(28))
                 .foregroundStyle(.white).padding(.trailing, 22)
                 .frame(width: 220, height: 94, alignment: .trailing)
                 .background(HubTheme.blue, in: UnevenRoundedRectangle(topLeadingRadius: 52, bottomLeadingRadius: 0, bottomTrailingRadius: 0, topTrailingRadius: 0))
@@ -332,6 +343,7 @@ struct ContentView: View {
         switch destination {
         case .home: HomeView()
         case .library: LibraryView()
+        case .hacks: HacksHomebrewView()
         case .controller: ControllerLibraryView()
         case .sources: ROMLibraryView()
         case .connections: ConnectionsView()
