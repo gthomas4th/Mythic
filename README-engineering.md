@@ -2,7 +2,9 @@
 
 Native macOS game hub based on Mythic, retaining GPL-3.0 and upstream notices.
 Authoritative source: this checkout, branch `feat/steam-native` on the owner's fork.
-See [current delivery and acceptance status](docs/project-status.md).
+Start with the [detailed ChatGPT development brief](docs/chatgpt-development-brief.md),
+then consult the [current delivery and acceptance status](docs/project-status.md) and the
+installed-revision receipt for the exact locally deployed build.
 
 Implemented: native and Windows Steam discovery in the existing library, pinned
 Windows launch profiles, SQLite catalog/preferences, profile import/export/clone/
