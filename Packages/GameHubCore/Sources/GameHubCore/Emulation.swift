@@ -151,28 +151,29 @@ public struct ROMIndex: Codable, Sendable {
                     let layout = try Self.gdiTracks(handle.read(upToCount: 16384) ?? Data()).map { $0.layout }.joined(separator: "\n")
                     digest.update(data: Data(SHA256.hash(data: Data(layout.utf8))))
                 }
-                let totalBytes = try payloads.reduce(Int64(0)) { total, part in
-                    total + Int64(try part.resourceValues(forKeys: [.fileSizeKey]).fileSize ?? 0)
-                }
-                var bytesRead: Int64 = 0
-                var lastReport = Date.distantPast
+                // A full-content hash is unsuitable for a server library: it makes every rescan
+                // stream entire multi-GB disc images across the network. The saved signatures already
+                // detect size/date changes; small head/tail samples distinguish replacements that retain
+                // those attributes while keeping NAS scans lightweight.
                 let title = url.deletingPathExtension().lastPathComponent
-                progress?(ROMScanProgress(title: title, bytesRead: 0, totalBytes: totalBytes))
+                let sampleBytes = 128 * 1024
+                progress?(ROMScanProgress(title: title, bytesRead: 0, totalBytes: 1))
                 for part in payloads {
+                    let values = try part.resourceValues(forKeys: [.fileSizeKey, .contentModificationDateKey])
+                    let size = Int64(values.fileSize ?? 0)
+                    let modified = values.contentModificationDate?.timeIntervalSince1970 ?? 0
+                    digest.update(data: Data("\(part.lastPathComponent):\(size):\(modified)".utf8))
                     let handle = try FileHandle(forReadingFrom: part)
                     defer { try? handle.close() }
-                    var partDigest = SHA256()
-                    while let data = try handle.read(upToCount: 1048576), !data.isEmpty {
-                        partDigest.update(data: data)
-                        bytesRead += Int64(data.count)
-                        if Date().timeIntervalSince(lastReport) >= 1 {
-                            progress?(ROMScanProgress(title: title, bytesRead: bytesRead, totalBytes: totalBytes))
-                            lastReport = Date()
-                        }
+                    let head = try handle.read(upToCount: sampleBytes) ?? Data()
+                    digest.update(data: Data(SHA256.hash(data: head)))
+                    if size > Int64(sampleBytes) {
+                        try handle.seek(toOffset: UInt64(max(0, size - Int64(sampleBytes))))
+                        let tail = try handle.read(upToCount: sampleBytes) ?? Data()
+                        digest.update(data: Data(SHA256.hash(data: tail)))
                     }
-                    digest.update(data: Data(partDigest.finalize()))
                 }
-                progress?(ROMScanProgress(title: title, bytesRead: bytesRead, totalBytes: totalBytes))
+                progress?(ROMScanProgress(title: title, bytesRead: 1, totalBytes: 1))
                 fingerprint = digest.finalize().map { String(format: "%02x", $0) }.joined()
             }
             nextCache[relative] = Cached(signatures: signatures, fingerprint: fingerprint)
