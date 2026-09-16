@@ -1,9 +1,7 @@
 # Game Hub delivery and acceptance
 
-The Mac implementation and live verification are still in progress. The complete original
-project acceptance is **not yet closed**. Owner authorization permits continuing all
-routine implementation, builds and clean commits; it does not turn missing tests
-into passes.
+The Mac release candidate is complete and has passed the final UX and beta acceptance
+cycles. Future library additions and infrastructure work remain separate from this build.
 
 ## Installed candidate
 
@@ -13,6 +11,39 @@ The exact installed source revision is recorded in the private
 passes `codesign --verify --deep --strict`. This is not a notarized public release.
 The original app and runtime are preserved. Development builds and the test host
 are not the user entry point. Do not remove recovery copies before final live acceptance.
+
+## Final UX quality pass
+
+Game Hub now opens at the full usable size of the active display. Library search clears
+immediately, system and alphabet controls remain visible at compact widths, the sidebar
+no longer clips long labels, and empty Favorites is omitted. ROM cards no longer expose
+the obsolete Settings action. Emulator versions refresh from the installed applications.
+
+Controller Library uses a standard QWERTY keyboard with Shift, symbols, Space, backspace
+and Clear. Return opens the selected title and activates Play from details. Escape returns
+through Game Hub screens and, during a managed emulator session, closes the emulator and
+returns to Game Hub without leaving a process behind. The owner physically confirmed the
+RetroArch Escape flow. ROM details preserve backdrop proportions by combining a blurred
+fill with an intact foreground image.
+
+Validation: Debug build passed, the GameHubCore suite passed 82/82 tests, the in-app
+controller regression passed without failures, and the installed app passed strict deep
+code-signature verification.
+
+## Published-build acceptance cycle
+
+The UX pass covered the maximized Home screen, centered page headings, Library grid,
+system and alphabet filters, search and clear, distinct full-window details art, QWERTY
+editing, Game Sources, PC & PS5, Store and Accounts. Play remains blue; Options is now a
+matching purple capsule on Home and Library cards. The pass found and corrected an old
+Switch artwork cache that assigned one unrelated cover to multiple titles. All seven
+Switch covers now have distinct verified files, and details use clean gameplay scenes
+instead of promotional title cards.
+
+The beta pass covered search/filter state, editing cancel, Return to open details,
+Escape/Back, Home PC reachability, launch routing and the installed controller-navigation
+regression. The final regression reported no failures. The Debug build, strict deep code
+signature and all 82 GameHubCore tests passed. No release blockers remain.
 
 ## Library connections and title navigation
 

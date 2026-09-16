@@ -85,13 +85,6 @@ struct LibraryView: View {
                                 }
                             }
                             
-                            Section("Installation") {
-                                Toggle("Installed",
-                                       isOn: searchTokenBinding(for: .installed))
-                                Toggle("Not Installed",
-                                       isOn: searchTokenBinding(for: .notInstalled))
-                            }
-                            
                             Section {
                                 Toggle("Favorited", isOn: searchTokenBinding(for: .favourited))
                             }

@@ -87,7 +87,8 @@ struct HomeView: View {
                         VStack(alignment: .leading, spacing: 18) {
                             Text("CONTINUE PLAYING").font(HubTheme.heading(18)).tracking(2)
                                 .foregroundStyle(HubTheme.blue)
-                            Text(recentGame.title).font(HubTheme.heading(36)).lineLimit(3)
+                            Text(recentGame.title).font(HubTheme.heading(34)).lineLimit(3)
+                                .minimumScaleFactor(0.7).fixedSize(horizontal: false, vertical: true)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                             HubGameBadges(game: recentGame)
                             Spacer(minLength: 0)
@@ -115,9 +116,7 @@ struct HomeView: View {
                 }
                 
                 VStack(alignment: .leading, spacing: 28) {
-                    if favouriteGames.isEmpty {
-                        Text("FAVORITES").font(HubTheme.heading(26))
-                    } else {
+                    if !favouriteGames.isEmpty {
                         gameRow("Favorites", games: favouriteGames)
                     }
                     gameRow("Recently Played", games: gameDataStore.displayLibrary

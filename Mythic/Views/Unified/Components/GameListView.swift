@@ -44,6 +44,7 @@ struct GameListView: View {
     @State private var input = HubControllerInput.shared
     @State private var selection = 0
     @State private var gridColumns = 1
+    @State private var contentWidth: CGFloat = 1000
     @State private var launchMessage = ""
     private func updateColumns(_ width: CGFloat) {
         let cellWidth = max(240.0, gameCardSize) + 22.0
@@ -102,6 +103,21 @@ struct GameListView: View {
             }
             if !launchMessage.isEmpty { Text(launchMessage).padding(8) }
             VStack(alignment: .leading, spacing: 10) {
+                HStack(spacing: 10) {
+                    Image(systemName: "magnifyingglass").foregroundStyle(HubTheme.blue)
+                    TextField("Search titles", text: $viewModel.searchString)
+                        .textFieldStyle(.plain).font(.system(size: 17))
+                    if !viewModel.searchString.isEmpty {
+                        Button { viewModel.searchString = "" } label: {
+                            Image(systemName: "xmark.circle.fill")
+                        }
+                        .buttonStyle(.plain).help("Clear search")
+                    }
+                }
+                .padding(.horizontal, 14).padding(.vertical, 11)
+                .background(HubTheme.panel, in: .rect(cornerRadius: 12))
+                .overlay(RoundedRectangle(cornerRadius: 12).stroke(HubTheme.blue.opacity(0.45), lineWidth: 1))
+
                 Label("QUICK PLAY", systemImage: "bolt.fill")
                     .font(.system(size: 14, weight: .bold)).foregroundStyle(HubTheme.ink)
                 HStack(spacing: 10) {
@@ -115,14 +131,27 @@ struct GameListView: View {
                 Label("SYSTEM", systemImage: "gamecontroller.fill")
                     .font(.system(size: 14, weight: .bold))
                     .foregroundStyle(HubTheme.ink)
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 8) {
-                        HubSystemFilterButton(title: "All", system: nil, selected: viewModel.selectedSystem.isEmpty) {
-                            viewModel.selectedSystem = ""; selection = 0
-                        }
+                if contentWidth < 850 {
+                    Menu {
+                        Button("All systems") { viewModel.selectedSystem = ""; selection = 0 }
                         ForEach(viewModel.availableSystems, id: \.self) { system in
-                            HubSystemFilterButton(title: system, system: system, selected: viewModel.selectedSystem == system) {
-                                viewModel.selectedSystem = system; selection = 0
+                            Button(system) { viewModel.selectedSystem = system; selection = 0 }
+                        }
+                    } label: {
+                        Label(viewModel.selectedSystem.isEmpty ? "All systems" : viewModel.selectedSystem, systemImage: "gamecontroller.fill")
+                            .font(.system(size: 16, weight: .bold)).frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(12).background(HubTheme.blue.opacity(0.18), in: .rect(cornerRadius: 10))
+                    }.menuStyle(.borderlessButton)
+                } else {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 8) {
+                            HubSystemFilterButton(title: "All", system: nil, selected: viewModel.selectedSystem.isEmpty) {
+                                viewModel.selectedSystem = ""; selection = 0
+                            }
+                            ForEach(viewModel.availableSystems, id: \.self) { system in
+                                HubSystemFilterButton(title: system, system: system, selected: viewModel.selectedSystem == system) {
+                                    viewModel.selectedSystem = system; selection = 0
+                                }
                             }
                         }
                     }
@@ -130,19 +159,36 @@ struct GameListView: View {
 
                 Label("TITLE", systemImage: "textformat")
                     .font(.system(size: 14, weight: .bold)).foregroundStyle(HubTheme.ink)
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 6) {
-                        HubAlphabetFilterButton(title: "All", selected: viewModel.selectedLetter.isEmpty) {
-                            viewModel.selectedLetter = ""; selection = 0
-                        }
+                if contentWidth < 850 {
+                    Menu {
+                        Button("All titles") { viewModel.selectedLetter = ""; selection = 0 }
                         ForEach(GameListViewModel.alphabetSections, id: \.self) { letter in
-                            HubAlphabetFilterButton(title: letter, selected: viewModel.selectedLetter == letter) {
-                                viewModel.selectedLetter = letter; selection = 0
+                            Button(letter) { viewModel.selectedLetter = letter; selection = 0 }
+                        }
+                    } label: {
+                        Label(viewModel.selectedLetter.isEmpty ? "All titles" : "Titles beginning with \(viewModel.selectedLetter)", systemImage: "textformat")
+                            .font(.system(size: 16, weight: .bold)).frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(12).background(HubTheme.blue.opacity(0.14), in: .rect(cornerRadius: 10))
+                    }.menuStyle(.borderlessButton)
+                } else {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 6) {
+                            HubAlphabetFilterButton(title: "All", selected: viewModel.selectedLetter.isEmpty) {
+                                viewModel.selectedLetter = ""; selection = 0
+                            }
+                            ForEach(GameListViewModel.alphabetSections, id: \.self) { letter in
+                                HubAlphabetFilterButton(title: letter, selected: viewModel.selectedLetter == letter) {
+                                    viewModel.selectedLetter = letter; selection = 0
+                                }
                             }
                         }
                     }
                 }
             }.padding(.horizontal, 28).padding(.bottom, 16)
+                .background(GeometryReader { geometry in
+                    Color.clear.onAppear { contentWidth = geometry.size.width }
+                        .onChange(of: geometry.size.width) { _, width in contentWidth = width }
+                })
             if !gameDataStore.displayLibrary.isEmpty && displayedGames.isEmpty {
                 ContentUnavailableView("No matching games", systemImage: "line.3.horizontal.decrease",
                     description: Text("Try another system or clear your search and filters."))
@@ -156,8 +202,7 @@ struct GameListView: View {
                     "Your library starts here",
                     systemImage: "folder.badge.questionmark",
                     description: Text("""
-                        Install a Mac game in Steam, then refresh to see it here.
-                        Import local games below, or open Steam Deck to track your ROM shortcuts.
+                        Refresh Steam or Epic, add a ROM source, or import a local game to begin.
                         """)
                 )
                 .task {
@@ -201,23 +246,6 @@ struct GameListView: View {
                         .onChange(of: geometry.size.width) { _, width in updateColumns(width) }
                 })
                 .onChange(of: selection) { _, _ in if let selectedID { proxy.scrollTo(selectedID, anchor: .center) } }
-                .searchable(text: $viewModel.searchString,
-                            tokens: $viewModel.searchTokens,
-                            suggestedTokens: .constant(viewModel.suggestedTokens),
-                            placement: .toolbar) { token in
-                    switch token {
-                    case .platform(let platform):
-                        Text(platform.description)
-                    case .storefront(let storefront):
-                        Text(storefront.description)
-                    case .installed:
-                        Text("Installed")
-                    case .notInstalled:
-                        Text("Not Installed")
-                    case .favourited:
-                        Text("Favorited")
-                    }
-                }
                 }
             }
         }

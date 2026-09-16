@@ -90,6 +90,19 @@ struct SteamDeckLibraryView: View {
         store.inventory.shortcuts.filter { search.isEmpty || $0.title.localizedCaseInsensitiveContains(search) }
             .sorted { $0.title.localizedStandardCompare($1.title) == .orderedAscending }
     }
+    private var centralROMTitles: Set<String> {
+        Set(GameDataStore.shared.displayLibrary.compactMap { game in
+            guard game is ROMGame else { return nil }
+            return matchKey(game.title)
+        })
+    }
+    private func availableCentrally(_ shortcut: SteamDeckShortcut) -> Bool {
+        shortcut.isROMReference && centralROMTitles.contains(matchKey(shortcut.title))
+    }
+    private func matchKey(_ title: String) -> String {
+        ROMTitle.displayName(title).folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current)
+            .unicodeScalars.filter(CharacterSet.alphanumerics.contains).map(String.init).joined().lowercased()
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
@@ -110,7 +123,7 @@ struct SteamDeckLibraryView: View {
             HStack(spacing: 24) {
                 metric("Shortcuts", value: store.inventory.shortcuts.count)
                 metric("ROM references", value: store.inventory.shortcuts.filter(\.isROMReference).count)
-                Label("Local play not configured", systemImage: "externaldrive.badge.questionmark")
+                Label("\(store.inventory.shortcuts.filter(availableCentrally).count) matched in Game Hub", systemImage: "externaldrive.connected.to.line.below")
                     .foregroundStyle(.secondary)
             }
             Divider()
@@ -140,11 +153,12 @@ struct SteamDeckLibraryView: View {
                                 HStack {
                                     Text(shortcut.title).font(.headline)
                                     Spacer()
-                                    Label(shortcut.isROMReference ? "Files on Steam Deck" : "Target not resolved",
-                                          systemImage: shortcut.isROMReference ? "externaldrive" : "questionmark.circle")
+                                    Label(availableCentrally(shortcut) ? "Available from server" : (shortcut.isROMReference ? "Files on Steam Deck" : "Target not resolved"),
+                                          systemImage: availableCentrally(shortcut) ? "externaldrive.connected.to.line.below" : (shortcut.isROMReference ? "externaldrive" : "questionmark.circle"))
                                         .font(.caption).foregroundStyle(.secondary)
                                 }
-                                Text(shortcut.isROMReference ? "Steam Deck ROM shortcut · Not available on this Mac"
+                                Text(availableCentrally(shortcut) ? "A matching ROM is available in the central Game Hub library"
+                                     : shortcut.isROMReference ? "Steam Deck ROM shortcut · Not available on this Mac"
                                      : "Non-Steam shortcut · Not a Steam purchase")
                                     .font(.callout).foregroundStyle(.secondary)
                                 if let path = shortcut.romPath {
@@ -173,6 +187,9 @@ struct SteamDeckLibraryView: View {
         }
         .padding(24)
         .frame(minWidth: 650, idealWidth: 720, minHeight: 480, idealHeight: 560)
+        .font(.system(size: 16))
+        .foregroundStyle(HubTheme.ink)
+        .background(HubTheme.canvas)
         .fileImporter(isPresented: $isImporterPresented, allowedContentTypes: [.item], allowsMultipleSelection: false) {
             store.importFile($0)
         }

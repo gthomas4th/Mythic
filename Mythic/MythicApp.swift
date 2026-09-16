@@ -42,6 +42,11 @@ struct MythicApp: App {
                         }
                 }
             }
+            .onAppear {
+                DispatchQueue.main.async {
+                    appDelegate.maximizeMainWindow()
+                }
+            }
             .modifier(SparkleUpdater())
             .frame(minWidth: 850, minHeight: 400)
         }

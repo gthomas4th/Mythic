@@ -287,6 +287,17 @@ struct HubLaunchButtonStyle: ButtonStyle {
     }
 }
 
+struct HubOptionsButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.system(size: 17, weight: .semibold))
+            .foregroundStyle(Color.white)
+            .padding(.horizontal, 18)
+            .frame(minHeight: 36)
+            .background(HubTheme.purple.opacity(configuration.isPressed ? 0.72 : 1), in: .capsule)
+    }
+}
+
 enum ROMArtworkKind: String, Hashable {
     case boxart
     case scene
@@ -449,16 +460,17 @@ private actor ROMArtworkResolver {
                   let records = try JSONSerialization.jsonObject(with: data) as? [String: [String: Any]] else { return nil }
             var result: [String: URL] = [:]
             for record in records.values {
-                guard let id = record["id"] as? String else { continue }
+                let id = record["id"] as? String ?? ""
                 let value: String?
                 switch kind {
                 case .boxart:
                     value = record["frontBoxArt"] as? String ?? record["iconUrl"] as? String
                 case .scene:
-                    value = (record["screenshots"] as? [String])?.first ?? record["bannerUrl"] as? String
+                    let screenshots = record["screenshots"] as? [String] ?? []
+                    value = screenshots.dropFirst().first ?? screenshots.first ?? record["bannerUrl"] as? String
                 }
                 guard let value, let url = URL(string: value) else { continue }
-                result[id.uppercased()] = url
+                if !id.isEmpty { result[id.uppercased()] = url }
                 if let name = record["name"] as? String { result[normalize(name)] = url }
             }
             return result
@@ -555,7 +567,15 @@ private actor ROMArtworkResolver {
 
     private func cachedArtworkURL(system: String, title: String, kind: ROMArtworkKind) -> URL {
         let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
-        let directory = base.appendingPathComponent("GameHub/Artwork/\(kind.rawValue)/\(system)", isDirectory: true)
+        // The original Switch cache may contain art from an early fuzzy matcher.
+        // Keep it untouched and use a clean, exact-title cache namespace.
+        let cacheSystem: String
+        if system == "switch" {
+            cacheSystem = kind == .scene ? "switch-scene-v2" : "switch-v2"
+        } else {
+            cacheSystem = system
+        }
+        let directory = base.appendingPathComponent("GameHub/Artwork/\(kind.rawValue)/\(cacheSystem)", isDirectory: true)
         try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         let key = normalize(title).prefix(180)
         return directory.appendingPathComponent(String(key) + ".image")

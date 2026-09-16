@@ -146,7 +146,7 @@ struct ContentView: View {
                 if gameOptions.editor != "Title" { failures.append("Title editor did not open") }
                 let originalDraft = gameOptions.draft
                 controllerAction("select")
-                if gameOptions.draft != originalDraft + "a" { failures.append("Controller keyboard did not type") }
+                if gameOptions.draft != originalDraft + "q" { failures.append("Controller QWERTY keyboard did not type") }
                 controllerAction("back")
                 if gameOptions.editor != nil || gameOptions.game?.title != originalTitle { failures.append("Editor cancel failed") }
                 controllerAction("back")
@@ -267,9 +267,9 @@ struct ContentView: View {
             HStack(alignment: .bottom, spacing: 8) {
                 Text("GAME HUB").font(HubTheme.heading(28))
                 .foregroundStyle(.white).padding(.trailing, 22)
-                .frame(width: 220, height: 94, alignment: .trailing)
+                .frame(width: 250, height: 94, alignment: .trailing)
                 .background(HubTheme.blue, in: UnevenRoundedRectangle(topLeadingRadius: 52, bottomLeadingRadius: 0, bottomTrailingRadius: 0, topTrailingRadius: 0))
-                VStack(alignment: .trailing, spacing: 8) {
+                VStack(alignment: .center, spacing: 8) {
                     Text(destination.rawValue.uppercased()).font(HubTheme.heading(28)).tracking(2)
                     HStack(spacing: 8) {
                         Capsule().fill(HubTheme.blue)
@@ -277,6 +277,7 @@ struct ContentView: View {
                         Capsule().fill(HubTheme.yellow).frame(width: 54)
                     }.frame(height: 20).accessibilityHidden(true)
                 }
+                .frame(maxWidth: .infinity)
             }
             HStack(alignment: .top, spacing: 8) {
                 ScrollViewReader { sidebarProxy in
@@ -319,7 +320,7 @@ struct ContentView: View {
                   }.frame(minHeight: 510)
                 }.scrollIndicators(.hidden)
                     .onChange(of: sidebarSelection) { _, value in sidebarProxy.scrollTo(value, anchor: .center) }
-                }.frame(width: 220)
+                }.frame(width: 250)
                 NavigationStack {
                     consoleDestination
                 }
@@ -329,14 +330,14 @@ struct ContentView: View {
             }
             HStack(spacing: 8) {
                 UnevenRoundedRectangle(topLeadingRadius: 0, bottomLeadingRadius: 28, bottomTrailingRadius: 0, topTrailingRadius: 0)
-                    .fill(HubTheme.blue).frame(width: 220)
+                    .fill(HubTheme.blue).frame(width: 250)
                 Capsule().fill(HubTheme.blue)
                 Capsule().fill(HubTheme.green).frame(width: 60)
                 Capsule().fill(HubTheme.red).frame(width: 32)
             }.frame(height: 18).accessibilityHidden(true)
         }
         .padding(16).background(HubTheme.panel)
-        .frame(minWidth: 900, minHeight: 700)
+        .frame(minWidth: 980, minHeight: 700)
     }
 
     @ViewBuilder private var consoleDestination: some View {

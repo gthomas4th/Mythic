@@ -257,9 +257,14 @@ extension GameCard {
         @Binding var game: Game
         var body: some View {
             Button { HubGameOptions.shared.open(game) } label: {
-                if HubControllerInput.shared.connected { HubButtonHint(button: "X", action: "Options") }
-                else { Label("Options", systemImage: "ellipsis") }
-            }.buttonStyle(.plain).help("Open game details and options")
+                if HubControllerInput.shared.connected {
+                    HubButtonHint(button: "X", action: "Options")
+                } else {
+                    Label("Options", systemImage: "ellipsis")
+                }
+            }
+            .buttonStyle(HubOptionsButtonStyle())
+            .help("Open game details and options")
         }
     }
     struct LegacyMenuView: View {
@@ -270,7 +275,9 @@ extension GameCard {
         var body: some View {
             Group { // annoying, but the only way two sheets'll fit in here
                 Menu {
-                    GameCard.Buttons.SettingsButton(game: $game, withLabel: true, isGameSettingsSheetPresented: $isGameSettingsSheetPresented)
+                    if !(game is ROMGame) {
+                        GameCard.Buttons.SettingsButton(game: $game, withLabel: true, isGameSettingsSheetPresented: $isGameSettingsSheetPresented)
+                    }
                     GameCard.Buttons.FavouriteButton(game: $game, withLabel: true)
                     if let rom = game as? ROMGame {
                         if ROMLibrary.shared.downloadingID == game.id {

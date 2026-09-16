@@ -284,7 +284,12 @@ struct ConnectionsView: View {
             }
             if !message.isEmpty { Text(message) }
         }
-        .formStyle(.grouped).navigationTitle("PC & PlayStation")
+        .formStyle(.grouped)
+        .scrollContentBackground(.hidden)
+        .font(.system(size: 16))
+        .foregroundStyle(HubTheme.ink)
+        .background(HubTheme.canvas)
+        .navigationTitle("PC & PlayStation")
         .onAppear { findRemotePlay() }
     }
     private func open(stream: Bool) {

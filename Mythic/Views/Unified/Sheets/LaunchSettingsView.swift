@@ -10,7 +10,7 @@ struct LaunchSettingsView: View {
     @State private var steamClosed = false
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
-            Text("Launch Settings").font(.title.bold())
+            HubSectionBanner(title: "Launch Settings")
             Text("Working profiles stay pinned. App updates do not replace their runtime or touch saves.").foregroundStyle(.secondary)
             Picker("Compatibility profile", selection: $selected) {
                 Text("Select a profile").tag("")
@@ -57,6 +57,9 @@ struct LaunchSettingsView: View {
             if !status.isEmpty { Text(status).font(.callout).foregroundStyle(.secondary) }
         }
         .padding(24).frame(width: 620)
+        .font(.system(size: 16))
+        .foregroundStyle(HubTheme.ink)
+        .background(HubTheme.canvas)
         .task { selected = initialProfileID ?? ""; refresh() }
     }
     private func refresh() {

@@ -20,6 +20,15 @@ import FirebaseCrashlytics
 
 // TODO: modularise
 class AppDelegate: NSObject, NSApplicationDelegate {
+    @MainActor
+    func maximizeMainWindow() {
+        guard let window = NSApp.window(withID: "main") ?? NSApp.mainWindow,
+              let screen = window.screen ?? NSScreen.main else { return }
+
+        window.setFrame(screen.visibleFrame, display: true, animate: false)
+        window.makeKeyAndOrderFront(nil)
+    }
+
     func applicationDidFinishLaunching(_: Notification) {
         // MARK: Firebase Configuration
         // Use the Firebase library to configure APIs.

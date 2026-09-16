@@ -128,6 +128,7 @@ struct ControllerLibraryView: View {
     @State private var search = ""
     @State private var showLaunchSettings = false
     @State private var detailProfile: CompatibilityProfile?
+    @State private var keyMonitor: Any?
     private enum Focus: Hashable { case search, browsing }
     @FocusState private var focus: Focus?
     private var games: [Game] {
@@ -152,7 +153,7 @@ struct ControllerLibraryView: View {
                 .onSubmit { details = selectedGame != nil; focus = .browsing }
             if input.connected {
                 HubControllerHints(actions: [("Move", "Browse"), ("A", "Play"), ("X", "Options"), ("Y", "Favorites"), ("B", "Back"), ("Menu", "Sidebar")])
-            } else { Text("↑ ↓ Browse · Return Details & Play · Escape Back").font(.system(size: 16)) }
+            } else { Text("↑ ↓ Browse · Return Details / Play · Escape Back").font(.system(size: 16)) }
             if details, let game = selectedGame {
                 Text(game.title).font(HubTheme.heading(36))
                 if let steam = game as? SteamGame, let record = steam.record {
@@ -237,8 +238,27 @@ struct ControllerLibraryView: View {
                 action(command); return true
             }
             focus = .browsing
+            keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
+                guard HubGameOptions.shared.game == nil else { return event }
+                if event.keyCode == 53 {
+                    if details { details = false } else { input.onAction?("back") }
+                    return nil
+                }
+                if [36, 76].contains(event.keyCode), focus != .search {
+                    if details {
+                        if let game = selectedGame { play(game) }
+                    } else if selectedGame != nil {
+                        details = true
+                    }
+                    return nil
+                }
+                return event
+            }
         }
-        .onDisappear { input.clearContent("controller") }
+        .onDisappear {
+            input.clearContent("controller")
+            if let keyMonitor { NSEvent.removeMonitor(keyMonitor); self.keyMonitor = nil }
+        }
     }
     private func displayedTarget(for game: SteamGame, record: GameRecord) -> LaunchTarget? {
         game.selectedLaunchTarget
@@ -298,10 +318,31 @@ struct ControllerLibraryView: View {
     var editor: String?
     var draft = ""
     var key = 0
+    var keyboardMode = 0
     var message = ""
     private let file: URL
     private var edits: [String: [String: String]] = [:]
-    let keys = Array("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789:/.-_?=&%+# ").map(String.init) + ["⌫", "Clear"]
+    var keyboardRows: [[String]] {
+        switch keyboardMode {
+        case 1:
+            [["Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P"],
+             ["A", "S", "D", "F", "G", "H", "J", "K", "L"],
+             ["Shift", "Z", "X", "C", "V", "B", "N", "M", "⌫"],
+             ["123", "-", "_", "'", "Space", ".", "Clear"]]
+        case 2:
+            [["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"],
+             ["-", "_", ":", "/", "?", "&", "=", "+", "#"],
+             ["@", "(", ")", "[", "]", "%", "'", "\"", "⌫"],
+             ["ABC", "Space", ".", "Clear"]]
+        default:
+            [["q", "w", "e", "r", "t", "y", "u", "i", "o", "p"],
+             ["a", "s", "d", "f", "g", "h", "j", "k", "l"],
+             ["Shift", "z", "x", "c", "v", "b", "n", "m", "⌫"],
+             ["123", "-", "_", "'", "Space", ".", "Clear"]]
+        }
+    }
+    var keys: [String] { keyboardRows.flatMap { $0 } }
+    var selectedKey: String { keys.indices.contains(key) ? keys[key] : "q" }
     init(file: URL = GameHubRuntime.support.appendingPathComponent("game-display-edits.json")) {
         self.file = file
         if let data = try? Data(contentsOf: file), let saved = try? JSONDecoder().decode([String: [String: String]].self, from: data) { edits = saved }
@@ -331,11 +372,8 @@ struct ControllerLibraryView: View {
         if editor != nil {
             switch action {
             case "back": editor = nil
-            case "up": key = max(0, key - 10)
-            case "down": key = min(keys.count - 1, key + 10)
-            case "left": key = max(0, key - 1)
-            case "right": key = min(keys.count - 1, key + 1)
-            case "select": typeKey(keys[key])
+            case "up", "down", "left", "right": moveKey(action)
+            case "select": typeKey(selectedKey)
             case "options": if !draft.isEmpty { draft.removeLast() }
             case "filter": saveEdit()
             default: break
@@ -356,7 +394,31 @@ struct ControllerLibraryView: View {
     func typeKey(_ character: String) {
         if character == "Clear" { draft = "" }
         else if character == "⌫" { if !draft.isEmpty { draft.removeLast() } }
-        else { draft += character }
+        else if character == "Space" { draft += " " }
+        else if character == "Shift" { keyboardMode = keyboardMode == 1 ? 0 : 1; key = 0 }
+        else if character == "123" { keyboardMode = 2; key = 0 }
+        else if character == "ABC" { keyboardMode = 0; key = 0 }
+        else {
+            draft += character
+            if keyboardMode == 1 { keyboardMode = 0; key = 0 }
+        }
+    }
+    func moveKey(_ direction: String) {
+        let rows = keyboardRows
+        var offset = 0
+        var position = (row: 0, column: 0)
+        for (rowIndex, row) in rows.enumerated() {
+            if key < offset + row.count { position = (rowIndex, key - offset); break }
+            offset += row.count
+        }
+        switch direction {
+        case "left": position.column = max(0, position.column - 1)
+        case "right": position.column = min(rows[position.row].count - 1, position.column + 1)
+        case "up": position.row = max(0, position.row - 1); position.column = min(position.column, rows[position.row].count - 1)
+        case "down": position.row = min(rows.count - 1, position.row + 1); position.column = min(position.column, rows[position.row].count - 1)
+        default: break
+        }
+        key = rows.prefix(position.row).reduce(0) { $0 + $1.count } + position.column
     }
     func activate() {
         guard let game else { return }
@@ -403,6 +465,7 @@ struct HubGameOptionsView: View {
     @State private var imageEmpty = true
     @State private var scene = HubGameScene()
     @State private var toolbarWasVisible: Bool?
+    @State private var escapeMonitor: Any?
     var body: some View {
         GeometryReader { geometry in
             ZStack {
@@ -478,9 +541,15 @@ struct HubGameOptionsView: View {
                     toolbarWasVisible = toolbar.isVisible
                     toolbar.isVisible = false
                 }
+                escapeMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
+                    guard event.keyCode == 53 else { return event }
+                    _ = model.action("back")
+                    return nil
+                }
             }
             .onDisappear {
                 if let toolbarWasVisible { NSApp.keyWindow?.toolbar?.isVisible = toolbarWasVisible }
+                if let escapeMonitor { NSEvent.removeMonitor(escapeMonitor); self.escapeMonitor = nil }
             }
             .task(id: model.game?.id) {
                 await scene.load(model.game)
@@ -503,7 +572,7 @@ struct HubGameOptionsView: View {
                 HubTheme.blue
                 if let game = model.game {
                     let url = scene.poster ?? game.horizontalImageURL ?? game.verticalImageURL
-                    if !(game is ROMGame), scene.poster == nil, game.horizontalImageURL == nil, url != nil {
+                    if url != nil, game is ROMGame || (!(game is ROMGame) && scene.poster == nil && game.horizontalImageURL == nil) {
                         // Portrait storefront art becomes a full-bleed composition: a
                         // blurred fill behind the intact cover, never a stretched image.
                         ZStack {
@@ -547,13 +616,18 @@ struct HubGameOptionsView: View {
                 Text("Edit \(editor)").font(.title2)
                 TextField(editor, text: $model.draft).textFieldStyle(.roundedBorder)
                 if input.connected { HubControllerHints(actions: [("Move", "Choose key"), ("A", "Type"), ("X", "Delete"), ("Y", "Save"), ("B", "Cancel")]) }
-                LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 10), spacing: 8) {
-                    ForEach(model.keys.indices, id: \.self) { index in
-                        Button(model.keys[index] == " " ? "Space" : model.keys[index]) { model.key = index; model.typeKey(model.keys[index]) }
-                            .frame(maxWidth: .infinity, minHeight: 34)
-                            .foregroundStyle(.black)
-                            .background(model.key == index ? HubTheme.yellow : HubTheme.panel, in: .rect(cornerRadius: 5))
-                            .buttonStyle(.plain)
+                VStack(spacing: 8) {
+                    ForEach(Array(model.keyboardRows.enumerated()), id: \.offset) { rowIndex, row in
+                        HStack(spacing: 8) {
+                            ForEach(Array(row.enumerated()), id: \.offset) { columnIndex, character in
+                                let index = model.keyboardRows.prefix(rowIndex).reduce(0) { $0 + $1.count } + columnIndex
+                                Button(character) { model.key = index; model.typeKey(character) }
+                                    .frame(maxWidth: character == "Space" ? 150 : .infinity, minHeight: 38)
+                                    .foregroundStyle(.black)
+                                    .background(model.key == index ? HubTheme.yellow : HubTheme.panel, in: .rect(cornerRadius: 5))
+                                    .buttonStyle(.plain)
+                            }
+                        }
                     }
                 }
                 HStack {

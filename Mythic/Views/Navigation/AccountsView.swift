@@ -37,7 +37,7 @@ struct AccountsView: View {
                 .padding()
                 .background(
                     RoundedRectangle(cornerRadius: 10)
-                        .fill(.quinary)
+                        .fill(HubTheme.panel)
                 )
                 .alert(
                     "Are you sure you want to sign out of Epic Games?",
@@ -79,6 +79,8 @@ struct AccountsView: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding()
+        .foregroundStyle(HubTheme.ink)
+        .background(HubTheme.canvas)
         .navigationTitle("Accounts")
         .task(priority: .background) {
             discordRPC.setPresence({

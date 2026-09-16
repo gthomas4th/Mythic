@@ -1,5 +1,6 @@
 import SwiftUI
 import UniformTypeIdentifiers
+import Carbon.HIToolbox
 
 struct ROMSource: Codable, Identifiable {
     var id = UUID()
@@ -138,6 +139,17 @@ struct ROMLocalCopy: Codable {
             }
         }
     }
+    func refreshApplicationVersions() {
+        var changed = false
+        for index in sources.indices {
+            guard let application = try? sources[index].applicationURL(),
+                  let info = try? EmulatorApplicationInfo.inspect(application: application),
+                  sources[index].applicationVersion != info.version else { continue }
+            sources[index].applicationVersion = info.version
+            changed = true
+        }
+        if changed { try? save() }
+    }
     func selectLocal(_ selected: Bool, gameID: String) {
         let previous = localCopies
         localCopies[gameID]?.selected = selected
@@ -273,7 +285,16 @@ struct ROMLocalCopy: Codable {
     private var application: NSRunningApplication?
     private var terminationObserver: NSObjectProtocol?
     private var escapeMonitor: Any?
+    private var escapeHotKey: EventHotKeyRef?
+    private var escapeHandler: EventHandlerRef?
     private var shuttingDown = false
+
+    private static let escapeHotKeyHandler: EventHandlerUPP = { _, _, _ in
+        Task { @MainActor in
+            await EmulatorSessionCoordinator.shared.quitActiveSession()
+        }
+        return noErr
+    }
 
     var hasActiveSession: Bool { application?.isTerminated == false }
 
@@ -324,14 +345,13 @@ struct ROMLocalCopy: Codable {
                   terminated.processIdentifier == launched.processIdentifier else { return }
             Task { @MainActor in self?.finish(launched, reactivateGameHub: true) }
         }
-        if kind == .ryujinx {
-            escapeMonitor = NSEvent.addGlobalMonitorForEvents(matching: .keyDown) { [weak self] event in
-                guard event.keyCode == 53 else { return }
-                Task { @MainActor in
-                    await self?.closeActiveSession(reactivateGameHub: true)
-                }
+        escapeMonitor = NSEvent.addGlobalMonitorForEvents(matching: .keyDown) { [weak self] event in
+            guard event.keyCode == 53 else { return }
+            Task { @MainActor in
+                await self?.closeActiveSession(reactivateGameHub: true)
             }
         }
+        installEscapeHotKey()
         launched.activate(options: [.activateAllWindows, .activateIgnoringOtherApps])
     }
 
@@ -378,6 +398,18 @@ struct ROMLocalCopy: Codable {
         if let escapeMonitor {
             NSEvent.removeMonitor(escapeMonitor)
             self.escapeMonitor = nil
+        }
+        if let escapeHotKey { UnregisterEventHotKey(escapeHotKey); self.escapeHotKey = nil }
+        if let escapeHandler { RemoveEventHandler(escapeHandler); self.escapeHandler = nil }
+    }
+
+    private func installEscapeHotKey() {
+        var eventType = EventTypeSpec(eventClass: OSType(kEventClassKeyboard), eventKind: UInt32(kEventHotKeyPressed))
+        let target = GetApplicationEventTarget()
+        guard InstallEventHandler(target, Self.escapeHotKeyHandler, 1, &eventType, nil, &escapeHandler) == noErr else { return }
+        let identifier = EventHotKeyID(signature: 0x47485542, id: 1) // GHUB
+        if RegisterEventHotKey(UInt32(kVK_Escape), 0, identifier, target, 0, &escapeHotKey) != noErr {
+            if let escapeHandler { RemoveEventHandler(escapeHandler); self.escapeHandler = nil }
         }
     }
 
@@ -614,8 +646,16 @@ struct ROMLibraryView: View {
                 Text("Deck-only paths remain labelled unavailable on this Mac until the real files are copied.").font(.callout).foregroundStyle(.secondary)
             }
         }
-        .formStyle(.grouped).navigationTitle("ROM Library")
-        .task { store.refreshSourceLocations(force: true) }
+        .formStyle(.grouped)
+        .scrollContentBackground(.hidden)
+        .font(.system(size: 16))
+        .foregroundStyle(HubTheme.ink)
+        .background(HubTheme.canvas)
+        .navigationTitle("ROM Library")
+        .task {
+            store.refreshSourceLocations(force: true)
+            store.refreshApplicationVersions()
+        }
         .sheet(isPresented: $deckPresented) { SteamDeckLibraryView() }
     }
 }
